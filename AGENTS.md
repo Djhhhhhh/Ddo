@@ -1,9 +1,11 @@
 # AGENTS.md
 
+> 本仓库采用多服务架构，请先阅读 [SERVICES_INDEX.md](./SERVICES_INDEX.md) 了解所有服务的职责和文档链接。
+
 ## 🧭 工作流程（必须遵守）
 
 1. 根据任务判断目标服务
-2. 查看 .agent/routing.md
+2. 查看 [SERVICES_INDEX.md](./SERVICES_INDEX.md) 确认服务职责
 3. 进入对应 services/<service>
 4. 阅读该服务的 AGENTS.md
 5. 在该目录内完成任务
@@ -20,10 +22,14 @@
 
 ## 📂 服务列表
 
-- cli：命令行入口 / 调度
-- server-go：后端 API / 数据处理
-- llm-py：大模型交互
-- web-ui：前端 / 弹窗
+详见 [SERVICES_INDEX.md](./SERVICES_INDEX.md)，快速参考：
+
+| 服务 | 职责 | 文档 |
+|------|------|------|
+| cli | 边界：只负责 xxx，不处理 xxx | [services/cli/AGENTS.md](services/cli/AGENTS.md) |
+| llm-py | 边界：只负责 xxx，不处理 xxx | [services/llm-py/AGENTS.md](services/llm-py/AGENTS.md) |
+| server-go | 边界：只负责 xxx，不处理 xxx | [services/server-go/AGENTS.md](services/server-go/AGENTS.md) |
+| web-ui | 边界：只负责 xxx，不处理 xxx | [services/web-ui/AGENTS.md](services/web-ui/AGENTS.md) |
 
 ---
 
@@ -32,8 +38,8 @@
 ### 🌍 全局模式（分析 / 提问）
 
 - 只读取：
-  - AGENTS.md
-  - .agent/routing.md
+  - AGENTS.md（本文档）
+  - [SERVICES_INDEX.md](./SERVICES_INDEX.md)（服务索引）
 - 不要进入 services 目录
 
 
@@ -47,4 +53,4 @@
 
 ## 📌 优先级
 
-AGENTS.md（当前服务） > routing.md > 代码
+AGENTS.md（当前服务） > 代码

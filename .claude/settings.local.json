@@ -1,7 +1,12 @@
 {
   "permissions": {
     "allow": [
-      "Bash(git add:*)"
+      "Bash(git add:*)",
+      "Bash(reg query:*)",
+      "Bash(findstr /i \"mysql\")",
+      "Bash(cp services/cli/AGENTS.md services/cli/AGENTS.md.backup)",
+      "Bash(awk ':*)",
+      "Bash(mv services/cli/AGENTS.md.tmp services/cli/AGENTS.md)"
     ]
   }
 }
