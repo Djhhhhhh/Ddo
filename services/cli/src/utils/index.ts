@@ -21,3 +21,17 @@ export {
   verifyDataMount,
   MYSQL_CONTAINER_NAME,
 } from './docker';
+export {
+  isValidService,
+  getLogFilePath,
+  parseSinceTime,
+  parseLogLine,
+  matchLogLevel,
+  readLastLines,
+  highlightLogLevel,
+  followLogFile,
+  getMySQLLogs,
+  readMultipleLogs,
+  SERVICE_DISPLAY_NAMES,
+  SUPPORTED_SERVICES,
+} from './log-reader';

@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -94,9 +95,17 @@
             font-size: 1.5rem;
         }
 
-        .stat-icon.pending { background: #fef3c7; }
-        .stat-icon.progress { background: #dbeafe; }
-        .stat-icon.done { background: #d1fae5; }
+        .stat-icon.pending {
+            background: #fef3c7;
+        }
+
+        .stat-icon.progress {
+            background: #dbeafe;
+        }
+
+        .stat-icon.done {
+            background: #d1fae5;
+        }
 
         .stat-content h3 {
             font-size: 1.75rem;
@@ -143,8 +152,13 @@
             transition: all 0.3s ease;
         }
 
-        .progress-segment.done { background: var(--success); }
-        .progress-segment.progress { background: var(--primary); }
+        .progress-segment.done {
+            background: var(--success);
+        }
+
+        .progress-segment.progress {
+            background: var(--primary);
+        }
 
         .progress-legend {
             display: flex;
@@ -167,9 +181,17 @@
             border-radius: 3px;
         }
 
-        .legend-dot.done { background: var(--success); }
-        .legend-dot.progress { background: var(--primary); }
-        .legend-dot.pending { background: var(--gray-300); }
+        .legend-dot.done {
+            background: var(--success);
+        }
+
+        .legend-dot.progress {
+            background: var(--primary);
+        }
+
+        .legend-dot.pending {
+            background: var(--gray-300);
+        }
 
         /* Phase Sections */
         .phases-container {
@@ -210,9 +232,20 @@
             font-size: 1rem;
         }
 
-        .phase-badge.p1 { background: #fef3c7; color: #92400e; }
-        .phase-badge.p2 { background: #dbeafe; color: #1e40af; }
-        .phase-badge.p3 { background: #fce7f3; color: #9d174d; }
+        .phase-badge.p1 {
+            background: #fef3c7;
+            color: #92400e;
+        }
+
+        .phase-badge.p2 {
+            background: #dbeafe;
+            color: #1e40af;
+        }
+
+        .phase-badge.p3 {
+            background: #fce7f3;
+            color: #9d174d;
+        }
 
         .phase-info h3 {
             font-size: 1.1rem;
@@ -370,11 +403,30 @@
             color: var(--gray-600);
         }
 
-        .task-tag.module-cli { background: #fef3c7; color: #92400e; }
-        .task-tag.module-llm { background: #dbeafe; color: #1e40af; }
-        .task-tag.module-server { background: #fce7f3; color: #9d174d; }
-        .task-tag.module-web { background: #d1fae5; color: #065f46; }
-        .task-tag.priority-high { background: #fee2e2; color: #991b1b; }
+        .task-tag.module-cli {
+            background: #fef3c7;
+            color: #92400e;
+        }
+
+        .task-tag.module-llm {
+            background: #dbeafe;
+            color: #1e40af;
+        }
+
+        .task-tag.module-server {
+            background: #fce7f3;
+            color: #9d174d;
+        }
+
+        .task-tag.module-web {
+            background: #d1fae5;
+            color: #065f46;
+        }
+
+        .task-tag.priority-high {
+            background: #fee2e2;
+            color: #991b1b;
+        }
 
         .task-actions {
             display: flex;
@@ -442,8 +494,15 @@
         }
 
         @keyframes pulse {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.5; }
+
+            0%,
+            100% {
+                opacity: 1;
+            }
+
+            50% {
+                opacity: 0.5;
+            }
         }
 
         .focus-tasks {
@@ -732,6 +791,7 @@
         }
     </style>
 </head>
+
 <body>
     <div class="container">
         <!-- Header -->
@@ -881,4 +941,5 @@
 
     <script src="app.js"></script>
 </body>
+
 </html>

@@ -90,3 +90,29 @@ export interface ServiceStatusInfo {
   /** 健康检查地址 */
   healthUrl: string;
 }
+
+/** 日志查看选项 */
+export interface LogOptions {
+  /** 服务名称 */
+  service?: string;
+  /** 显示行数（默认 100） */
+  lines?: number;
+  /** 是否实时跟踪 */
+  follow?: boolean;
+  /** 时间过滤（如 "1h", "30m"） */
+  since?: string;
+  /** 日志级别过滤 */
+  level?: 'DEBUG' | 'INFO' | 'WARN' | 'ERROR';
+}
+
+/** 日志条目 */
+export interface LogEntry {
+  /** 时间戳 */
+  timestamp?: Date;
+  /** 日志级别 */
+  level?: string;
+  /** 服务名称 */
+  service: string;
+  /** 日志消息 */
+  message: string;
+}

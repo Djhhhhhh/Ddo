@@ -188,14 +188,28 @@ program
         process.exit(1);
     }
 });
-// logs 命令（占位）
+// logs 命令
 program
     .command('logs [service]')
-    .description('查看服务日志')
-    .action((service) => {
-    logger_1.default.info(chalk_1.default.yellow('logs 命令尚未实现'));
-    if (service) {
-        logger_1.default.info(`指定服务: ${service}`);
+    .description('查看服务日志 (cli|server-go|llm-py|web-ui|mysql|all)')
+    .option('-d, --data-dir <path>', '指定数据目录路径')
+    .option('-n, --lines <number>', '显示最后 N 行', '100')
+    .option('-f, --follow', '实时跟踪日志')
+    .option('--since <time>', '显示某时间之后的日志（如 1h, 30m, 2024-01-01）')
+    .option('--level <level>', '按日志级别过滤（DEBUG, INFO, WARN, ERROR）')
+    .action(async (service, options) => {
+    try {
+        const { logsCommand } = await Promise.resolve().then(() => __importStar(require('./commands/logs')));
+        const result = await logsCommand(service, options);
+        if (!result.success) {
+            logger_1.default.error(result.error || '查看日志失败');
+            process.exit(1);
+        }
+        process.exit(0);
+    }
+    catch (err) {
+        logger_1.default.error(`查看日志出错: ${err instanceof Error ? err.message : String(err)}`);
+        process.exit(1);
     }
 });
 // config 命令（占位）

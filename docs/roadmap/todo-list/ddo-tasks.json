@@ -1,10 +1,10 @@
 {
-  "exportTime": "2026-04-14T08:53:19.634Z",
+  "exportTime": "2026-04-14T10:47:43.048Z",
   "phases": {
     "p1": {
       "title": "Phase 1: 基础设施",
       "subtitle": "阻塞项 - 必须按序完成",
-      "status": "active",
+      "status": "completed",
       "tasks": [
         {
           "id": "p1-1",
@@ -90,7 +90,7 @@
           "id": "p1-11",
           "title": "CLI: ddo logs 实现",
           "module": "cli",
-          "status": "pending",
+          "status": "done",
           "priority": "medium",
           "notes": "查看服务日志"
         },

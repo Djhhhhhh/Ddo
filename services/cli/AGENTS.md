@@ -23,7 +23,8 @@ services/cli/
 │   │   ├── init.ts           # init 命令实现
 │   │   ├── start.ts          # start 命令实现 - 启动所有服务
 │   │   ├── stop.ts           # stop 命令实现 - 停止所有服务
-│   │   └── status.ts         # status 命令实现 - 显示服务状态
+│   │   ├── status.ts         # status 命令实现 - 显示服务状态
+│   │   └── logs.ts           # logs 命令实现 - 查看服务日志（2026-04-14）
 │   ├── services/
 │   │   ├── manager.ts        # 服务管理器 - 统一管理服务生命周期
 │   │   ├── pid-file.ts       # PID 文件操作 - 读写进程ID
@@ -37,7 +38,8 @@ services/cli/
 │   │   ├── index.ts          # 工具模块导出
 │   │   ├── logger.ts         # 终端日志输出工具
 │   │   ├── paths.ts          # 路径解析工具
-│   │   └── docker.ts         # Docker 操作封装
+│   │   ├── docker.ts         # Docker 操作封装
+│   │   └── log-reader.ts     # 日志读取、过滤、跟踪工具（2026-04-14）
 │   └── types/
 │       └── index.ts          # TypeScript 类型定义
 ├── dist/                     # 编译输出（自动构建）
@@ -93,4 +95,4 @@ services/cli/
 
 ## 🕒 最后更新时间
 
-2026-04-14 16:00:00
+2026-04-14 18:00:00

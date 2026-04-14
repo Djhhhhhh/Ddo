@@ -89,23 +89,45 @@ const defaultTasks = {
 // ==================== 状态管理 ====================
 let tasks = JSON.parse(JSON.stringify(defaultTasks));
 let customTasks = [];
+const API_BASE = ''; // 同域，直接相对路径
 
-// 从 localStorage 加载
-function loadFromStorage() {
-    const saved = localStorage.getItem('ddo-tasks');
-    const savedCustom = localStorage.getItem('ddo-custom-tasks');
-    if (saved) {
-        tasks = JSON.parse(saved);
-    }
-    if (savedCustom) {
-        customTasks = JSON.parse(savedCustom);
+// 从服务器加载数据
+async function loadFromStorage() {
+    try {
+        const res = await fetch('/api/load');
+        if (res.ok) {
+            const data = await res.json();
+            if (data.phases) {
+                tasks = data.phases;
+                if (data.customTasks) customTasks = data.customTasks;
+            }
+            console.log('✅ 已从服务器加载数据');
+        }
+    } catch (err) {
+        console.log('⚠️ 服务器加载失败，使用默认数据');
     }
 }
 
-// 保存到 localStorage
-function saveToStorage() {
-    localStorage.setItem('ddo-tasks', JSON.stringify(tasks));
-    localStorage.setItem('ddo-custom-tasks', JSON.stringify(customTasks));
+// 保存到服务器
+async function saveToStorage() {
+    try {
+        const data = {
+            exportTime: new Date().toISOString(),
+            phases: tasks,
+            customTasks: customTasks
+        };
+        const res = await fetch('/api/save', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+        });
+        if (res.ok) {
+            console.log('✅ 已保存到 ddo-tasks.json');
+        }
+    } catch (err) {
+        console.error('❌ 保存失败:', err);
+        showToast('保存失败: ' + err.message);
+    }
 }
 
 // ==================== 渲染函数 ====================
@@ -576,8 +598,8 @@ document.getElementById('modal').addEventListener('click', (e) => {
 });
 
 // ==================== 初始化 ====================
-document.addEventListener('DOMContentLoaded', () => {
-    loadFromStorage();
+document.addEventListener('DOMContentLoaded', async () => {
+    await loadFromStorage();
     updatePhaseStatus();
     renderAll();
 
