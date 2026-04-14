@@ -12,6 +12,8 @@
 - 所有业务逻辑通过 API 调用委托给 server-go 或 llm-py
 - 目录结构：
   - `src/commands/` - CLI 命令实现
+  - `src/services/` - 服务管理模块（PID文件、健康检查、进程管理）
+  - `src/repl/` - REPL 交互模式
   - `src/utils/` - 通用工具函数
   - `src/templates/` - 配置文件模板
   - `src/types/` - TypeScript 类型定义
@@ -23,6 +25,7 @@
 - 用户输出统一使用 `logger.ts`，支持级别控制（debug/info/warn/error）
 - 路径处理统一使用 `path.ts` 中的工具函数，支持 Windows/macOS 跨平台
 - Docker 操作统一封装在 `docker.ts`，错误处理要友好
+- 服务管理统一使用 `services/manager.ts`，包含 PID 文件管理、健康检查、进程启停
 
 ## 常见陷阱
 
@@ -30,6 +33,10 @@
 - Docker Compose v1/v2 兼容：`docker compose` vs `docker-compose`，使用 `getComposeCommand()` 自动检测
 - 配置文件生成要支持幂等性：允许重复运行 `ddo init` 不报错
 - 数据目录优先级：DDO_DATA_DIR 环境变量 > --data-dir 参数 > 默认路径
+- PID 文件存储在 `<dataDir>/services/<service-name>.pid`
+- 健康检查通过 HTTP 轮询 `/health` 端点，超时 30 秒
+- 服务启动失败时自动回滚已启动的服务
+- Windows 进程使用 `tasklist`/`taskkill` 管理，Unix 使用 `kill` 信号
 
 ## 示例参考
 

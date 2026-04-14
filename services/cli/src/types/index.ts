@@ -74,3 +74,19 @@ export interface CommandContext {
   /** 日志级别 */
   logLevel?: LogLevel;
 }
+
+/** 服务状态 */
+export interface ServiceStatusInfo {
+  /** 服务名称 */
+  name: string;
+  /** 显示名称 */
+  displayName: string;
+  /** 是否运行中 */
+  running: boolean;
+  /** 进程ID */
+  pid?: number;
+  /** 服务端口 */
+  port: number;
+  /** 健康检查地址 */
+  healthUrl: string;
+}

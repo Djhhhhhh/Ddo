@@ -1,0 +1,387 @@
+{
+  "exportTime": "2026-04-14T08:53:19.634Z",
+  "phases": {
+    "p1": {
+      "title": "Phase 1: 基础设施",
+      "subtitle": "阻塞项 - 必须按序完成",
+      "status": "active",
+      "tasks": [
+        {
+          "id": "p1-1",
+          "title": "CLI: ddo init 实现",
+          "module": "cli",
+          "status": "done",
+          "priority": "high",
+          "notes": "创建目录结构 ~/.ddo/data/mysql/"
+        },
+        {
+          "id": "p1-2",
+          "title": "创建 docker-compose.yml",
+          "module": "other",
+          "status": "done",
+          "priority": "high",
+          "notes": "MySQL 8.0 容器配置"
+        },
+        {
+          "id": "p1-3",
+          "title": "初始化数据目录 ~/.ddo/data/mysql/",
+          "module": "cli",
+          "status": "done",
+          "priority": "high",
+          "notes": "数据持久化目录"
+        },
+        {
+          "id": "p1-4",
+          "title": "启动 MySQL 容器",
+          "module": "other",
+          "status": "done",
+          "priority": "high",
+          "notes": "Docker Desktop 必须运行"
+        },
+        {
+          "id": "p1-5",
+          "title": "生成 config.yaml 配置",
+          "module": "cli",
+          "status": "done",
+          "priority": "high",
+          "notes": "默认配置模板"
+        },
+        {
+          "id": "p1-6",
+          "title": "CLI: ddo start 实现",
+          "module": "cli",
+          "status": "done",
+          "priority": "high",
+          "notes": "服务启动、进程管理"
+        },
+        {
+          "id": "p1-7",
+          "title": "进程管理 PID 文件",
+          "module": "cli",
+          "status": "done",
+          "priority": "high",
+          "notes": "记录服务进程ID"
+        },
+        {
+          "id": "p1-8",
+          "title": "服务启动顺序控制",
+          "module": "cli",
+          "status": "done",
+          "priority": "medium",
+          "notes": "MySQL -> server-go -> llm-py"
+        },
+        {
+          "id": "p1-9",
+          "title": "CLI: ddo stop 实现",
+          "module": "cli",
+          "status": "done",
+          "priority": "high",
+          "notes": "停止所有服务"
+        },
+        {
+          "id": "p1-10",
+          "title": "CLI: ddo status 实现",
+          "module": "cli",
+          "status": "done",
+          "priority": "medium",
+          "notes": "显示 MySQL 运行状态"
+        },
+        {
+          "id": "p1-11",
+          "title": "CLI: ddo logs 实现",
+          "module": "cli",
+          "status": "pending",
+          "priority": "medium",
+          "notes": "查看服务日志"
+        },
+        {
+          "id": "p1-12",
+          "title": "数据持久化验证",
+          "module": "cli",
+          "status": "done",
+          "priority": "high",
+          "notes": "删除容器后数据还在"
+        }
+      ]
+    },
+    "p2": {
+      "title": "Phase 2: 核心能力",
+      "subtitle": "可并行开发",
+      "status": "pending",
+      "tasks": [
+        {
+          "id": "p2-1",
+          "title": "CLI: REPL 模式基础",
+          "module": "cli",
+          "status": "pending",
+          "priority": "high",
+          "notes": "命令解析框架"
+        },
+        {
+          "id": "p2-2",
+          "title": "CLI: /chat 命令",
+          "module": "cli",
+          "status": "pending",
+          "priority": "high",
+          "notes": "与 llm-py 交互"
+        },
+        {
+          "id": "p2-3",
+          "title": "CLI: /kb 命令",
+          "module": "cli",
+          "status": "pending",
+          "priority": "high",
+          "notes": "知识库管理"
+        },
+        {
+          "id": "p2-4",
+          "title": "CLI: NLP 集成",
+          "module": "cli",
+          "status": "pending",
+          "priority": "medium",
+          "notes": "自然语言理解"
+        },
+        {
+          "id": "p2-5",
+          "title": "llm-py: FastAPI 框架",
+          "module": "llm",
+          "status": "pending",
+          "priority": "high",
+          "notes": "基础项目结构"
+        },
+        {
+          "id": "p2-6",
+          "title": "llm-py: OpenRouter 代理",
+          "module": "llm",
+          "status": "pending",
+          "priority": "high",
+          "notes": "Chat API 转发"
+        },
+        {
+          "id": "p2-7",
+          "title": "RAG Engine: Embedder",
+          "module": "llm",
+          "status": "pending",
+          "priority": "high",
+          "notes": "文档嵌入"
+        },
+        {
+          "id": "p2-8",
+          "title": "RAG Engine: Retriever",
+          "module": "llm",
+          "status": "pending",
+          "priority": "high",
+          "notes": "向量检索"
+        },
+        {
+          "id": "p2-9",
+          "title": "RAG Engine: Generator",
+          "module": "llm",
+          "status": "pending",
+          "priority": "high",
+          "notes": "回答生成"
+        },
+        {
+          "id": "p2-10",
+          "title": "llm-py API 文档",
+          "module": "llm",
+          "status": "pending",
+          "priority": "medium",
+          "notes": "/docs 自动文档"
+        },
+        {
+          "id": "p2-11",
+          "title": "server-go: Gin 框架",
+          "module": "server",
+          "status": "pending",
+          "priority": "high",
+          "notes": "基础项目结构"
+        },
+        {
+          "id": "p2-12",
+          "title": "server-go: MySQL 连接",
+          "module": "server",
+          "status": "pending",
+          "priority": "high",
+          "notes": "GORM 配置"
+        },
+        {
+          "id": "p2-13",
+          "title": "server-go: 健康检查 API",
+          "module": "server",
+          "status": "pending",
+          "priority": "high",
+          "notes": "/health 端点"
+        },
+        {
+          "id": "p2-14",
+          "title": "server-go: 知识库 CRUD",
+          "module": "server",
+          "status": "pending",
+          "priority": "high",
+          "notes": "知识库管理API"
+        },
+        {
+          "id": "p2-15",
+          "title": "server-go: 定时任务 API",
+          "module": "server",
+          "status": "pending",
+          "priority": "medium",
+          "notes": "Cron 调度、HTTP回调"
+        },
+        {
+          "id": "p2-16",
+          "title": "server-go: MCP 管理 API",
+          "module": "server",
+          "status": "pending",
+          "priority": "medium",
+          "notes": "MCP 服务管理"
+        },
+        {
+          "id": "p2-17",
+          "title": "server-go: BadgerDB 队列",
+          "module": "server",
+          "status": "pending",
+          "priority": "medium",
+          "notes": "嵌入式消息队列"
+        },
+        {
+          "id": "p2-18",
+          "title": "B组/C组接口联调",
+          "module": "other",
+          "status": "pending",
+          "priority": "high",
+          "notes": "llm-py ↔ server-go"
+        },
+        {
+          "id": "p2-19",
+          "title": "CLI 端到端测试",
+          "module": "cli",
+          "status": "pending",
+          "priority": "high",
+          "notes": "完整流程验证"
+        }
+      ]
+    },
+    "p3": {
+      "title": "Phase 3: 扩展层",
+      "subtitle": "最后完善",
+      "status": "pending",
+      "tasks": [
+        {
+          "id": "p3-1",
+          "title": "Web: Vue 3 框架",
+          "module": "web",
+          "status": "pending",
+          "priority": "high",
+          "notes": "Vite 项目结构"
+        },
+        {
+          "id": "p3-2",
+          "title": "Web: Dashboard 页面",
+          "module": "web",
+          "status": "pending",
+          "priority": "high",
+          "notes": "主界面布局"
+        },
+        {
+          "id": "p3-3",
+          "title": "Web: API 对接",
+          "module": "web",
+          "status": "pending",
+          "priority": "high",
+          "notes": "Axios 配置"
+        },
+        {
+          "id": "p3-4",
+          "title": "Web: MCP/Timer 配置表单",
+          "module": "web",
+          "status": "pending",
+          "priority": "medium",
+          "notes": "配置管理界面"
+        },
+        {
+          "id": "p3-5",
+          "title": "Web: 图表组件",
+          "module": "web",
+          "status": "pending",
+          "priority": "medium",
+          "notes": "数据可视化"
+        },
+        {
+          "id": "p3-6",
+          "title": "Electron: 主进程",
+          "module": "web",
+          "status": "pending",
+          "priority": "high",
+          "notes": "Electron 基础"
+        },
+        {
+          "id": "p3-7",
+          "title": "Electron: 灵动岛窗口",
+          "module": "web",
+          "status": "pending",
+          "priority": "high",
+          "notes": "悬浮通知窗口"
+        },
+        {
+          "id": "p3-8",
+          "title": "Electron: 系统通知",
+          "module": "web",
+          "status": "pending",
+          "priority": "medium",
+          "notes": "native notification"
+        },
+        {
+          "id": "p3-9",
+          "title": "Electron: 常驻托盘",
+          "module": "web",
+          "status": "pending",
+          "priority": "medium",
+          "notes": "系统托盘图标"
+        },
+        {
+          "id": "p3-10",
+          "title": "Electron: 定时任务弹窗",
+          "module": "web",
+          "status": "pending",
+          "priority": "high",
+          "notes": "Ding 通知"
+        },
+        {
+          "id": "p3-11",
+          "title": "Web 联调",
+          "module": "other",
+          "status": "pending",
+          "priority": "high",
+          "notes": "前后端联调"
+        },
+        {
+          "id": "p3-12",
+          "title": "Ding 通知测试",
+          "module": "other",
+          "status": "pending",
+          "priority": "medium",
+          "notes": "Electron 通知测试"
+        },
+        {
+          "id": "p3-13",
+          "title": "完整流程验证",
+          "module": "other",
+          "status": "pending",
+          "priority": "high",
+          "notes": "E2E 测试"
+        },
+        {
+          "id": "p3-14",
+          "title": "跨平台测试",
+          "module": "other",
+          "status": "pending",
+          "priority": "medium",
+          "notes": "Win/Mac 双环境"
+        }
+      ]
+    }
+  },
+  "customTasks": []
+}

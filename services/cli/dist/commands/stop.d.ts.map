@@ -1,0 +1,1 @@
+{"version":3,"file":"stop.d.ts","sourceRoot":"","sources":["../../src/commands/stop.ts"],"names":[],"mappings":"AAAA;;;GAGG;AAUH,UAAU,WAAW;IACnB,OAAO,CAAC,EAAE,MAAM,CAAC;IACjB,YAAY,CAAC,EAAE,OAAO,CAAC;CACxB;AAED;;GAEG;AACH,wBAAsB,WAAW,CAAC,OAAO,GAAE,WAAgB,GAAG,OAAO,CAAC;IACpE,OAAO,EAAE,OAAO,CAAC;IACjB,KAAK,CAAC,EAAE,MAAM,CAAC;CAChB,CAAC,CAsGD"}

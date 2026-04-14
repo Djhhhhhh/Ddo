@@ -39,7 +39,7 @@ export declare function waitForHealthy(containerName: string, timeoutMs?: number
 /**
  * 停止 MySQL 容器
  */
-export declare function stopMySQL(composeFilePath: string): Promise<{
+export declare function stopMySQL(composeFilePath?: string): Promise<{
     success: boolean;
     message: string;
 }>;

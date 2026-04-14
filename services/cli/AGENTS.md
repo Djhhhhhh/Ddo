@@ -20,7 +20,16 @@ services/cli/
 ├── src/
 │   ├── index.ts              # CLI 入口，命令注册和解析
 │   ├── commands/
-│   │   └── init.ts           # init 命令实现
+│   │   ├── init.ts           # init 命令实现
+│   │   ├── start.ts          # start 命令实现 - 启动所有服务
+│   │   ├── stop.ts           # stop 命令实现 - 停止所有服务
+│   │   └── status.ts         # status 命令实现 - 显示服务状态
+│   ├── services/
+│   │   ├── manager.ts        # 服务管理器 - 统一管理服务生命周期
+│   │   ├── pid-file.ts       # PID 文件操作 - 读写进程ID
+│   │   └── health-check.ts   # 健康检查 - HTTP 轮询检查服务就绪
+│   ├── repl/
+│   │   └── index.ts          # REPL 交互模式
 │   ├── templates/
 │   │   ├── config.yaml.ts    # 配置文件模板
 │   │   └── docker-compose.yml.ts  # Docker Compose 模板

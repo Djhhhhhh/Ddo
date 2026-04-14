@@ -112,7 +112,10 @@ function getComposeCommand() {
  */
 async function getContainerStatus(containerName) {
     try {
-        const output = (0, child_process_1.execSync)(`docker inspect --format='{{.State.Running}}|{{.State.Status}}|{{.State.Health.Status}}|{{.Id}}' ${containerName}`, { stdio: 'pipe', encoding: 'utf8' });
+        // Windows 使用双引号，Unix 使用单引号
+        const quote = process.platform === 'win32' ? '"' : "'";
+        const format = `${quote}{{.State.Running}}|{{.State.Status}}|{{.State.Health.Status}}|{{.Id}}${quote}`;
+        const output = (0, child_process_1.execSync)(`docker inspect --format=${format} ${containerName}`, { stdio: 'pipe', encoding: 'utf8' });
         const [running, status, health, id] = output.trim().split('|');
         return {
             running: running === 'true',
@@ -121,7 +124,8 @@ async function getContainerStatus(containerName) {
             id: id?.substring(0, 12),
         };
     }
-    catch {
+    catch (err) {
+        logger_1.default.debug(`获取容器状态失败: ${err}`);
         return {
             running: false,
             name: containerName,
@@ -199,6 +203,33 @@ async function waitForHealthy(containerName, timeoutMs = 60000) {
  * 停止 MySQL 容器
  */
 async function stopMySQL(composeFilePath) {
+    // 如果没有提供 composeFilePath，直接停止容器
+    if (!composeFilePath) {
+        return new Promise((resolve) => {
+            const child = (0, child_process_1.spawn)('docker', ['stop', MYSQL_CONTAINER_NAME], {
+                stdio: 'pipe',
+                shell: process.platform === 'win32',
+            });
+            let stderr = '';
+            child.stderr?.on('data', (data) => {
+                stderr += data.toString();
+            });
+            child.on('close', (code) => {
+                if (code === 0) {
+                    // 停止后移除容器
+                    (0, child_process_1.spawn)('docker', ['rm', MYSQL_CONTAINER_NAME], { stdio: 'ignore' });
+                    resolve({ success: true, message: '容器已停止' });
+                }
+                else {
+                    resolve({ success: false, message: stderr || `退出码: ${code}` });
+                }
+            });
+            child.on('error', (err) => {
+                resolve({ success: false, message: err.message });
+            });
+        });
+    }
+    // 使用 docker-compose down
     const workDir = require('path').dirname(composeFilePath);
     return new Promise((resolve) => {
         const child = (0, child_process_1.spawn)('docker', ['compose', 'down'], {

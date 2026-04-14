@@ -4,6 +4,39 @@
  * Ddo CLI 入口文件
  * 个人智能工作空间命令行工具
  */
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || (function () {
+    var ownKeys = function(o) {
+        ownKeys = Object.getOwnPropertyNames || function (o) {
+            var ar = [];
+            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
+            return ar;
+        };
+        return ownKeys(o);
+    };
+    return function (mod) {
+        if (mod && mod.__esModule) return mod;
+        var result = {};
+        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
+        __setModuleDefault(result, mod);
+        return result;
+    };
+})();
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
@@ -11,6 +44,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const commander_1 = require("commander");
 const chalk_1 = __importDefault(require("chalk"));
 const init_1 = require("./commands/init");
+const start_1 = require("./commands/start");
 const logger_1 = __importDefault(require("./utils/logger"));
 const paths_1 = require("./utils/paths");
 const program = new commander_1.Command();
@@ -59,27 +93,100 @@ program
         process.exit(1);
     }
 });
-// start 命令（占位）
+// start 命令
 program
     .command('start')
     .description('启动所有 Ddo 服务')
-    .action(() => {
-    logger_1.default.info(chalk_1.default.yellow('start 命令尚未实现'));
-    logger_1.default.info(`请先运行 ${chalk_1.default.cyan('ddo init')} 完成初始化`);
+    .option('-d, --data-dir <path>', '指定数据目录路径')
+    .option('--skip-repl', '启动后不进入 REPL 模式')
+    .option('-v, --verbose', '显示详细日志')
+    .option('--silent', '静默模式')
+    .action(async (options) => {
+    try {
+        // 设置日志级别
+        if (options.verbose) {
+            logger_1.default.setLevel('debug');
+        }
+        else if (options.silent) {
+            logger_1.default.setSilent(true);
+        }
+        const result = await (0, start_1.startCommand)({
+            dataDir: options.dataDir,
+            skipRepl: options.skipRepl,
+        });
+        if (!result.success) {
+            logger_1.default.error(result.error || '启动失败');
+            process.exit(1);
+        }
+        // 如果跳过 REPL，直接退出
+        if (options.skipRepl) {
+            process.exit(0);
+        }
+    }
+    catch (err) {
+        logger_1.default.error(`启动过程出错: ${err instanceof Error ? err.message : String(err)}`);
+        process.exit(1);
+    }
 });
-// stop 命令（占位）
+// stop 命令
 program
     .command('stop')
     .description('停止所有 Ddo 服务')
-    .action(() => {
-    logger_1.default.info(chalk_1.default.yellow('stop 命令尚未实现'));
+    .option('-d, --data-dir <path>', '指定数据目录路径')
+    .option('--include-mysql', '同时停止 MySQL 容器')
+    .option('-v, --verbose', '显示详细日志')
+    .option('--silent', '静默模式')
+    .action(async (options) => {
+    try {
+        // 设置日志级别
+        if (options.verbose) {
+            logger_1.default.setLevel('debug');
+        }
+        else if (options.silent) {
+            logger_1.default.setSilent(true);
+        }
+        const { stopCommand } = await Promise.resolve().then(() => __importStar(require('./commands/stop')));
+        const result = await stopCommand({
+            dataDir: options.dataDir,
+            includeMysql: options.includeMysql,
+        });
+        if (!result.success) {
+            logger_1.default.error(result.error || '停止失败');
+            process.exit(1);
+        }
+        process.exit(0);
+    }
+    catch (err) {
+        logger_1.default.error(`停止过程出错: ${err instanceof Error ? err.message : String(err)}`);
+        process.exit(1);
+    }
 });
-// status 命令（占位）
+// status 命令
 program
     .command('status')
     .description('显示服务状态')
-    .action(() => {
-    logger_1.default.info(chalk_1.default.yellow('status 命令尚未实现'));
+    .option('-d, --data-dir <path>', '指定数据目录路径')
+    .option('-v, --verbose', '显示详细日志')
+    .action(async (options) => {
+    try {
+        // 设置日志级别
+        if (options.verbose) {
+            logger_1.default.setLevel('debug');
+        }
+        const { statusCommand } = await Promise.resolve().then(() => __importStar(require('./commands/status')));
+        const result = await statusCommand({
+            dataDir: options.dataDir,
+        });
+        if (!result.success) {
+            logger_1.default.error(result.error || '查询状态失败');
+            process.exit(1);
+        }
+        process.exit(0);
+    }
+    catch (err) {
+        logger_1.default.error(`查询状态出错: ${err instanceof Error ? err.message : String(err)}`);
+        process.exit(1);
+    }
 });
 // logs 命令（占位）
 program

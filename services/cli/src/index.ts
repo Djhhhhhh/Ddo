@@ -8,6 +8,7 @@
 import { Command } from 'commander';
 import chalk from 'chalk';
 import { initCommand } from './commands/init';
+import { startCommand } from './commands/start';
 import logger from './utils/logger';
 import { resolveDataDir, prettyPath } from './utils/paths';
 
@@ -63,29 +64,108 @@ program
     }
   });
 
-// start 命令（占位）
+// start 命令
 program
   .command('start')
   .description('启动所有 Ddo 服务')
-  .action(() => {
-    logger.info(chalk.yellow('start 命令尚未实现'));
-    logger.info(`请先运行 ${chalk.cyan('ddo init')} 完成初始化`);
+  .option('-d, --data-dir <path>', '指定数据目录路径')
+  .option('--skip-repl', '启动后不进入 REPL 模式')
+  .option('-v, --verbose', '显示详细日志')
+  .option('--silent', '静默模式')
+  .action(async (options) => {
+    try {
+      // 设置日志级别
+      if (options.verbose) {
+        logger.setLevel('debug');
+      } else if (options.silent) {
+        logger.setSilent(true);
+      }
+
+      const result = await startCommand({
+        dataDir: options.dataDir,
+        skipRepl: options.skipRepl,
+      });
+
+      if (!result.success) {
+        logger.error(result.error || '启动失败');
+        process.exit(1);
+      }
+
+      // 如果跳过 REPL，直接退出
+      if (options.skipRepl) {
+        process.exit(0);
+      }
+    } catch (err) {
+      logger.error(`启动过程出错: ${err instanceof Error ? err.message : String(err)}`);
+      process.exit(1);
+    }
   });
 
-// stop 命令（占位）
+// stop 命令
 program
   .command('stop')
   .description('停止所有 Ddo 服务')
-  .action(() => {
-    logger.info(chalk.yellow('stop 命令尚未实现'));
+  .option('-d, --data-dir <path>', '指定数据目录路径')
+  .option('--include-mysql', '同时停止 MySQL 容器')
+  .option('-v, --verbose', '显示详细日志')
+  .option('--silent', '静默模式')
+  .action(async (options) => {
+    try {
+      // 设置日志级别
+      if (options.verbose) {
+        logger.setLevel('debug');
+      } else if (options.silent) {
+        logger.setSilent(true);
+      }
+
+      const { stopCommand } = await import('./commands/stop');
+
+      const result = await stopCommand({
+        dataDir: options.dataDir,
+        includeMysql: options.includeMysql,
+      });
+
+      if (!result.success) {
+        logger.error(result.error || '停止失败');
+        process.exit(1);
+      }
+
+      process.exit(0);
+    } catch (err) {
+      logger.error(`停止过程出错: ${err instanceof Error ? err.message : String(err)}`);
+      process.exit(1);
+    }
   });
 
-// status 命令（占位）
+// status 命令
 program
   .command('status')
   .description('显示服务状态')
-  .action(() => {
-    logger.info(chalk.yellow('status 命令尚未实现'));
+  .option('-d, --data-dir <path>', '指定数据目录路径')
+  .option('-v, --verbose', '显示详细日志')
+  .action(async (options) => {
+    try {
+      // 设置日志级别
+      if (options.verbose) {
+        logger.setLevel('debug');
+      }
+
+      const { statusCommand } = await import('./commands/status');
+
+      const result = await statusCommand({
+        dataDir: options.dataDir,
+      });
+
+      if (!result.success) {
+        logger.error(result.error || '查询状态失败');
+        process.exit(1);
+      }
+
+      process.exit(0);
+    } catch (err) {
+      logger.error(`查询状态出错: ${err instanceof Error ? err.message : String(err)}`);
+      process.exit(1);
+    }
   });
 
 // logs 命令（占位）
