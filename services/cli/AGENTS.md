@@ -2,16 +2,47 @@
 
 ## 📌 作用
 
-一句话描述：[待填充：此服务的核心职责]
+Ddo CLI 是个人智能工作空间的命令行入口，提供交互式操作界面和后台服务生命周期管理。
 
-- 边界：只负责 xxx，不处理 xxx
-- 调用关系：被 xxx 调用，调用 xxx
+- 边界：
+  - **负责**：服务初始化、启动/停止/状态管理、REPL 交互、定时任务调度、知识库管理
+  - **不负责**：LLM 推理（委托给 llm-py）、数据持久化逻辑（委托给 server-go）、Web UI（仅触发启动）
+- 调用关系：
+  - 被用户调用（CLI 入口）
+  - 调用 Docker API（管理 MySQL 容器）
+  - 调用 server-go API（状态查询、数据操作）
+  - 调用 llm-py API（REPL 自然语言处理）
 
 ## 📂 目录结构
 
 ```
-cli/
-├── [待填充：列出主要目录，如 src/ handlers/]
+services/cli/
+├── src/
+│   ├── index.ts              # CLI 入口，命令注册和解析
+│   ├── commands/
+│   │   └── init.ts           # init 命令实现
+│   ├── templates/
+│   │   ├── config.yaml.ts    # 配置文件模板
+│   │   └── docker-compose.yml.ts  # Docker Compose 模板
+│   ├── utils/
+│   │   ├── index.ts          # 工具模块导出
+│   │   ├── logger.ts         # 终端日志输出工具
+│   │   ├── paths.ts          # 路径解析工具
+│   │   └── docker.ts         # Docker 操作封装
+│   └── types/
+│       └── index.ts          # TypeScript 类型定义
+├── dist/                     # 编译输出（自动构建）
+├── docs/
+│   ├── roadmap/
+│   │   └── mvp.md            # MVP 需求文档
+│   └── feature/              # 技术方案目录
+│       └── 2026-04-14-ddo-init/
+│           └── 技术方案.md
+├── .claude/
+│   └── rules/
+│       └── rules.md          # 服务规则文件
+├── package.json              # npm 配置
+├── tsconfig.json             # TypeScript 配置
 └── AGENTS.md (本文件)
 ```
 
@@ -48,8 +79,9 @@ cli/
 硬性红线（违反会导致架构混乱）：
 - ❌ 跨 service import（只能调 API，不能 import 包）
 - ❌ 直接修改其他 service 的代码
-- ❌ [待补充：具体的禁止行为，由开发过程中发现]
+- ❌ 在 CLI 中实现 LLM 推理逻辑（应调用 llm-py）
+- ❌ 在 CLI 中直接操作 MySQL 数据库（应通过 server-go API）
 
 ## 🕒 最后更新时间
 
-2026-04-13 20:58:54
+2026-04-14 16:00:00

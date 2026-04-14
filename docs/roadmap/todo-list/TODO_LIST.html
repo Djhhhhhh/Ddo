@@ -1,0 +1,884 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ddo 项目 - 开发任务追踪</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary: #2563eb;
+            --primary-dark: #1d4ed8;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+            --gray-50: #f9fafb;
+            --gray-100: #f3f4f6;
+            --gray-200: #e5e7eb;
+            --gray-300: #d1d5db;
+            --gray-400: #9ca3af;
+            --gray-500: #545a66;
+            --gray-600: #4b5563;
+            --gray-700: #374151;
+            --gray-800: #1f2937;
+            --gray-900: #111827;
+            --radius: 8px;
+            --shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+            --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: var(--gray-50);
+            color: var(--gray-800);
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 24px;
+        }
+
+        /* Header */
+        .header {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            color: white;
+            padding: 40px 24px;
+            border-radius: var(--radius);
+            margin-bottom: 24px;
+            box-shadow: var(--shadow-lg);
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin-bottom: 8px;
+        }
+
+        .header-desc {
+            opacity: 0.9;
+            font-size: 1.1rem;
+        }
+
+        /* Stats Cards */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 16px;
+            margin-bottom: 32px;
+        }
+
+        .stat-card {
+            background: white;
+            padding: 20px;
+            border-radius: var(--radius);
+            box-shadow: var(--shadow);
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .stat-icon {
+            width: 48px;
+            height: 48px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+        }
+
+        .stat-icon.pending { background: #fef3c7; }
+        .stat-icon.progress { background: #dbeafe; }
+        .stat-icon.done { background: #d1fae5; }
+
+        .stat-content h3 {
+            font-size: 1.75rem;
+            font-weight: 700;
+            color: var(--gray-900);
+        }
+
+        .stat-content p {
+            color: var(--gray-500);
+            font-size: 0.875rem;
+        }
+
+        /* Progress Overview */
+        .progress-section {
+            background: white;
+            padding: 24px;
+            border-radius: var(--radius);
+            box-shadow: var(--shadow);
+            margin-bottom: 32px;
+        }
+
+        .progress-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+        }
+
+        .progress-header h2 {
+            font-size: 1.25rem;
+            font-weight: 600;
+        }
+
+        .progress-bar {
+            height: 12px;
+            background: var(--gray-200);
+            border-radius: 6px;
+            overflow: hidden;
+            display: flex;
+        }
+
+        .progress-segment {
+            height: 100%;
+            transition: all 0.3s ease;
+        }
+
+        .progress-segment.done { background: var(--success); }
+        .progress-segment.progress { background: var(--primary); }
+
+        .progress-legend {
+            display: flex;
+            gap: 24px;
+            margin-top: 12px;
+            flex-wrap: wrap;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.875rem;
+            color: var(--gray-600);
+        }
+
+        .legend-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 3px;
+        }
+
+        .legend-dot.done { background: var(--success); }
+        .legend-dot.progress { background: var(--primary); }
+        .legend-dot.pending { background: var(--gray-300); }
+
+        /* Phase Sections */
+        .phases-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(420px, 1fr));
+            gap: 24px;
+        }
+
+        .phase-card {
+            background: white;
+            border-radius: var(--radius);
+            box-shadow: var(--shadow);
+            overflow: hidden;
+        }
+
+        .phase-header {
+            padding: 20px 24px;
+            border-bottom: 1px solid var(--gray-200);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .phase-title {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .phase-badge {
+            width: 40px;
+            height: 40px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 1rem;
+        }
+
+        .phase-badge.p1 { background: #fef3c7; color: #92400e; }
+        .phase-badge.p2 { background: #dbeafe; color: #1e40af; }
+        .phase-badge.p3 { background: #fce7f3; color: #9d174d; }
+
+        .phase-info h3 {
+            font-size: 1.1rem;
+            font-weight: 600;
+        }
+
+        .phase-info p {
+            font-size: 0.875rem;
+            color: var(--gray-500);
+        }
+
+        .phase-status {
+            font-size: 0.75rem;
+            font-weight: 600;
+            padding: 4px 12px;
+            border-radius: 20px;
+            text-transform: uppercase;
+        }
+
+        .phase-status.blocked {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+
+        .phase-status.active {
+            background: #dbeafe;
+            color: #1e40af;
+        }
+
+        .phase-status.pending {
+            background: var(--gray-100);
+            color: var(--gray-600);
+        }
+
+        .phase-status.completed {
+            background: #d1fae5;
+            color: #065f46;
+        }
+
+        .phase-body {
+            padding: 16px;
+        }
+
+        .task-group {
+            margin-bottom: 16px;
+        }
+
+        .task-group:last-child {
+            margin-bottom: 0;
+        }
+
+        .group-title {
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: var(--gray-500);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 8px;
+            padding-left: 8px;
+        }
+
+        .task-list {
+            list-style: none;
+        }
+
+        .task-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+            padding: 12px;
+            border-radius: var(--radius);
+            cursor: pointer;
+            transition: all 0.2s ease;
+            border: 2px solid transparent;
+        }
+
+        .task-item:hover {
+            background: var(--gray-50);
+        }
+
+        .task-item.active-task {
+            border-color: var(--primary);
+            background: #eff6ff;
+        }
+
+        .checkbox {
+            width: 22px;
+            height: 22px;
+            border: 2px solid var(--gray-300);
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            margin-top: 2px;
+            transition: all 0.2s ease;
+            cursor: pointer;
+        }
+
+        .checkbox:hover {
+            border-color: var(--primary);
+        }
+
+        .checkbox.checked {
+            background: var(--success);
+            border-color: var(--success);
+        }
+
+        .checkbox.checked::after {
+            content: '✓';
+            color: white;
+            font-weight: 700;
+            font-size: 0.875rem;
+        }
+
+        .checkbox.in-progress {
+            background: var(--primary);
+            border-color: var(--primary);
+        }
+
+        .checkbox.in-progress::after {
+            content: '◐';
+            color: white;
+            font-weight: 700;
+            font-size: 0.75rem;
+        }
+
+        .task-content {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .task-title {
+            font-weight: 500;
+            margin-bottom: 4px;
+            word-break: break-word;
+        }
+
+        .task-item.done .task-title {
+            text-decoration: line-through;
+            color: var(--gray-400);
+        }
+
+        .task-meta {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+
+        .task-tag {
+            font-size: 0.75rem;
+            padding: 2px 8px;
+            border-radius: 4px;
+            background: var(--gray-100);
+            color: var(--gray-600);
+        }
+
+        .task-tag.module-cli { background: #fef3c7; color: #92400e; }
+        .task-tag.module-llm { background: #dbeafe; color: #1e40af; }
+        .task-tag.module-server { background: #fce7f3; color: #9d174d; }
+        .task-tag.module-web { background: #d1fae5; color: #065f46; }
+        .task-tag.priority-high { background: #fee2e2; color: #991b1b; }
+
+        .task-actions {
+            display: flex;
+            gap: 4px;
+            opacity: 0;
+            transition: opacity 0.2s ease;
+        }
+
+        .task-item:hover .task-actions {
+            opacity: 1;
+        }
+
+        .action-btn {
+            width: 28px;
+            height: 28px;
+            border: none;
+            background: transparent;
+            border-radius: 6px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--gray-400);
+            transition: all 0.2s ease;
+        }
+
+        .action-btn:hover {
+            background: var(--gray-100);
+            color: var(--gray-700);
+        }
+
+        .action-btn.play:hover {
+            background: #dbeafe;
+            color: var(--primary);
+        }
+
+        /* Current Focus Section */
+        .focus-section {
+            background: linear-gradient(135deg, #1f2937 0%, #111827 100%);
+            color: white;
+            padding: 24px;
+            border-radius: var(--radius);
+            margin-bottom: 32px;
+            box-shadow: var(--shadow-lg);
+        }
+
+        .focus-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+
+        .focus-header h2 {
+            font-size: 1.25rem;
+            font-weight: 600;
+        }
+
+        .pulse {
+            width: 12px;
+            height: 12px;
+            background: var(--success);
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        .focus-tasks {
+            display: grid;
+            gap: 12px;
+        }
+
+        .focus-task {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 16px 20px;
+            border-radius: var(--radius);
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .focus-task .task-number {
+            width: 32px;
+            height: 32px;
+            background: var(--primary);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            flex-shrink: 0;
+        }
+
+        .focus-task .task-info h4 {
+            font-weight: 600;
+            margin-bottom: 4px;
+        }
+
+        .focus-task .task-info p {
+            font-size: 0.875rem;
+            opacity: 0.8;
+        }
+
+        /* Quick Actions */
+        .quick-actions {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 32px;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            padding: 10px 20px;
+            border-radius: var(--radius);
+            font-weight: 500;
+            cursor: pointer;
+            border: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.2s ease;
+            font-size: 0.9rem;
+        }
+
+        .btn-primary {
+            background: var(--primary);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: var(--primary-dark);
+        }
+
+        .btn-secondary {
+            background: white;
+            color: var(--gray-700);
+            border: 1px solid var(--gray-200);
+        }
+
+        .btn-secondary:hover {
+            background: var(--gray-50);
+        }
+
+        /* Modal */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s ease;
+        }
+
+        .modal-overlay.active {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .modal {
+            background: white;
+            border-radius: var(--radius);
+            width: 90%;
+            max-width: 500px;
+            box-shadow: var(--shadow-lg);
+            transform: scale(0.9);
+            transition: transform 0.3s ease;
+        }
+
+        .modal-overlay.active .modal {
+            transform: scale(1);
+        }
+
+        .modal-header {
+            padding: 20px 24px;
+            border-bottom: 1px solid var(--gray-200);
+        }
+
+        .modal-header h3 {
+            font-size: 1.25rem;
+            font-weight: 600;
+        }
+
+        .modal-body {
+            padding: 24px;
+        }
+
+        .form-group {
+            margin-bottom: 16px;
+        }
+
+        .form-group label {
+            display: block;
+            font-weight: 500;
+            margin-bottom: 6px;
+            font-size: 0.875rem;
+        }
+
+        .form-group input,
+        .form-group select,
+        .form-group textarea {
+            width: 100%;
+            padding: 10px 12px;
+            border: 1px solid var(--gray-300);
+            border-radius: var(--radius);
+            font-size: 0.9rem;
+            transition: border-color 0.2s ease;
+        }
+
+        .form-group input:focus,
+        .form-group select:focus,
+        .form-group textarea:focus {
+            outline: none;
+            border-color: var(--primary);
+        }
+
+        .form-group textarea {
+            resize: vertical;
+            min-height: 80px;
+        }
+
+        .modal-footer {
+            padding: 16px 24px;
+            border-top: 1px solid var(--gray-200);
+            display: flex;
+            justify-content: flex-end;
+            gap: 12px;
+        }
+
+        /* Toast */
+        .toast {
+            position: fixed;
+            bottom: 24px;
+            right: 24px;
+            background: var(--gray-800);
+            color: white;
+            padding: 12px 20px;
+            border-radius: var(--radius);
+            box-shadow: var(--shadow-lg);
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            transform: translateY(100px);
+            opacity: 0;
+            transition: all 0.3s ease;
+            z-index: 1001;
+        }
+
+        .toast.show {
+            transform: translateY(0);
+            opacity: 1;
+        }
+
+        /* Empty State */
+        .empty-state {
+            text-align: center;
+            padding: 48px 24px;
+            color: var(--gray-500);
+        }
+
+        .empty-state-icon {
+            font-size: 3rem;
+            margin-bottom: 16px;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .container {
+                padding: 16px;
+            }
+
+            .header h1 {
+                font-size: 1.75rem;
+            }
+
+            .phases-container {
+                grid-template-columns: 1fr;
+            }
+
+            .stats-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+
+            .task-actions {
+                opacity: 1;
+            }
+        }
+
+        /* Export buttons */
+        .export-section {
+            position: fixed;
+            bottom: 24px;
+            left: 24px;
+            display: flex;
+            gap: 8px;
+        }
+
+        .fab {
+            width: 48px;
+            height: 48px;
+            border-radius: 50%;
+            background: var(--primary);
+            color: white;
+            border: none;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.25rem;
+            box-shadow: var(--shadow-lg);
+            transition: all 0.2s ease;
+        }
+
+        .fab:hover {
+            background: var(--primary-dark);
+            transform: scale(1.1);
+        }
+
+        .tooltip {
+            position: relative;
+        }
+
+        .tooltip::before {
+            content: attr(data-tooltip);
+            position: absolute;
+            bottom: 100%;
+            left: 50%;
+            transform: translateX(-50%);
+            padding: 6px 12px;
+            background: var(--gray-800);
+            color: white;
+            font-size: 0.75rem;
+            border-radius: 4px;
+            white-space: nowrap;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.2s ease;
+            margin-bottom: 8px;
+        }
+
+        .tooltip:hover::before {
+            opacity: 1;
+            visibility: visible;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <header class="header">
+            <h1>🚀 Ddo 项目开发追踪</h1>
+            <p class="header-desc">基于路线图 dev-workflow.md 的任务管理与进度追踪系统</p>
+        </header>
+
+        <!-- Stats -->
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-icon pending">⏳</div>
+                <div class="stat-content">
+                    <h3 id="stat-pending">0</h3>
+                    <p>待开始任务</p>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon progress">▶️</div>
+                <div class="stat-content">
+                    <h3 id="stat-progress">0</h3>
+                    <p>进行中任务</p>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon done">✅</div>
+                <div class="stat-content">
+                    <h3 id="stat-done">0</h3>
+                    <p>已完成任务</p>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon" style="background: #e0e7ff;">📊</div>
+                <div class="stat-content">
+                    <h3 id="stat-percent">0%</h3>
+                    <p>总体进度</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Current Focus -->
+        <div class="focus-section" id="focus-section">
+            <div class="focus-header">
+                <div class="pulse"></div>
+                <h2>🎯 当前应该开始做的任务</h2>
+            </div>
+            <div class="focus-tasks" id="focus-tasks">
+                <!-- 动态生成 -->
+            </div>
+        </div>
+
+        <!-- Quick Actions -->
+        <div class="quick-actions">
+            <button class="btn btn-primary" onclick="startNextTask()">
+                ▶️ 开始下一项任务
+            </button>
+            <button class="btn btn-secondary" onclick="openModal()">
+                ➕ 添加自定义任务
+            </button>
+            <button class="btn btn-secondary" onclick="resetAllTasks()">
+                🔄 重置所有进度
+            </button>
+        </div>
+
+        <!-- Progress Overview -->
+        <div class="progress-section">
+            <div class="progress-header">
+                <h2>📈 总体进度</h2>
+                <span id="progress-text">0/0 完成</span>
+            </div>
+            <div class="progress-bar" id="progress-bar">
+                <!-- 动态生成 -->
+            </div>
+            <div class="progress-legend">
+                <div class="legend-item">
+                    <div class="legend-dot done"></div>
+                    <span>已完成</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-dot progress"></div>
+                    <span>进行中</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-dot pending"></div>
+                    <span>待开始</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Phases -->
+        <div class="phases-container" id="phases-container">
+            <!-- 动态生成 -->
+        </div>
+    </div>
+
+    <!-- Add Task Modal -->
+    <div class="modal-overlay" id="modal">
+        <div class="modal">
+            <div class="modal-header">
+                <h3>添加新任务</h3>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label>任务名称</label>
+                    <input type="text" id="task-name" placeholder="输入任务名称">
+                </div>
+                <div class="form-group">
+                    <label>所属阶段</label>
+                    <select id="task-phase">
+                        <option value="p1">Phase 1: 基础设施</option>
+                        <option value="p2">Phase 2: 核心能力</option>
+                        <option value="p3">Phase 3: 扩展层</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>负责模块</label>
+                    <select id="task-module">
+                        <option value="cli">CLI (Node.js)</option>
+                        <option value="llm">llm-py (Python)</option>
+                        <option value="server">server-go (Go)</option>
+                        <option value="web">web-ui (Vue)</option>
+                        <option value="other">其他</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>备注说明</label>
+                    <textarea id="task-notes" placeholder="可选：添加任务说明..."></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeModal()">取消</button>
+                <button class="btn btn-primary" onclick="addTask()">添加任务</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast -->
+    <div class="toast" id="toast">
+        <span id="toast-message">操作成功</span>
+    </div>
+
+    <!-- Export FABs -->
+    <div class="export-section">
+        <button class="fab tooltip" data-tooltip="导出为 Markdown" onclick="exportMarkdown()">📝</button>
+        <button class="fab tooltip" data-tooltip="导出为 JSON" onclick="exportJSON()">💾</button>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
