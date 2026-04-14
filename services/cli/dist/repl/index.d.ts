@@ -18,4 +18,11 @@ export interface ReplOptions {
  * 启动 REPL 交互模式
  */
 export declare function startRepl(options: ReplOptions): Promise<void>;
+/**
+ * 重新显示欢迎信息（用于 clear 命令）
+ */
+export declare function showWelcomeAgain(): void;
+export { parseCommand } from './parser';
+export { ModeManager, ReplMode, type ModeInfo } from './mode';
+export { registry, type CommandContext, type ReplCommand } from './commands';
 //# sourceMappingURL=index.d.ts.map

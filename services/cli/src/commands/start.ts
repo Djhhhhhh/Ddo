@@ -137,16 +137,13 @@ export async function startCommand(options: StartOptions = {}): Promise<{
     });
   }
 
-  // 如果没有任何服务，给出提示
+  // 如果没有任何服务，给出提示但仍继续进入 REPL
+  let noBackendServices = false;
   if (allServices.length === 0) {
     logger.warn('未找到任何后端服务目录');
-    logger.info('当前功能受限，您仍然可以使用以下命令:');
-    logger.info(`  ${logger.command('ddo init')}   初始化或重置配置`);
-    logger.info(`  ${logger.command('ddo status')}  查看服务状态`);
-    logger.info(`  ${logger.command('ddo stop')}    停止所有服务`);
+    logger.info('当前仅 CLI 可用，部分功能受限');
     logger.newline();
-    logger.info('请先开发 server-go、llm-py、web-ui 服务后再使用 ddo start');
-    return { success: true };
+    noBackendServices = true;
   }
 
   const services = allServices;
@@ -173,46 +170,50 @@ export async function startCommand(options: StartOptions = {}): Promise<{
     }
   }
 
-  // 8. 启动服务
-  logger.newline();
-  logger.section('启动服务');
+  // 8. 启动服务（如果有的话）
+  let runningStatuses: ServiceStatus[] = [];
 
-  // 只启动未运行的服务
-  const servicesToStart = services.filter((s) => {
-    const status = manager.getStatus(s);
-    return !status.running;
-  });
+  if (!noBackendServices) {
+    logger.newline();
+    logger.section('启动服务');
 
-  if (servicesToStart.length === 0) {
-    logger.success('所有服务已在运行');
-  } else {
-    const startResult = await manager.startAll(servicesToStart);
+    // 只启动未运行的服务
+    const servicesToStart = services.filter((s) => {
+      const status = manager.getStatus(s);
+      return !status.running;
+    });
 
-    if (!startResult.success) {
-      return {
-        success: false,
-        error: '部分服务启动失败，请查看日志',
-      };
+    if (servicesToStart.length === 0) {
+      logger.success('所有服务已在运行');
+    } else {
+      const startResult = await manager.startAll(servicesToStart);
+
+      if (!startResult.success) {
+        return {
+          success: false,
+          error: '部分服务启动失败，请查看日志',
+        };
+      }
+
+      logger.newline();
+      logger.success('所有服务已启动');
     }
 
+    // 9. 输出服务信息
     logger.newline();
-    logger.success('所有服务已启动');
+    logger.divider();
+    logger.section('服务访问地址');
+
+    runningStatuses = services.map((s) => manager.getStatus(s));
+
+    for (const service of runningStatuses) {
+      const status = service.running ? chalk.green('● 运行中') : chalk.red('● 已停止');
+      console.log(`  ${status} ${service.displayName.padEnd(12)} ${chalk.cyan(service.healthUrl)}`);
+    }
+
+    logger.divider();
+    logger.newline();
   }
-
-  // 9. 输出服务信息
-  logger.newline();
-  logger.divider();
-  logger.section('服务访问地址');
-
-  const runningStatuses = services.map((s) => manager.getStatus(s));
-
-  for (const service of runningStatuses) {
-    const status = service.running ? chalk.green('● 运行中') : chalk.red('● 已停止');
-    console.log(`  ${status} ${service.displayName.padEnd(12)} ${chalk.cyan(service.healthUrl)}`);
-  }
-
-  logger.divider();
-  logger.newline();
 
   // 10. 进入 REPL 或退出
   if (options.skipRepl) {
@@ -223,14 +224,22 @@ export async function startCommand(options: StartOptions = {}): Promise<{
   logger.info('正在进入 REPL 交互模式...');
   logger.newline();
 
+  // 准备服务状态列表（如果没有后端服务，只显示 CLI）
+  const replServices = runningStatuses.length > 0
+    ? runningStatuses.map((s) => ({
+        name: s.name,
+        displayName: s.displayName,
+        running: s.running,
+        port: s.port,
+      }))
+    : [
+        { name: 'cli', displayName: 'CLI', running: true, port: 0 },
+        { name: 'mysql', displayName: 'MySQL', running: true, port: 3306 },
+      ];
+
   // 进入 REPL
   await startRepl({
-    services: runningStatuses.map((s) => ({
-      name: s.name,
-      displayName: s.displayName,
-      running: s.running,
-      port: s.port,
-    })),
+    services: replServices,
   });
 
   return { success: true };

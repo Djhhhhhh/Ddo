@@ -1,0 +1,1 @@
+{"version":3,"file":"completer.d.ts","sourceRoot":"","sources":["../../src/repl/completer.ts"],"names":[],"mappings":"AAAA;;GAEG;AAGH,OAAO,EAAE,WAAW,EAAY,MAAM,QAAQ,CAAC;AAE/C;;GAEG;AACH,MAAM,WAAW,eAAe;IAC9B,WAAW;IACX,WAAW,EAAE,MAAM,EAAE,CAAC;IACtB,cAAc;IACd,OAAO,EAAE,MAAM,CAAC;CACjB;AAED;;GAEG;AACH,wBAAgB,eAAe,CAAC,WAAW,EAAE,WAAW,IAC9C,MAAM,MAAM,KAAG,eAAe,CA4DvC"}

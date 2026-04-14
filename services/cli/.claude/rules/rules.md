@@ -11,21 +11,32 @@
   - 用户交互（REPL、命令输出）
 - 所有业务逻辑通过 API 调用委托给 server-go 或 llm-py
 - 目录结构：
-  - `src/commands/` - CLI 命令实现
+  - `src/commands/` - CLI 命令实现（init、start、stop、status、logs）
   - `src/services/` - 服务管理模块（PID文件、健康检查、进程管理）
-  - `src/repl/` - REPL 交互模式
+  - `src/repl/` - REPL 交互模式（命令解析、模式管理、命令注册）
+    - `src/repl/parser.ts` - 命令解析，支持参数、flags、引号字符串
+    - `src/repl/mode.ts` - 模式管理（Default/Chat/Kb/Timer/Mcp）
+    - `src/repl/commands/` - REPL 命令实现（/exit、/help、/chat、/status、/kb、/timer、/mcp）
+    - `src/repl/completer.ts` - Tab 自动补全
   - `src/utils/` - 通用工具函数
   - `src/templates/` - 配置文件模板
   - `src/types/` - TypeScript 类型定义
+- REPL 命令架构（发现日期：2026-04-14）：
+  - 使用 `registry` 单例注册所有命令
+  - 命令定义实现 `ReplCommand` 接口，包含 name、description、aliases、handler
+  - 支持子命令模式（/kb、/timer、/mcp），模式内直接输入子命令
+  - 解析器支持 `-a`、`-abc` 组合选项、`--long`、`--key=value` 格式
 
 ## 代码规范
 
 - 使用 TypeScript + strict 模式
 - CLI 命令采用 async/await 编写，统一返回 `{ success, data, error }` 结构
+- REPL 命令 handler 返回 `Promise<boolean>`，`true` 表示继续 REPL，`false` 表示退出（发现日期：2026-04-14）
 - 用户输出统一使用 `logger.ts`，支持级别控制（debug/info/warn/error）
 - 路径处理统一使用 `path.ts` 中的工具函数，支持 Windows/macOS 跨平台
 - Docker 操作统一封装在 `docker.ts`，错误处理要友好
 - 服务管理统一使用 `services/manager.ts`，包含 PID 文件管理、健康检查、进程启停
+- REPL 命令通过 `registry.register()` 注册，支持 name + aliases 多名称映射
 
 ## 常见陷阱
 

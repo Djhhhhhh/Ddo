@@ -40,23 +40,75 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
+exports.registry = exports.ReplMode = exports.ModeManager = exports.parseCommand = void 0;
 exports.startRepl = startRepl;
+exports.showWelcomeAgain = showWelcomeAgain;
 const readline = __importStar(require("readline"));
 const chalk_1 = __importDefault(require("chalk"));
 const logger_1 = __importDefault(require("../utils/logger"));
+const parser_1 = require("./parser");
+const mode_1 = require("./mode");
+const commands_1 = require("./commands");
+const completer_1 = require("./completer");
+// 导入并注册所有命令
+const exit_1 = require("./commands/exit");
+const help_1 = require("./commands/help");
+const chat_1 = require("./commands/chat");
+const clear_1 = require("./commands/clear");
+const status_1 = require("./commands/status");
+const mode_switch_1 = require("./commands/mode-switch");
+// 注册命令
+commands_1.registry.register(exit_1.exitCommand);
+commands_1.registry.register(exit_1.backCommand);
+commands_1.registry.register(help_1.helpCommand);
+commands_1.registry.register(chat_1.chatCommand);
+commands_1.registry.register(clear_1.clearCommand);
+commands_1.registry.register(status_1.statusCommand);
+commands_1.registry.register(mode_switch_1.kbCommand);
+commands_1.registry.register(mode_switch_1.timerCommand);
+commands_1.registry.register(mode_switch_1.mcpCommand);
+// ASCII 艺术字
+const ASCII_ART = `
+ /$$$$$$$        /$$
+| $$__  $$      | $$
+| $$  \\ $$  /$$$$$$$  /$$$$$$
+| $$  | $$ /$$__  $$ /$$__  $$
+| $$  | $$| $$  | $$| $$  \\ $$
+| $$  | $$| $$  | $$| $$  | $$
+| $$$$$$$/|  $$$$$$$|  $$$$$$/
+|_______/  \\_______/ \\______/
+`;
+// 保存 REPL 实例用于 clear 命令
+let replInstance = null;
 /**
  * 启动 REPL 交互模式
  */
 async function startRepl(options) {
     const { services } = options;
+    // 保存实例供 clear 命令使用
+    replInstance = { services };
+    // 创建模式管理器
+    const modeManager = new mode_1.ModeManager();
     // 显示欢迎信息
     showWelcome(services);
+    // 创建自动补全器
+    const completer = (0, completer_1.createCompleter)(modeManager);
     // 创建 readline 接口
     const rl = readline.createInterface({
         input: process.stdin,
         output: process.stdout,
-        prompt: chalk_1.default.cyan('ddo> '),
+        prompt: modeManager.getPrompt(),
+        completer: (line) => {
+            const result = completer(line);
+            return [result.completions, result.matched];
+        },
     });
+    // 监听模式变化，更新提示符
+    const originalSetMode = modeManager.setMode.bind(modeManager);
+    modeManager.setMode = (mode) => {
+        originalSetMode(mode);
+        rl.setPrompt(modeManager.getPrompt());
+    };
     // 设置提示符
     rl.prompt();
     // 处理输入
@@ -66,9 +118,19 @@ async function startRepl(options) {
             rl.prompt();
             return;
         }
-        // 处理命令
-        await handleCommand(trimmed, rl);
-        rl.prompt();
+        // 解析命令
+        const parsed = (0, parser_1.parseCommand)(trimmed);
+        // 如果有解析错误，显示警告
+        if (parsed.errors.length > 0) {
+            console.log(chalk_1.default.yellow('警告:'), parsed.errors.join(', '));
+        }
+        // 执行命令
+        const shouldContinue = await (0, commands_1.executeCommand)(parsed, rl, modeManager);
+        // 更新提示符（模式可能已改变）
+        rl.setPrompt(modeManager.getPrompt());
+        if (shouldContinue) {
+            rl.prompt();
+        }
     });
     // 处理退出
     rl.on('close', () => {
@@ -83,8 +145,10 @@ async function startRepl(options) {
  */
 function showWelcome(services) {
     console.clear();
+    // 显示 ASCII 艺术字
+    console.log(chalk_1.default.cyan(ASCII_ART));
     logger_1.default.divider();
-    console.log(chalk_1.default.bold.cyan('  Ddo - 个人智能工作空间'));
+    console.log(chalk_1.default.bold.cyan('  个人智能工作空间'));
     logger_1.default.divider();
     console.log();
     console.log(chalk_1.default.gray('运行中的服务:'));
@@ -94,109 +158,33 @@ function showWelcome(services) {
     }
     console.log();
     console.log(chalk_1.default.gray('可用命令:'));
-    console.log(`  ${chalk_1.default.yellow('/chat <message>')}  与 AI 助手对话`);
+    console.log(`  ${chalk_1.default.yellow('/chat <msg>')}     与 AI 助手对话`);
+    console.log(`  ${chalk_1.default.yellow('/kb')}             进入知识库管理模式`);
+    console.log(`  ${chalk_1.default.yellow('/timer')}          进入定时任务管理模式`);
+    console.log(`  ${chalk_1.default.yellow('/mcp')}            进入 MCP 管理模式`);
     console.log(`  ${chalk_1.default.yellow('/status')}         查看服务状态`);
-    console.log(`  ${chalk_1.default.yellow('/web')}            打开 Web Dashboard`);
     console.log(`  ${chalk_1.default.yellow('/exit')}           退出 REPL`);
     console.log();
     console.log(chalk_1.default.gray('直接输入自然语言描述任务，AI 将自动理解并执行'));
+    console.log(chalk_1.default.gray('按 Tab 键可查看命令补全提示'));
     console.log();
     logger_1.default.divider();
     console.log();
 }
 /**
- * 处理命令
+ * 重新显示欢迎信息（用于 clear 命令）
  */
-async function handleCommand(input, rl) {
-    // 命令模式（以 / 开头）
-    if (input.startsWith('/')) {
-        const parts = input.slice(1).split(' ');
-        const cmd = parts[0].toLowerCase();
-        const args = parts.slice(1);
-        switch (cmd) {
-            case 'exit':
-            case 'quit':
-            case 'q':
-                console.log(chalk_1.default.gray('正在退出...'));
-                rl.close();
-                break;
-            case 'status':
-                await showStatus();
-                break;
-            case 'web':
-                console.log(chalk_1.default.yellow('Web Dashboard 尚未实现'));
-                break;
-            case 'chat':
-                if (args.length === 0) {
-                    console.log(chalk_1.default.yellow('请输入对话内容，例如: /chat 你好'));
-                }
-                else {
-                    console.log(chalk_1.default.gray('正在发送请求到 llm-py...'));
-                    console.log(chalk_1.default.yellow('chat 命令尚未完整实现'));
-                }
-                break;
-            case 'kb':
-                console.log(chalk_1.default.yellow('知识库管理命令尚未实现'));
-                break;
-            case 'timer':
-                console.log(chalk_1.default.yellow('定时任务命令尚未实现'));
-                break;
-            case 'mcp':
-                console.log(chalk_1.default.yellow('MCP 管理命令尚未实现'));
-                break;
-            case 'help':
-            case 'h':
-                showHelp();
-                break;
-            case 'clear':
-                console.clear();
-                break;
-            default:
-                console.log(chalk_1.default.red(`未知命令: /${cmd}`));
-                console.log(chalk_1.default.gray('输入 /help 查看可用命令'));
-        }
-    }
-    else {
-        // 自然语言模式
-        await handleNaturalLanguage(input);
+function showWelcomeAgain() {
+    if (replInstance) {
+        showWelcome(replInstance.services);
     }
 }
-/**
- * 处理自然语言输入
- */
-async function handleNaturalLanguage(input) {
-    console.log(chalk_1.default.gray('正在理解您的意图...'));
-    console.log(chalk_1.default.yellow('自然语言处理尚未完整实现，请使用 /chat 命令'));
-    console.log();
-    console.log(chalk_1.default.gray('您输入的是:'), input);
-}
-/**
- * 显示服务状态
- */
-async function showStatus() {
-    console.log(chalk_1.default.cyan('\n服务状态:'));
-    console.log(chalk_1.default.gray('  状态检查功能将在后续完善\n'));
-}
-/**
- * 显示帮助信息
- */
-function showHelp() {
-    console.log();
-    console.log(chalk_1.default.bold.cyan('Ddo REPL 帮助'));
-    console.log();
-    console.log(chalk_1.default.gray('自然语言模式:'));
-    console.log('  直接输入任务描述，AI 将自动解析并执行');
-    console.log();
-    console.log(chalk_1.default.gray('命令模式:'));
-    console.log(`  ${chalk_1.default.yellow('/chat <message>')}  与 AI 助手对话`);
-    console.log(`  ${chalk_1.default.yellow('/kb')}             进入知识库管理模式`);
-    console.log(`  ${chalk_1.default.yellow('/timer')}          进入定时任务管理模式`);
-    console.log(`  ${chalk_1.default.yellow('/mcp')}            进入 MCP 管理模式`);
-    console.log(`  ${chalk_1.default.yellow('/status')}         查看所有服务状态`);
-    console.log(`  ${chalk_1.default.yellow('/web')}            打开 Web Dashboard`);
-    console.log(`  ${chalk_1.default.yellow('/clear')}          清屏`);
-    console.log(`  ${chalk_1.default.yellow('/exit')}           退出 REPL`);
-    console.log(`  ${chalk_1.default.yellow('/help')}           显示帮助`);
-    console.log();
-}
+// 导出组件供外部使用
+var parser_2 = require("./parser");
+Object.defineProperty(exports, "parseCommand", { enumerable: true, get: function () { return parser_2.parseCommand; } });
+var mode_2 = require("./mode");
+Object.defineProperty(exports, "ModeManager", { enumerable: true, get: function () { return mode_2.ModeManager; } });
+Object.defineProperty(exports, "ReplMode", { enumerable: true, get: function () { return mode_2.ReplMode; } });
+var commands_2 = require("./commands");
+Object.defineProperty(exports, "registry", { enumerable: true, get: function () { return commands_2.registry; } });
 //# sourceMappingURL=index.js.map

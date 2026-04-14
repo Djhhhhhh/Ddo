@@ -30,7 +30,18 @@ services/cli/
 │   │   ├── pid-file.ts       # PID 文件操作 - 读写进程ID
 │   │   └── health-check.ts   # 健康检查 - HTTP 轮询检查服务就绪
 │   ├── repl/
-│   │   └── index.ts          # REPL 交互模式
+│   │   ├── index.ts          # REPL 入口，命令分发和自然语言处理
+│   │   ├── parser.ts         # 命令解析器 - 支持参数、选项、引号字符串（2026-04-14）
+│   │   ├── mode.ts           # 模式管理器 - 管理 Default/Chat/Kb/Timer/Mcp 模式（2026-04-14）
+│   │   ├── completer.ts      # Tab 自动补全（2026-04-14）
+│   │   └── commands/         # REPL 命令目录（2026-04-14）
+│   │       ├── index.ts      # 命令注册中心和接口定义
+│   │       ├── chat.ts       # /chat 命令 - AI 对话和聊天模式
+│   │       ├── status.ts     # /status 命令 - 服务状态查看
+│   │       ├── exit.ts       # /exit、/back 命令
+│   │       ├── help.ts       # /help 命令 - 帮助系统
+│   │       ├── clear.ts      # /clear 命令
+│   │       └── mode-switch.ts # /kb、/timer、/mcp 模式切换命令
 │   ├── templates/
 │   │   ├── config.yaml.ts    # 配置文件模板
 │   │   └── docker-compose.yml.ts  # Docker Compose 模板
@@ -95,4 +106,4 @@ services/cli/
 
 ## 🕒 最后更新时间
 
-2026-04-14 18:00:00
+2026-04-14 20:30:00
