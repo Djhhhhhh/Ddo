@@ -107,31 +107,31 @@
     "p2": {
       "title": "Phase 2: 核心能力",
       "subtitle": "可并行开发",
-      "status": "pending",
+      "status": "in_progress",
       "tasks": [
         {
           "id": "p2-1",
           "title": "CLI: REPL 模式基础",
           "module": "cli",
-          "status": "pending",
+          "status": "done",
           "priority": "high",
-          "notes": "命令解析框架"
+          "notes": "命令解析框架已实现，含parser、mode、registry、completer"
         },
         {
           "id": "p2-2",
-          "title": "CLI: /chat 命令",
+          "title": "CLI: /chat 命令框架",
           "module": "cli",
-          "status": "pending",
+          "status": "done",
           "priority": "high",
-          "notes": "与 llm-py 交互"
+          "notes": "命令框架完成，待 llm-py 服务联调"
         },
         {
           "id": "p2-3",
-          "title": "CLI: /kb 命令",
+          "title": "CLI: /kb /timer /mcp 命令框架",
           "module": "cli",
-          "status": "pending",
+          "status": "done",
           "priority": "high",
-          "notes": "知识库管理"
+          "notes": "子命令模式和模式切换已实现"
         },
         {
           "id": "p2-4",
@@ -139,7 +139,7 @@
           "module": "cli",
           "status": "pending",
           "priority": "medium",
-          "notes": "自然语言理解"
+          "notes": "等待 llm-py /api/nlp 接口"
         },
         {
           "id": "p2-5",
@@ -147,7 +147,7 @@
           "module": "llm",
           "status": "pending",
           "priority": "high",
-          "notes": "基础项目结构"
+          "notes": "尚未开始，需创建项目结构"
         },
         {
           "id": "p2-6",
@@ -155,7 +155,7 @@
           "module": "llm",
           "status": "pending",
           "priority": "high",
-          "notes": "Chat API 转发"
+          "notes": "依赖 p2-5"
         },
         {
           "id": "p2-7",
@@ -163,7 +163,7 @@
           "module": "llm",
           "status": "pending",
           "priority": "high",
-          "notes": "文档嵌入"
+          "notes": "文本向量化，调用 Embedding API"
         },
         {
           "id": "p2-8",
@@ -171,7 +171,7 @@
           "module": "llm",
           "status": "pending",
           "priority": "high",
-          "notes": "向量检索"
+          "notes": "向量相似度搜索，Chroma/FAISS"
         },
         {
           "id": "p2-9",
@@ -179,7 +179,7 @@
           "module": "llm",
           "status": "pending",
           "priority": "high",
-          "notes": "回答生成"
+          "notes": "上下文生成+LLM调用"
         },
         {
           "id": "p2-10",
@@ -187,7 +187,7 @@
           "module": "llm",
           "status": "pending",
           "priority": "medium",
-          "notes": "/docs 自动文档"
+          "notes": "FastAPI /docs 自动生成"
         },
         {
           "id": "p2-11",
@@ -195,7 +195,7 @@
           "module": "server",
           "status": "pending",
           "priority": "high",
-          "notes": "基础项目结构"
+          "notes": "尚未开始，需创建项目结构"
         },
         {
           "id": "p2-12",
@@ -203,7 +203,7 @@
           "module": "server",
           "status": "pending",
           "priority": "high",
-          "notes": "GORM 配置"
+          "notes": "GORM 配置，依赖 p2-11"
         },
         {
           "id": "p2-13",
@@ -211,7 +211,7 @@
           "module": "server",
           "status": "pending",
           "priority": "high",
-          "notes": "/health 端点"
+          "notes": "/health 端点，依赖 p2-12"
         },
         {
           "id": "p2-14",
@@ -219,7 +219,7 @@
           "module": "server",
           "status": "pending",
           "priority": "high",
-          "notes": "知识库管理API"
+          "notes": "元数据管理，RAG代理到llm-py"
         },
         {
           "id": "p2-15",
@@ -227,7 +227,7 @@
           "module": "server",
           "status": "pending",
           "priority": "medium",
-          "notes": "Cron 调度、HTTP回调"
+          "notes": "Cron调度、HTTP回调、robfig/cron"
         },
         {
           "id": "p2-16",
@@ -235,7 +235,7 @@
           "module": "server",
           "status": "pending",
           "priority": "medium",
-          "notes": "MCP 服务管理"
+          "notes": "MCP配置CRUD、连接池、测试接口"
         },
         {
           "id": "p2-17",
@@ -243,7 +243,7 @@
           "module": "server",
           "status": "pending",
           "priority": "medium",
-          "notes": "嵌入式消息队列"
+          "notes": "嵌入式消息队列，延时任务"
         },
         {
           "id": "p2-18",
@@ -251,7 +251,7 @@
           "module": "other",
           "status": "pending",
           "priority": "high",
-          "notes": "llm-py ↔ server-go"
+          "notes": "llm-py ↔ server-go ↔ CLI"
         },
         {
           "id": "p2-19",
@@ -259,7 +259,7 @@
           "module": "cli",
           "status": "pending",
           "priority": "high",
-          "notes": "完整流程验证"
+          "notes": "完整流程验证，依赖所有前置任务"
         }
       ]
     },

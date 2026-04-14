@@ -2,18 +2,54 @@
 
 ## 📌 作用
 
-一句话描述：[待填充：此服务的核心职责]
+llm-py 是 Ddo 项目的 LLM 代理服务，基于 FastAPI 构建。
 
-- 边界：只负责 xxx，不处理 xxx
-- 调用关系：被 xxx 调用，调用 xxx
+**核心职责**：
+- 代理 OpenRouter API 调用（Chat Completions）
+- 提供 RAG（检索增强生成）知识库服务
+- 为 CLI/server-go 提供 NLP 意图识别能力
+
+**边界**：
+- 只负责 LLM 相关功能，不处理业务逻辑
+- 不直接对外暴露，通过 server-go 代理
+
+**调用关系**：
+- 被：server-go (Go) 调用
+- 调用：OpenRouter API (外部)
 
 ## 📂 目录结构
 
 ```
-llm-py/
-├── [待填充：列出主要目录，如 src/ handlers/]
+services/llm-py/
+├── app/                           # 主应用包
+│   ├── __init__.py               # 包初始化
+│   ├── main.py                   # FastAPI 主应用入口
+│   ├── api/                      # API 路由模块
+│   │   ├── __init__.py          # 路由聚合 (api_router)
+│   │   ├── health.py            # /api/health - 健康检查
+│   │   ├── chat.py              # /api/chat/* - Chat Completions (p2-6)
+│   │   ├── models.py            # /api/models/* - 模型管理 (p2-6)
+│   │   ├── nlp.py               # /api/nlp/* - NLP 意图识别 (p2-4)
+│   │   └── rag.py               # /api/rag/* - RAG 知识库 (p2-7/8/9)
+│   ├── core/                     # 核心模块
+│   │   ├── __init__.py
+│   │   ├── config.py            # Pydantic Settings 配置管理
+│   │   └── lifespan.py          # FastAPI lifespan 生命周期
+│   └── utils/                    # 工具模块
+│       ├── __init__.py
+│       └── logger.py            # 日志配置和工具函数
+├── main.py                       # Uvicorn 启动脚本
+├── requirements.txt              # Python 依赖
+├── .env.example                  # 环境变量示例
 └── AGENTS.md (本文件)
 ```
+
+**关键文件说明**：
+- `app/main.py`: FastAPI 实例创建、CORS 中间件、路由挂载
+- `app/core/config.py`: 统一配置管理，支持环境变量和 .env 文件
+- `app/api/__init__.py`: 路由聚合，所有 API 通过 `api_router` 注册
+- `main.py`: 开发启动入口，使用 Uvicorn 运行
+- `.env`: 本地配置文件（不提交到 git）
 
 ## 🧠 Rules 自维护
 
@@ -48,8 +84,10 @@ llm-py/
 硬性红线（违反会导致架构混乱）：
 - ❌ 跨 service import（只能调 API，不能 import 包）
 - ❌ 直接修改其他 service 的代码
-- ❌ [待补充：具体的禁止行为，由开发过程中发现]
+- ❌ 将 OpenRouter API Key 提交到 Git
+- ❌ 在生产环境启用 `reload=True`
+- ❌ 直接暴露 llm-py 端口到外网（必须走 server-go 代理）
 
 ## 🕒 最后更新时间
 
-2026-04-13 20:25:59
+2026-04-14 17:08:58
