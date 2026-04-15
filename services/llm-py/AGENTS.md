@@ -30,14 +30,22 @@ services/llm-py/
 │   │   ├── chat.py              # /api/chat/* - Chat Completions ✅ LangChain 实现
 │   │   ├── models.py            # /api/models/* - 模型管理
 │   │   ├── nlp.py               # /api/nlp/* - NLP 意图识别 ✅ LangChain 实现
-│   │   └── rag.py               # /api/rag/* - RAG 知识库 ✅ p2-7 Embedder 已实现
+│   │   └── rag.py               # /api/rag/* - RAG 知识库 ✅ p2-8 Retriever / p2-9 Generator 已实现
 │   ├── core/                     # 核心模块 (LangChain "大脑" 层)
 │   │   ├── __init__.py
 │   │   ├── config.py            # Pydantic Settings 配置管理
 │   │   ├── llm_factory.py       # LangChain 核心：模型工厂、链式编排、提示管理
-│   │   ├── embedder.py          # ← 新增：RAG Embedder 服务核心 (p2-7)
-│   │   ├── document_store.py    # ← 新增：文档存储（临时内存实现）(p2-7)
-│   │   └── lifespan.py          # FastAPI lifespan 生命周期
+│   │   ├── embedder.py          # RAG Embedder 服务核心 - 文本向量化 (p2-7)
+│   │   ├── document_store.py    # 文档存储（临时内存实现）- 将被 RAG vector_store 替代 (p2-7)
+│   │   ├── lifespan.py          # FastAPI lifespan 生命周期
+│   │   └── rag/                  # ← 新增：RAG Engine 核心模块 (p2-8/p2-9)
+│   │       ├── __init__.py      # RAG 模块导出
+│   │       ├── vector_store.py  # 向量存储封装 - Chroma/FAISS 双实现
+│   │       ├── retriever.py     # 语义检索服务 - 向量相似度搜索
+│   │       └── generator.py     # RAG 生成服务 - 上下文组装 + LLM 调用
+│   ├── models/                   # ← 新增：数据模型定义
+│   │   ├── __init__.py          # 模型包导出
+│   │   └── rag.py               # RAG 相关 Pydantic 模型
 │   └── utils/                    # 工具模块
 │       ├── __init__.py
 │       └── logger.py            # 日志配置和工具函数
@@ -52,7 +60,10 @@ services/llm-py/
 - **LangChain "大脑"** (`app/core/`):
   - `llm_factory.py`: 负责 Chat/NLP 模型管理、链式编排、流式处理
   - `embedder.py`: 负责 RAG 文档向量化、Embedding API 调用、批量处理
-- **RAG 存储** (`app/core/document_store.py`): 临时内存存储，后续替换为 ChromaDB/FAISS
+- **RAG Engine** (`app/core/rag/`):
+  - `vector_store.py`: 向量存储抽象 + Chroma/FAISS 双实现
+  - `retriever.py`: 语义检索服务，将查询转为向量并搜索相似文档
+  - `generator.py`: RAG 生成服务，组装上下文并调用 LLM 生成回答
 - **OpenRouter 接入**: 通过 `langchain-openrouter` / `langchain-openai` 包实现
 
 **关键文件说明**：
@@ -61,6 +72,7 @@ services/llm-py/
 - `app/api/__init__.py`: 路由聚合，所有 API 通过 `api_router` 注册
 - `main.py`: 开发启动入口，使用 Uvicorn 运行
 - `.env`: 本地配置文件（不提交到 git）
+- `app/core/rag/`: RAG 核心引擎，实现检索增强生成的完整流程
 
 ## 🧠 Rules 自维护
 
@@ -101,4 +113,4 @@ services/llm-py/
 
 ## 🕒 最后更新时间
 
-2026-04-15 16:20:00
+2026-04-15 23:30:00

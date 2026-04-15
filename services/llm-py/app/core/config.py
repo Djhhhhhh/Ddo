@@ -65,9 +65,10 @@ class Settings(BaseSettings):
         default="~/.ddo/data/vector/",
         description="Vector store data path"
     )
-    rag_embedding_model: str = Field(
-        default="openai/text-embedding-3-small",
-        description="Embedding model name"
+    rag_embedding_model: Optional[str] = Field(
+        default=None,
+        alias="DDO_LLM_RAG_MODEL",
+        description="Embedding model for RAG (env: DDO_LLM_RAG_MODEL). Falls back to llm_default_model."
     )
     rag_embedding_batch_size: int = Field(
         default=100,
@@ -80,6 +81,14 @@ class Settings(BaseSettings):
     rag_top_k: int = Field(
         default=5,
         description="Number of documents to retrieve"
+    )
+    rag_min_score: float = Field(
+        default=0.7,
+        description="Minimum similarity score for retrieval (0.0-1.0)"
+    )
+    rag_max_context_length: int = Field(
+        default=4000,
+        description="Maximum context length for RAG (characters)"
     )
 
     @property

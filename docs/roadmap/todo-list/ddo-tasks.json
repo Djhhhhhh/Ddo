@@ -1,5 +1,5 @@
 {
-  "exportTime": "2026-04-14T14:17:07.955Z",
+  "exportTime": "2026-04-15T11:43:38.183Z",
   "phases": {
     "p1": {
       "title": "Phase 1: 基础设施",
@@ -169,7 +169,7 @@
           "id": "p2-8",
           "title": "RAG Engine: Retriever",
           "module": "llm",
-          "status": "pending",
+          "status": "done",
           "priority": "high",
           "notes": "向量相似度搜索，Chroma/FAISS"
         },
@@ -177,7 +177,7 @@
           "id": "p2-9",
           "title": "RAG Engine: Generator",
           "module": "llm",
-          "status": "pending",
+          "status": "done",
           "priority": "high",
           "notes": "上下文生成+LLM调用"
         },

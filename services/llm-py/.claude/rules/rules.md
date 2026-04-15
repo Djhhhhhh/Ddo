@@ -53,8 +53,10 @@
 - tenacity 重试必须指定 `retry_if_exception_type`，否则默认重试所有异常可能导致死循环（2026-04-15）
 - httpx.AsyncClient 流式读取必须用 `async with client.stream()` 上下文，否则连接可能泄漏（2026-04-15）
 - Embedding 批处理：OpenRouter 有批量限制，必须分批处理大量文档（2026-04-15）
-
-## 示例参考
+- **RAG Architecture Pattern**: RAG Engine 分为三层：VectorStore (存储) -> Retriever (检索) -> Generator (生成)，每个层级独立测试（2026-04-15）
+- **Vector Store Abstraction**: 定义 `BaseVectorStore` 接口，支持多后端切换 (Chroma/FAISS)，通过 `get_vector_store()` 工厂方法获取实例（2026-04-15）
+- **RAG Prompt Template**: 使用 LangChain `ChatPromptTemplate` 定义 RAG 系统提示，包含 Context 和 Question 变量（2026-04-15）
+- **Cosine Distance Conversion**: Chroma 返回 distance，需转换为 similarity: `score = 1 - distance`（2026-04-15）
 
 ### API Endpoint 定义示例
 
@@ -148,5 +150,68 @@ except NetworkError as e:
 except EmbeddingError as e:
     # 其他 embedding 错误，使用其 status_code
     raise HTTPException(status_code=e.status_code, detail=str(e))
+```
+（2026-04-15）
+
+### Retriever 使用示例
+
+```python
+from app.core.rag import get_retriever_service
+
+retriever = get_retriever_service()
+documents = await retriever.search(
+    query="What is RAG?",
+    collection="default",
+    top_k=5,
+    min_score=0.7,
+)
+# documents: List[RetrievedDocument] with score metadata
+```
+（2026-04-15）
+
+### Generator 使用示例
+
+```python
+from app.core.rag import get_generator_service
+from app.core.rag.retriever import RetrievedDocument
+
+generator = get_generator_service()
+
+# Non-streaming
+answer = await generator.generate(
+    question="What is RAG?",
+    documents=documents,  # List[RetrievedDocument]
+    model="anthropic/claude-3.5-sonnet",
+)
+
+# Streaming
+async for chunk in generator.generate_stream(
+    question="What is RAG?",
+    documents=documents,
+):
+    print(chunk, end="")
+```
+（2026-04-15）
+
+### Vector Store 使用示例
+
+```python
+from app.core.rag import get_vector_store, StoredDocument
+
+# Get configured store (Chroma or FAISS based on config)
+store = get_vector_store()
+
+# Add documents
+docs = [StoredDocument(document_id="1", content="text", embedding=[...], metadata={})]
+await store.add_documents(docs, collection="default")
+
+# Search
+results = await store.search(
+    query_embedding=[...],
+    top_k=5,
+    collection="default",
+    min_score=0.7,
+)
+# results: List[(StoredDocument, score)]
 ```
 （2026-04-15）

@@ -20,3 +20,7 @@ langchain-community>=0.3.0
 
 # Utils
 python-multipart>=0.0.6
+
+# Vector Store (Choose one or both)
+chromadb>=0.5.0      # Recommended: persistent vector store with collection management
+# faiss-cpu>=1.8.0   # Alternative: high-performance vector search (uncomment to use)

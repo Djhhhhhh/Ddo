@@ -18,7 +18,7 @@ from tenacity import (
 )
 
 from app.core.config import get_settings
-from app.core.document_store import DocumentEmbedding, get_document_store
+from app.models.document import DocumentEmbedding, StoredDocument
 from app.utils.logger import get_logger
 
 logger = get_logger(__name__)
@@ -53,7 +53,7 @@ class EmbedderService:
     Uses LangChain's embedding interface with OpenRouter or OpenAI.
     Supports batch processing and automatic retries.
 
-    Model priority: explicit model param > env DDO_LLM_MODEL > system default
+    Model priority: explicit model param > env DDO_LLM_RAG_MODEL > env DDO_LLM_MODEL > system default
     """
 
     def __init__(self, model: Optional[str] = None):
@@ -62,11 +62,13 @@ class EmbedderService:
 
         Args:
             model: Embedding model name.
-                   Priority: this param > env DDO_LLM_MODEL > config default.
+                   Priority: this param > env DDO_LLM_RAG_MODEL > env DDO_LLM_MODEL > config default.
         """
         settings = get_settings()
-        # Priority: explicit model > env DDO_LLM_MODEL > rag_embedding_model default
-        self.model = model or settings.llm_default_model or settings.rag_embedding_model
+        # Priority: explicit model > DDO_LLM_RAG_MODEL > DDO_LLM_MODEL > default
+        self.model = model or settings.rag_embedding_model or settings.llm_default_model
+        if not self.model:
+            self.model = "openai/text-embedding-3-small"  # Ultimate fallback
         self.batch_size = settings.rag_embedding_batch_size
         self.dimensions = settings.rag_embedding_dimensions
         self._embeddings = None
@@ -230,9 +232,20 @@ class EmbedderService:
             )
             results.append(doc)
 
-        # Store in document store
-        store = get_document_store()
-        store.add_batch(results)
+        # Store in vector store (Chroma/FAISS) for RAG retrieval
+        # Lazy import to avoid circular dependency
+        from app.core.rag.vector_store import get_vector_store
+        vector_store = get_vector_store()
+        vector_docs = [
+            StoredDocument(
+                document_id=doc.document_id,
+                content=doc.content,
+                embedding=doc.embedding,
+                metadata=doc.metadata,
+            )
+            for doc in results
+        ]
+        await vector_store.add_documents(vector_docs, collection="default")
 
         duration = (time.time() - start_time) * 1000
         logger.info(
@@ -273,7 +286,7 @@ def get_embedder_service(model: Optional[str] = None) -> EmbedderService:
 
     Args:
         model: Embedding model name.
-               Priority: this param > env DDO_LLM_MODEL > config default.
+               Priority: this param > env DDO_LLM_RAG_MODEL > env DDO_LLM_MODEL > config default.
 
     Returns:
         EmbedderService instance (cached per model).
@@ -282,7 +295,9 @@ def get_embedder_service(model: Optional[str] = None) -> EmbedderService:
 
     # Resolve the effective model
     settings = get_settings()
-    effective_model = model or settings.llm_default_model or settings.rag_embedding_model
+    effective_model = model or settings.rag_embedding_model or settings.llm_default_model
+    if not effective_model:
+        effective_model = "openai/text-embedding-3-small"
 
     if effective_model not in _embedder_services:
         _embedder_services[effective_model] = EmbedderService(model=model)
