@@ -10,9 +10,11 @@ import (
 
 	"github.com/ddo/server-go/internal/application/usecase/health"
 	"github.com/ddo/server-go/internal/bootstrap"
+	"github.com/ddo/server-go/internal/db"
 	"github.com/ddo/server-go/internal/infrastructure/config"
 	"github.com/ddo/server-go/internal/infrastructure/logger"
 	"github.com/ddo/server-go/internal/infrastructure/server"
+	"github.com/ddo/server-go/internal/queue"
 	httpinterface "github.com/ddo/server-go/internal/interfaces/http"
 	"github.com/ddo/server-go/internal/interfaces/http/handler"
 )
@@ -31,6 +33,10 @@ func InitializeApp(cfgPath string) (*bootstrap.App, func(), error) {
 		// 基础设施层
 		provideLogger,
 		server.NewGinServer,
+
+		// 数据库层
+		provideMySQLConn,
+		provideQueue,
 
 		// 接口层
 		httpinterface.NewRouter,
@@ -68,6 +74,30 @@ func provideLogger(cfg *config.Config) (*zap.Logger, func(), error) {
 	}
 
 	return log, cleanup, nil
+}
+
+// provideMySQLConn 提供 MySQL 连接
+func provideMySQLConn(cfg *config.Config, logger *zap.Logger) (*db.MySQLConn, func(), error) {
+	conn, cleanup, err := db.NewMySQLConn(cfg)
+	if err != nil {
+		logger.Error("Failed to connect to MySQL", zap.Error(err))
+		// MySQL 连接失败不应阻止服务启动
+		// 返回 nil，服务启动后可以通过健康检查发现
+		return nil, func() {}, nil
+	}
+	return conn, cleanup, nil
+}
+
+// provideQueue 提供消息队列
+func provideQueue(cfg *config.Config, logger *zap.Logger) (queue.Queue, func(), error) {
+	// 使用默认配置，数据目录在 ~/.ddo/data/badger/queue
+	qCfg := queue.DefaultConfig(cfg.Database.DBName)
+	q, cleanup, err := queue.NewBadgerQueue(qCfg, logger)
+	if err != nil {
+		logger.Error("Failed to create queue", zap.Error(err))
+		return nil, func() {}, err
+	}
+	return q, cleanup, nil
 }
 
 // provideEngine 提供 Gin Engine

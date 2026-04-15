@@ -8,8 +8,8 @@ import (
 
 var (
 	// 命令行参数
-	configPath = flag.String("c", "", "配置文件路径 (默认: ./configs/config.yaml)")
-	version    = flag.Bool("v", false, "显示版本信息")
+	configPath = flag.String("config", "", "配置文件路径 (默认: ./configs/config.yaml)")
+	showVersion = flag.Bool("version", false, "显示版本信息")
 
 	// 应用版本号（通过 ldflags 注入）
 	appVersion = "v1.0.0"
@@ -21,7 +21,7 @@ func main() {
 	flag.Parse()
 
 	// 显示版本信息
-	if *version {
+	if *showVersion {
 		fmt.Printf("server-go %s (commit: %s, built: %s)\n", appVersion, gitCommit, buildTime)
 		os.Exit(0)
 	}

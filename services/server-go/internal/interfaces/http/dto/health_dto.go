@@ -15,9 +15,10 @@ type HealthCheckResponse struct {
 
 // HealthData 健康数据
 type HealthData struct {
-	Status    string `json:"status"`
-	Version   string `json:"version"`
-	Timestamp string `json:"timestamp"`
+	Status    string                 `json:"status"`
+	Version   string                 `json:"version"`
+	Timestamp string                 `json:"timestamp"`
+	MySQL     map[string]interface{} `json:"mysql,omitempty"`
 }
 
 // HealthCheckV1Response v1 版本健康检查响应
@@ -30,32 +31,43 @@ type HealthCheckV1Response struct {
 
 // HealthV1Data v1 健康数据
 type HealthV1Data struct {
-	Status    string `json:"status"`
-	Timestamp string `json:"timestamp"`
+	Status    string                 `json:"status"`
+	Timestamp string                 `json:"timestamp"`
+	MySQL     map[string]interface{} `json:"mysql,omitempty"`
+}
+
+// HealthCheckResponseData 健康检查响应数据
+type HealthCheckResponseData struct {
+	Status    string
+	Version   string
+	Timestamp time.Time
+	MySQL     map[string]interface{}
 }
 
 // ToHealthCheckResponse 转换为健康检查响应
-func ToHealthCheckResponse(status, version string, ts time.Time) HealthCheckResponse {
+func ToHealthCheckResponse(data HealthCheckResponseData) HealthCheckResponse {
 	return HealthCheckResponse{
 		Code:    0,
 		Message: "ok",
 		Data: HealthData{
-			Status:    status,
-			Version:   version,
-			Timestamp: ts.Format(time.RFC3339),
+			Status:    data.Status,
+			Version:   data.Version,
+			Timestamp: data.Timestamp.Format(time.RFC3339),
+			MySQL:     data.MySQL,
 		},
 		Timestamp: time.Now(),
 	}
 }
 
 // ToHealthCheckV1Response 转换为 v1 版本健康检查响应
-func ToHealthCheckV1Response(status string, ts time.Time) HealthCheckV1Response {
+func ToHealthCheckV1Response(data HealthCheckResponseData) HealthCheckV1Response {
 	return HealthCheckV1Response{
 		Code:    0,
 		Message: "ok",
 		Data: HealthV1Data{
-			Status:    status,
-			Timestamp: ts.Format(time.RFC3339),
+			Status:    data.Status,
+			Timestamp: data.Timestamp.Format(time.RFC3339),
+			MySQL:     data.MySQL,
 		},
 		Timestamp: time.Now(),
 	}

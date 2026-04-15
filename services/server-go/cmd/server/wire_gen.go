@@ -7,16 +7,17 @@
 package main
 
 import (
-	"github.com/gin-gonic/gin"
-	"go.uber.org/zap"
-
 	"github.com/ddo/server-go/internal/application/usecase/health"
 	"github.com/ddo/server-go/internal/bootstrap"
+	"github.com/ddo/server-go/internal/db"
 	"github.com/ddo/server-go/internal/infrastructure/config"
 	"github.com/ddo/server-go/internal/infrastructure/logger"
 	"github.com/ddo/server-go/internal/infrastructure/server"
-	httpinterface "github.com/ddo/server-go/internal/interfaces/http"
+	"github.com/ddo/server-go/internal/queue"
+	http "github.com/ddo/server-go/internal/interfaces/http"
 	"github.com/ddo/server-go/internal/interfaces/http/handler"
+	"github.com/gin-gonic/gin"
+	"go.uber.org/zap"
 )
 
 // Injectors from wire.go:
@@ -30,25 +31,34 @@ func InitializeApp(cfgPath string) (*bootstrap.App, func(), error) {
 		return nil, nil, err
 	}
 
-	// 创建 cleanup 函数
-	cleanup := func() {}
-
 	// 初始化日志
 	zapLogger, logCleanup, err := provideLogger(cfg)
 	if err != nil {
 		return nil, nil, err
 	}
-	cleanup = func() {
+
+	// 初始化 MySQL 连接
+	mySQLConn, mysqlCleanup, err := provideMySQLConn(cfg, zapLogger)
+	if err != nil {
 		logCleanup()
+		return nil, nil, err
+	}
+
+	// 初始化消息队列
+	queueQueue, queueCleanup, err := provideQueue(cfg, zapLogger)
+	if err != nil {
+		mysqlCleanup()
+		logCleanup()
+		return nil, nil, err
 	}
 
 	// 初始化路由
-	router := httpinterface.NewRouter(zapLogger)
+	router := http.NewRouter(zapLogger)
 	engine := provideEngine(router)
 
 	// 初始化用例
 	version := provideVersion()
-	checkHealthUseCase := health.NewUseCase(version)
+	checkHealthUseCase := health.NewUseCase(version, mySQLConn)
 
 	// 初始化 Handler
 	healthHandler := handler.NewHealthHandler(checkHealthUseCase, version)
@@ -60,7 +70,14 @@ func InitializeApp(cfgPath string) (*bootstrap.App, func(), error) {
 	ginServer := server.NewGinServer(cfg, zapLogger, engine)
 
 	// 创建应用
-	app := bootstrap.NewApp(cfg, zapLogger, ginServer)
+	app := bootstrap.NewApp(cfg, zapLogger, ginServer, mySQLConn, queueQueue)
+
+	// 组装 cleanup 函数
+	cleanup := func() {
+		queueCleanup()
+		mysqlCleanup()
+		logCleanup()
+	}
 
 	return app, cleanup, nil
 }
@@ -88,8 +105,32 @@ func provideLogger(cfg *config.Config) (*zap.Logger, func(), error) {
 	return log, cleanup, nil
 }
 
+// provideMySQLConn 提供 MySQL 连接
+func provideMySQLConn(cfg *config.Config, logger *zap.Logger) (*db.MySQLConn, func(), error) {
+	conn, cleanup, err := db.NewMySQLConn(cfg)
+	if err != nil {
+		logger.Error("Failed to connect to MySQL", zap.Error(err))
+		// MySQL 连接失败不应阻止服务启动
+		// 返回 nil，服务启动后可以通过健康检查发现
+		return nil, func() {}, nil
+	}
+	return conn, cleanup, nil
+}
+
+// provideQueue 提供消息队列
+func provideQueue(cfg *config.Config, logger *zap.Logger) (queue.Queue, func(), error) {
+	// 使用默认配置，数据目录在 ~/.ddo/data/badger/queue
+	qCfg := queue.DefaultConfig(cfg.Database.DBName)
+	q, cleanup, err := queue.NewBadgerQueue(qCfg, logger)
+	if err != nil {
+		logger.Error("Failed to create queue", zap.Error(err))
+		return nil, func() {}, err
+	}
+	return q, cleanup, nil
+}
+
 // provideEngine 提供 Gin Engine
-func provideEngine(router *httpinterface.Router) *gin.Engine {
+func provideEngine(router *http.Router) *gin.Engine {
 	return router.Engine()
 }
 

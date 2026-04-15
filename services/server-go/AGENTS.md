@@ -13,12 +13,14 @@ server-go 是 Ddo 平台的核心网关服务，负责提供统一的 API 路由
 server-go/
 ├── cmd/
 │   └── server/
-│       └── main.go                          # 服务启动入口（2026-04-14）
+│       ├── main.go                          # 服务启动入口（2026-04-14）
+│       ├── wire.go                          # Wire 依赖注入配置（2026-04-15）
+│       └── wire_gen.go                      # Wire 生成的代码（2026-04-15）
 ├── configs/
 │   └── config.yaml                          # 配置文件模板（2026-04-14）
 ├── internal/
 │   ├── bootstrap/
-│   │   └── app.go                           # 应用生命周期管理（2026-04-14）
+│   │   └── app.go                           # 应用生命周期管理（2026-04-15）
 │   ├── domain/                              # ★ 领域层（核心业务）
 │   │   ├── common/                          # 领域共享组件（2026-04-14）
 │   │   │   ├── entity.go                    # 实体基类
@@ -33,35 +35,48 @@ server-go/
 │   │   │   └── result.go                    # 统一响应结果封装（2026-04-14）
 │   │   └── usecase/
 │   │       └── health/
-│   │           └── check_health.go          # CheckHealth 用例实现（2026-04-14）
+│   │           └── check_health.go          # CheckHealth 用例实现（2026-04-15）
 │   ├── interfaces/                          # 接口层（协议适配）
 │   │   └── http/
 │   │       ├── handler/
-│   │       │   └── health_handler.go        # 健康检查 Handler（2026-04-14）
+│   │       │   └── health_handler.go        # 健康检查 Handler（2026-04-15）
 │   │       ├── middleware/
 │   │       │   ├── recovery.go              # 异常恢复（2026-04-14）
 │   │       │   ├── logger.go                # 请求日志（2026-04-14）
 │   │       │   ├── cors.go                  # 跨域支持（2026-04-14）
 │   │       │   └── request_id.go            # 请求ID追踪（2026-04-14）
 │   │       ├── dto/
-│   │       │   └── health_dto.go            # HTTP DTO（2026-04-14）
+│   │       │   └── health_dto.go            # HTTP DTO（2026-04-15）
 │   │       └── router.go                    # 路由注册（2026-04-14）
-│   └── infrastructure/                      # 基础设施层（技术实现）
-│       ├── config/
-│       │   └── config.go                    # Viper 配置管理（2026-04-14）
-│       ├── logger/
-│       │   └── logger.go                    # Zap 日志实现（2026-04-14）
-│       └── server/
-│           └── gin_server.go                # Gin HTTP 服务器适配器（2026-04-14）
+│   ├── infrastructure/                      # 基础设施层（技术实现）
+│   │   ├── config/
+│   │   │   └── config.go                    # Viper 配置管理（2026-04-15）
+│   │   ├── logger/
+│   │   │   └── logger.go                    # Zap 日志实现（2026-04-14）
+│   │   └── server/
+│   │       └── gin_server.go                # Gin HTTP 服务器适配器（2026-04-14）
+│   ├── db/                                  # ← 新增：数据库层（2026-04-15）
+│   │   ├── mysql.go                         # GORM MySQL 连接管理
+│   │   └── models/                          # 数据模型定义
+│   │       ├── knowledge.go                 # 知识库模型
+│   │       ├── timer.go                     # 定时任务模型
+│   │       ├── timer_log.go                 # 定时任务日志模型
+│   │       └── mcp.go                       # MCP 配置模型
+│   ├── queue/                               # ← 新增：消息队列层（2026-04-15）
+│   │   ├── queue.go                         # Queue 接口定义
+│   │   └── badger_queue.go                  # BadgerDB 队列实现
+│   └── scheduler/                           # ← 新增：任务调度层（2026-04-15）
+│       └── scheduler.go                     # Cron 调度器（预留接口）
 ├── pkg/
 │   └── utils/
 │       └── validator.go                     # 通用验证工具（2026-04-14）
 ├── docs/
 │   └── feature/                             # 技术方案文档
+├── .claude/
+│   └── rules/
+│       └── rules.md                         # 服务规则文件（2026-04-15）
 ├── go.mod                                   # Go 模块定义
 ├── Makefile                                 # 构建脚本（2026-04-14）
-├── wire.go                                  # Wire 依赖注入配置（2026-04-14）
-├── wire_gen.go                              # Wire 生成的代码（2026-04-14）
 └── AGENTS.md                                # 本文件
 ```
 
@@ -84,6 +99,12 @@ server-go/
 2. 在对应类别下追加新规则（不要覆盖）
 3. 格式：`- 规则描述（发现日期：YYYY-MM-DD）`
 
+### 新增规则速查（2026-04-15）
+- GORM 模型定义规范：UUID 主键、TableName、时间戳、软删除、BeforeCreate 钩子
+- BadgerDB Key 设计规范：层级结构、类型前缀、常量定义
+- 数据库连接管理规范：连接池默认值、Ping 健康检查、优雅关闭
+- 队列消息处理规范：Handler 接口分离、重试机制、消费确认
+
 > 💡 提示：每次开发完成后问自己：这次我学到了什么模式值得记录？
 
 ## ✅ 开发检查清单
@@ -91,15 +112,16 @@ server-go/
 提交前检查：
 - [ ] 本次修改只在当前 service 目录内
 - [ ] 新加文件已更新上面的目录结构
-- [ ] 如涉及新架构/规范，已更新 .claude/rules/<service>.md
+- [ ] 如涉及新架构/规范，已更新 .claude/rules/rules.md
 
 ## 🚫 禁止
 
 硬性红线（违反会导致架构混乱）：
 - ❌ 跨 service import（只能调 API，不能 import 包）
 - ❌ 直接修改其他 service 的代码
-- ❌ [待补充：具体的禁止行为，由开发过程中发现]
+- ❌ 在 domain 层引用 infrastructure 层（违反 DDD）
+- ❌ 在 repository 中直接暴露数据库实现细节
 
 ## 🕒 最后更新时间
 
-2026-04-14 16:45:00
+2026-04-15 16:30:00

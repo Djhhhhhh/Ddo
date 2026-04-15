@@ -28,12 +28,12 @@ build: ## 构建可执行文件
 .PHONY: run
 run: ## 运行服务（带配置文件）
 	@echo "Running $(BINARY_NAME)..."
-	go run $(LDFLAGS) $(CMD_DIR) -c ./configs/config.yaml
+	go run $(LDFLAGS) $(CMD_DIR) -config ./configs/config.yaml
 
 .PHONY: run-dev
 run-dev: ## 以开发模式运行服务
 	@echo "Running $(BINARY_NAME) in dev mode..."
-	MODE=debug go run $(LDFLAGS) $(CMD_DIR) -c ./configs/config.yaml
+	MODE=debug go run $(LDFLAGS) $(CMD_DIR) -config ./configs/config.yaml
 
 .PHONY: clean
 clean: ## 清理构建产物
@@ -104,4 +104,4 @@ docker-run: ## 运行 Docker 容器
 
 .PHONY: version
 version: ## 显示版本信息
-	@go run $(LDFLAGS) $(CMD_DIR) -v
+	@go run $(LDFLAGS) $(CMD_DIR) -version

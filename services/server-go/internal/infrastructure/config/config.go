@@ -47,6 +47,18 @@ func (c *Config) ServerAddr() string {
 	return fmt.Sprintf("%s:%d", c.Server.Host, c.Server.Port)
 }
 
+// MySQLDSN 获取 MySQL DSN
+func (c *Config) MySQLDSN() string {
+	return fmt.Sprintf("%s:%s@tcp(%s:%d)/%s?charset=%s&parseTime=True&loc=Local",
+		c.Database.User,
+		c.Database.Password,
+		c.Database.Host,
+		c.Database.Port,
+		c.Database.DBName,
+		c.Database.Charset,
+	)
+}
+
 // Loader 配置加载器接口
 type Loader interface {
 	Load(path string) (*Config, error)

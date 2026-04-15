@@ -201,9 +201,9 @@
           "id": "p2-12",
           "title": "server-go: MySQL 连接",
           "module": "server",
-          "status": "active",
+          "status": "done",
           "priority": "high",
-          "notes": "GORM 配置，p2-11 已完成"
+          "notes": "GORM + MySQL 8.0 连接池，自动迁移，健康检查集成"
         },
         {
           "id": "p2-13",
@@ -241,9 +241,9 @@
           "id": "p2-17",
           "title": "server-go: BadgerDB 队列",
           "module": "server",
-          "status": "pending",
+          "status": "done",
           "priority": "medium",
-          "notes": "嵌入式消息队列，延时任务，可独立开发"
+          "notes": "嵌入式消息队列，延时任务，Topic订阅，优先级"
         },
         {
           "id": "p2-18",

@@ -40,11 +40,21 @@ func (h *HealthHandler) HealthCheck(c *gin.Context) {
 	}
 
 	output := result.Data
-	response := dto.ToHealthCheckResponse(
-		output.Status,
-		output.Version,
-		output.Timestamp,
-	)
+	response := dto.ToHealthCheckResponse(dto.HealthCheckResponseData{
+		Status:    output.Status,
+		Version:   output.Version,
+		Timestamp: output.Timestamp,
+		MySQL:     output.MySQL,
+	})
+
+	// 如果 MySQL 未连接，返回 503
+	if output.MySQL != nil {
+		if connected, ok := output.MySQL["connected"].(bool); ok && !connected {
+			c.JSON(http.StatusServiceUnavailable, response)
+			return
+		}
+	}
+
 	c.JSON(http.StatusOK, response)
 }
 
@@ -64,9 +74,20 @@ func (h *HealthHandler) HealthCheckV1(c *gin.Context) {
 	}
 
 	output := result.Data
-	response := dto.ToHealthCheckV1Response(
-		output.Status,
-		output.Timestamp,
-	)
+	response := dto.ToHealthCheckV1Response(dto.HealthCheckResponseData{
+		Status:    output.Status,
+		Version:   output.Version,
+		Timestamp: output.Timestamp,
+		MySQL:     output.MySQL,
+	})
+
+	// 如果 MySQL 未连接，返回 503
+	if output.MySQL != nil {
+		if connected, ok := output.MySQL["connected"].(bool); ok && !connected {
+			c.JSON(http.StatusServiceUnavailable, response)
+			return
+		}
+	}
+
 	c.JSON(http.StatusOK, response)
 }
