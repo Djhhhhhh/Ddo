@@ -2,17 +2,67 @@
 
 ## 📌 作用
 
-一句话描述：[待填充：此服务的核心职责]
+server-go 是 Ddo 平台的核心网关服务，负责提供统一的 API 路由、定时任务调度、消息队列、知识库管理和 MCP 管理能力。采用 DDD（领域驱动设计）四层架构，为业务功能开发提供清晰的领域边界和分层结构。
 
-- 边界：只负责 xxx，不处理 xxx
-- 调用关系：被 xxx 调用，调用 xxx
+- 边界：负责 HTTP API 路由、配置管理、日志等基础设施能力
+- 调用关系：被上层服务调用，调用数据库和外部 API
 
 ## 📂 目录结构
 
 ```
 server-go/
-├── [待填充：列出主要目录，如 src/ handlers/]
-└── AGENTS.md (本文件)
+├── cmd/
+│   └── server/
+│       └── main.go                          # 服务启动入口（2026-04-14）
+├── configs/
+│   └── config.yaml                          # 配置文件模板（2026-04-14）
+├── internal/
+│   ├── bootstrap/
+│   │   └── app.go                           # 应用生命周期管理（2026-04-14）
+│   ├── domain/                              # ★ 领域层（核心业务）
+│   │   ├── common/                          # 领域共享组件（2026-04-14）
+│   │   │   ├── entity.go                    # 实体基类
+│   │   │   ├── valueobject.go               # 值对象基类
+│   │   │   ├── event.go                     # 领域事件接口
+│   │   │   └── errors.go                    # 领域错误定义
+│   │   └── health/                          # 健康检查领域（2026-04-14）
+│   │       ├── aggregate.go                 # Health 聚合根
+│   │       └── valueobject.go               # HealthStatus 值对象
+│   ├── application/                         # 应用层（用例编排）
+│   │   ├── result/
+│   │   │   └── result.go                    # 统一响应结果封装（2026-04-14）
+│   │   └── usecase/
+│   │       └── health/
+│   │           └── check_health.go          # CheckHealth 用例实现（2026-04-14）
+│   ├── interfaces/                          # 接口层（协议适配）
+│   │   └── http/
+│   │       ├── handler/
+│   │       │   └── health_handler.go        # 健康检查 Handler（2026-04-14）
+│   │       ├── middleware/
+│   │       │   ├── recovery.go              # 异常恢复（2026-04-14）
+│   │       │   ├── logger.go                # 请求日志（2026-04-14）
+│   │       │   ├── cors.go                  # 跨域支持（2026-04-14）
+│   │       │   └── request_id.go            # 请求ID追踪（2026-04-14）
+│   │       ├── dto/
+│   │       │   └── health_dto.go            # HTTP DTO（2026-04-14）
+│   │       └── router.go                    # 路由注册（2026-04-14）
+│   └── infrastructure/                      # 基础设施层（技术实现）
+│       ├── config/
+│       │   └── config.go                    # Viper 配置管理（2026-04-14）
+│       ├── logger/
+│       │   └── logger.go                    # Zap 日志实现（2026-04-14）
+│       └── server/
+│           └── gin_server.go                # Gin HTTP 服务器适配器（2026-04-14）
+├── pkg/
+│   └── utils/
+│       └── validator.go                     # 通用验证工具（2026-04-14）
+├── docs/
+│   └── feature/                             # 技术方案文档
+├── go.mod                                   # Go 模块定义
+├── Makefile                                 # 构建脚本（2026-04-14）
+├── wire.go                                  # Wire 依赖注入配置（2026-04-14）
+├── wire_gen.go                              # Wire 生成的代码（2026-04-14）
+└── AGENTS.md                                # 本文件
 ```
 
 ## 🧠 Rules 自维护
@@ -52,4 +102,4 @@ server-go/
 
 ## 🕒 最后更新时间
 
-2026-04-13 20:25:59
+2026-04-14 16:45:00

@@ -1,0 +1,22 @@
+# server-go 服务配置
+
+# 服务器配置
+server:
+  host: 0.0.0.0
+  port: 8080
+  mode: release  # debug, release, test
+
+# 数据库配置（预留）
+database:
+  host: 127.0.0.1
+  port: 3306
+  user: root
+  password: ""
+  dbname: ddo
+  charset: utf8mb4
+
+# 日志配置
+log:
+  level: info     # debug, info, warn, error, fatal
+  format: json    # json, console
+  output: stdout  # stdout, 或文件路径如 ./logs/server.log

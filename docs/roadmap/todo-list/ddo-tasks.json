@@ -1,5 +1,5 @@
 {
-  "exportTime": "2026-04-14T10:47:43.048Z",
+  "exportTime": "2026-04-14T14:17:07.955Z",
   "phases": {
     "p1": {
       "title": "Phase 1: 基础设施",
@@ -107,7 +107,7 @@
     "p2": {
       "title": "Phase 2: 核心能力",
       "subtitle": "可并行开发",
-      "status": "in_progress",
+      "status": "active",
       "tasks": [
         {
           "id": "p2-1",
@@ -145,7 +145,7 @@
           "id": "p2-5",
           "title": "llm-py: FastAPI 框架",
           "module": "llm",
-          "status": "pending",
+          "status": "done",
           "priority": "high",
           "notes": "尚未开始，需创建项目结构"
         },
