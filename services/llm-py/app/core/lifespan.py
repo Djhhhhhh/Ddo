@@ -10,6 +10,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 
 from app.core.config import get_settings
+from app.core.openrouter import close_openrouter_client
 
 logger = logging.getLogger(__name__)
 
@@ -24,7 +25,7 @@ async def lifespan(app: FastAPI):
     - Initialize connections
 
     Shutdown:
-    - Cleanup resources
+    - Cleanup resources (close HTTP client)
     """
     # Startup
     settings = get_settings()
@@ -33,11 +34,19 @@ async def lifespan(app: FastAPI):
     logger.info(f"RAG enabled: {settings.rag_enabled}")
 
     if not settings.openrouter_enabled:
-        logger.warning("OpenRouter API Key not configured. Chat functionality will be limited.")
+        logger.warning("DDO_OPENROUTER_API_KEY not configured. Chat functionality will be limited.")
     else:
-        logger.info("OpenRouter configuration validated")
+        logger.info("OpenRouter API Key configured")
+
+    if not settings.llm_default_model:
+        logger.warning("DDO_LLM_MODEL not configured. Please set the default LLM model.")
+        logger.warning("Example: set DDO_LLM_MODEL=anthropic/claude-3.5-sonnet")
+    else:
+        logger.info(f"Default LLM model: {settings.llm_default_model}")
 
     yield
 
     # Shutdown
     logger.info("Shutting down llm-py service...")
+    await close_openrouter_client()
+    logger.info("Cleanup complete")

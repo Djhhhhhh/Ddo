@@ -24,25 +24,31 @@ services/llm-py/
 ├── app/                           # 主应用包
 │   ├── __init__.py               # 包初始化
 │   ├── main.py                   # FastAPI 主应用入口
-│   ├── api/                      # API 路由模块
+│   ├── api/                      # API 路由模块 (FastAPI "大门" 层)
 │   │   ├── __init__.py          # 路由聚合 (api_router)
 │   │   ├── health.py            # /api/health - 健康检查
-│   │   ├── chat.py              # /api/chat/* - Chat Completions (p2-6)
-│   │   ├── models.py            # /api/models/* - 模型管理 (p2-6)
-│   │   ├── nlp.py               # /api/nlp/* - NLP 意图识别 (p2-4)
+│   │   ├── chat.py              # /api/chat/* - Chat Completions ✅ LangChain 实现
+│   │   ├── models.py            # /api/models/* - 模型管理
+│   │   ├── nlp.py               # /api/nlp/* - NLP 意图识别 ✅ LangChain 实现
 │   │   └── rag.py               # /api/rag/* - RAG 知识库 (p2-7/8/9)
-│   ├── core/                     # 核心模块
+│   ├── core/                     # 核心模块 (LangChain "大脑" 层)
 │   │   ├── __init__.py
 │   │   ├── config.py            # Pydantic Settings 配置管理
+│   │   ├── llm_factory.py       # ← LangChain 核心：模型工厂、链式编排、提示管理
 │   │   └── lifespan.py          # FastAPI lifespan 生命周期
 │   └── utils/                    # 工具模块
 │       ├── __init__.py
 │       └── logger.py            # 日志配置和工具函数
 ├── main.py                       # Uvicorn 启动脚本
-├── requirements.txt              # Python 依赖
+├── requirements.txt              # Python 依赖 (langchain, langchain-openrouter)
 ├── .env.example                  # 环境变量示例
 └── AGENTS.md (本文件)
 ```
+
+**架构分工**:
+- **FastAPI "大门"** (`app/api/`): 负责 HTTP 路由、请求验证、并发控制、序列化
+- **LangChain "大脑"** (`app/core/llm_factory.py`): 负责模型管理、提示工程、逻辑编排、流式处理
+- **OpenRouter 接入**: 通过 `langchain-openrouter` 包实现
 
 **关键文件说明**：
 - `app/main.py`: FastAPI 实例创建、CORS 中间件、路由挂载
@@ -90,4 +96,4 @@ services/llm-py/
 
 ## 🕒 最后更新时间
 
-2026-04-14 17:08:58
+2026-04-15 13:44:00

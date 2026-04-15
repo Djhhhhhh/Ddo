@@ -1,15 +1,24 @@
 """
-Chat Completion API routes.
+Chat Completion API routes - "大门"层
 
-Provides OpenRouter chat completion proxy with streaming support.
+FastAPI 职责：
+- HTTP 路由和请求验证
+- 序列化/反序列化
+- 并发控制（流式响应）
+- 错误处理和状态码映射
 
-TODO: Implement actual OpenRouter integration (Task p2-6)
+业务逻辑由 LangChain "大脑"层处理
 """
 
 from fastapi import APIRouter, HTTPException, status
+from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 from typing import List, Dict, Any, Optional, Literal
 
+from app.core.llm_factory import get_llm_factory, LLMFactoryError
+from app.utils.logger import get_logger
+
+logger = get_logger(__name__)
 router = APIRouter()
 
 
@@ -27,7 +36,7 @@ class ChatRequest(BaseModel):
     model: Optional[str] = Field(None, description="Model ID (default from config)")
     stream: bool = Field(False, description="Enable streaming response")
     temperature: Optional[float] = Field(0.7, ge=0, le=2, description="Sampling temperature")
-    max_tokens: Optional[int] = Field(None, ge=1, description="Maximum tokens to generate")
+    system_prompt: Optional[str] = Field(None, description="System prompt override")
 
 
 class ChatResponseChoice(BaseModel):
@@ -55,35 +64,109 @@ class ChatResponse(BaseModel):
     usage: UsageInfo
 
 
+def _map_llm_error_to_http(error: LLMFactoryError) -> HTTPException:
+    """Map LLM Factory errors to appropriate HTTP responses."""
+    error_msg = str(error).lower()
+
+    if "api key" in error_msg or "not configured" in error_msg:
+        return HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=f"Configuration error: {error}",
+        )
+    elif "model" in error_msg and "not specified" in error_msg:
+        return HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Model configuration error: {error}",
+        )
+    else:
+        return HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail=f"LLM service error: {error}",
+        )
+
+
 @router.post(
     "/completions",
     response_model=ChatResponse,
     status_code=status.HTTP_200_OK,
     summary="Chat completion",
-    description="Proxy chat completion request to OpenRouter.",
+    description="Chat completion using LangChain orchestration.",
+    responses={
+        400: {"description": "Missing model configuration"},
+        401: {"description": "Invalid or missing API key"},
+        502: {"description": "LLM service error"},
+    },
 )
 async def chat_completions(request: ChatRequest) -> Dict[str, Any]:
     """
-    Chat completion endpoint.
+    Chat completion endpoint (non-streaming).
 
     Args:
         request: Chat completion request with messages and parameters.
 
     Returns:
-        Chat completion response from OpenRouter.
-
-    TODO: Implement actual OpenRouter integration in p2-6
+        Chat completion response.
     """
-    raise HTTPException(
-        status_code=status.HTTP_501_NOT_IMPLEMENTED,
-        detail="Chat completion not yet implemented. See task p2-6.",
-    )
+    factory = get_llm_factory()
+
+    try:
+        # Convert messages to dict format for LangChain
+        messages = [{"role": msg.role, "content": msg.content} for msg in request.messages]
+
+        # Get model from request or config
+        model = request.model or factory.settings.llm_default_model
+
+        logger.info(
+            f"[chat_request] model={model} stream=false messages={len(messages)}"
+        )
+
+        # Call LangChain brain
+        response_text = await factory.chat(
+            messages=messages,
+            model=model,
+            temperature=request.temperature or 0.7,
+            system_prompt=request.system_prompt,
+        )
+
+        logger.info(f"[chat_complete] model={model} response_length={len(response_text)}")
+
+        # Format response to match OpenAI-compatible format
+        return {
+            "id": "chatcmpl-ddo",
+            "model": model,
+            "choices": [{
+                "index": 0,
+                "message": {
+                    "role": "assistant",
+                    "content": response_text,
+                },
+                "finish_reason": "stop",
+            }],
+            "usage": {
+                "prompt_tokens": -1,  # Not available from simple response
+                "completion_tokens": -1,
+                "total_tokens": -1,
+            },
+        }
+
+    except LLMFactoryError as e:
+        raise _map_llm_error_to_http(e)
+    except Exception as e:
+        logger.error(f"[chat_error] error={str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail=f"Unexpected error: {str(e)}",
+        )
 
 
 @router.post(
     "/completions/stream",
     summary="Chat completion streaming",
-    description="Stream chat completion response from OpenRouter using SSE.",
+    description="Stream chat completion using LangChain with SSE.",
+    responses={
+        400: {"description": "Missing model configuration"},
+        401: {"description": "Invalid or missing API key"},
+    },
 )
 async def chat_completions_stream(request: ChatRequest):
     """
@@ -93,11 +176,51 @@ async def chat_completions_stream(request: ChatRequest):
         request: Chat completion request with messages and parameters.
 
     Returns:
-        Server-Sent Events stream of chat completion chunks.
-
-    TODO: Implement actual OpenRouter streaming integration in p2-6
+        Server-Sent Events stream.
     """
-    raise HTTPException(
-        status_code=status.HTTP_501_NOT_IMPLEMENTED,
-        detail="Streaming chat completion not yet implemented. See task p2-6.",
-    )
+    factory = get_llm_factory()
+
+    try:
+        # Convert messages
+        messages = [{"role": msg.role, "content": msg.content} for msg in request.messages]
+        model = request.model or factory.settings.llm_default_model
+
+        logger.info(
+            f"[chat_request] model={model} stream=true messages={len(messages)}"
+        )
+
+        async def event_stream():
+            """Generate SSE events from LangChain stream."""
+            chunk_index = 0
+            async for chunk in factory.stream_chat(
+                messages=messages,
+                model=model,
+                temperature=request.temperature or 0.7,
+                system_prompt=request.system_prompt,
+            ):
+                chunk_index += 1
+                # Format as SSE data
+                data = f'data: {{"choices": [{{"delta": {{"content": {repr(chunk)} }}, "index": 0}}]}}\n\n'
+                yield data
+
+            # End marker
+            logger.info(f"[chat_stream_complete] model={model} chunks={chunk_index}")
+            yield "data: [DONE]\n\n"
+
+        return StreamingResponse(
+            event_stream(),
+            media_type="text/event-stream",
+            headers={
+                "Cache-Control": "no-cache",
+                "Connection": "keep-alive",
+            },
+        )
+
+    except LLMFactoryError as e:
+        raise _map_llm_error_to_http(e)
+    except Exception as e:
+        logger.error(f"[chat_stream_error] error={str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail=f"Stream error: {str(e)}",
+        )

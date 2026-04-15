@@ -147,15 +147,15 @@
           "module": "llm",
           "status": "done",
           "priority": "high",
-          "notes": "尚未开始，需创建项目结构"
+          "notes": "FastAPI 基础框架已完成"
         },
         {
           "id": "p2-6",
           "title": "llm-py: OpenRouter 代理",
           "module": "llm",
-          "status": "pending",
+          "status": "done",
           "priority": "high",
-          "notes": "依赖 p2-5"
+          "notes": "FastAPI Gateway + LangChain Brain 架构实现完成。支持 Chat/NLP/Models API，流式/非流式响应"
         },
         {
           "id": "p2-7",
@@ -193,25 +193,25 @@
           "id": "p2-11",
           "title": "server-go: Gin 框架",
           "module": "server",
-          "status": "pending",
+          "status": "done",
           "priority": "high",
-          "notes": "尚未开始，需创建项目结构"
+          "notes": "Gin + DDD 架构已完成，包含 Wire DI、中间件、Health Check"
         },
         {
           "id": "p2-12",
           "title": "server-go: MySQL 连接",
           "module": "server",
-          "status": "pending",
+          "status": "active",
           "priority": "high",
-          "notes": "GORM 配置，依赖 p2-11"
+          "notes": "GORM 配置，p2-11 已完成"
         },
         {
           "id": "p2-13",
           "title": "server-go: 健康检查 API",
           "module": "server",
-          "status": "pending",
+          "status": "done",
           "priority": "high",
-          "notes": "/health 端点，依赖 p2-12"
+          "notes": "/health 端点已实现，无需 MySQL"
         },
         {
           "id": "p2-14",
@@ -219,7 +219,7 @@
           "module": "server",
           "status": "pending",
           "priority": "high",
-          "notes": "元数据管理，RAG代理到llm-py"
+          "notes": "元数据管理，RAG代理到llm-py，依赖 p2-12"
         },
         {
           "id": "p2-15",
@@ -227,7 +227,7 @@
           "module": "server",
           "status": "pending",
           "priority": "medium",
-          "notes": "Cron调度、HTTP回调、robfig/cron"
+          "notes": "Cron调度、HTTP回调、robfig/cron，依赖 p2-12"
         },
         {
           "id": "p2-16",
@@ -235,7 +235,7 @@
           "module": "server",
           "status": "pending",
           "priority": "medium",
-          "notes": "MCP配置CRUD、连接池、测试接口"
+          "notes": "MCP配置CRUD、连接池、测试接口，依赖 p2-12"
         },
         {
           "id": "p2-17",
@@ -243,7 +243,7 @@
           "module": "server",
           "status": "pending",
           "priority": "medium",
-          "notes": "嵌入式消息队列，延时任务"
+          "notes": "嵌入式消息队列，延时任务，可独立开发"
         },
         {
           "id": "p2-18",

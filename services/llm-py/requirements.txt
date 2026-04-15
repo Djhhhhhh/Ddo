@@ -7,8 +7,13 @@ pydantic>=2.5.0
 pydantic-settings>=2.1.0
 python-dotenv>=1.0.0
 
-# HTTP Client for OpenRouter
-httpx>=0.26.0
+# LangChain
+langchain>=0.3.0
+langchain-core>=0.3.0
+langchain-openrouter>=0.1.0
+
+# Fallback if langchain-openrouter unavailable
+langchain-openai>=0.2.0
 
 # Utils
 python-multipart>=0.0.6

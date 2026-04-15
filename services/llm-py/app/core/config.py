@@ -21,9 +21,10 @@ class Settings(BaseSettings):
     )
 
     # OpenRouter Configuration
-    openrouter_api_key: Optional[str] = Field(
+    ddo_openrouter_api_key: Optional[str] = Field(
         default=None,
-        description="OpenRouter API Key"
+        alias="DDO_OPENROUTER_API_KEY",
+        description="OpenRouter API Key (from env DDO_OPENROUTER_API_KEY)"
     )
 
     # Service Configuration
@@ -35,9 +36,10 @@ class Settings(BaseSettings):
         default=8000,
         description="Service bind port"
     )
-    llm_default_model: str = Field(
-        default="anthropic/claude-3.5-sonnet",
-        description="Default LLM model"
+    llm_default_model: Optional[str] = Field(
+        default=None,
+        alias="DDO_LLM_MODEL",
+        description="Default LLM model (env: DDO_LLM_MODEL, e.g. anthropic/claude-3.5-sonnet)"
     )
     llm_timeout: int = Field(
         default=30,
@@ -73,9 +75,14 @@ class Settings(BaseSettings):
     )
 
     @property
+    def openrouter_api_key(self) -> Optional[str]:
+        """Get OpenRouter API Key."""
+        return self.ddo_openrouter_api_key
+
+    @property
     def openrouter_enabled(self) -> bool:
         """Check if OpenRouter is properly configured."""
-        return self.openrouter_api_key is not None and len(self.openrouter_api_key) > 0
+        return self.ddo_openrouter_api_key is not None and len(self.ddo_openrouter_api_key) > 0
 
 
 @lru_cache
