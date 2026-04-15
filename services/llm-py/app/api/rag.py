@@ -3,13 +3,24 @@ RAG (Retrieval-Augmented Generation) API routes.
 
 Provides knowledge base management, document embedding, and semantic search.
 
-TODO: Implement actual RAG engine (Tasks p2-7, p2-8, p2-9)
+NOTE: p2-7 Embedder implemented in /embed endpoint.
+TODO: p2-8 Retriever (search), p2-9 Generator (ask)
 """
 
 from fastapi import APIRouter, HTTPException, status
 from pydantic import BaseModel, Field
 from typing import List, Dict, Any, Optional
 
+from app.core.embedder import (
+    EmbedderService,
+    EmbeddingError,
+    RateLimitError,
+    NetworkError,
+    get_embedder_service,
+)
+from app.utils.logger import get_logger
+
+logger = get_logger(__name__)
 router = APIRouter()
 
 
@@ -20,6 +31,7 @@ class EmbedRequest(BaseModel):
 
     documents: List[str] = Field(..., description="Documents to embed")
     metadata: Optional[List[Dict[str, Any]]] = Field(None, description="Optional metadata for each document")
+    model: Optional[str] = Field(None, description="Embedding model name (optional, defaults to env DDO_LLM_MODEL or system default)")
 
 
 class EmbedResponse(BaseModel):
@@ -41,17 +53,82 @@ async def embed_documents(request: EmbedRequest) -> EmbedResponse:
     Embed documents endpoint.
 
     Args:
-        request: Documents to embed.
+        request: Documents to embed with optional metadata.
 
     Returns:
         Embedding result with document IDs.
 
-    TODO: Implement actual embedding in p2-7
+    Raises:
+        HTTPException: On validation errors or embedding failures.
     """
-    raise HTTPException(
-        status_code=status.HTTP_501_NOT_IMPLEMENTED,
-        detail="Document embedding not yet implemented. See task p2-7.",
-    )
+    # Validate request
+    if not request.documents:
+        logger.warning("[embed_api_error] empty_documents")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Documents list cannot be empty",
+        )
+
+    if request.metadata is not None and len(request.metadata) != len(request.documents):
+        logger.warning(
+            f"[embed_api_error] metadata_mismatch "
+            f"documents={len(request.documents)} metadata={len(request.metadata)}"
+        )
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Metadata length ({len(request.metadata)}) must match documents length ({len(request.documents)})",
+        )
+
+    # Get embedder service with model override
+    # Priority: request.model > env DDO_LLM_MODEL > system default
+    embedder = get_embedder_service(model=request.model)
+
+    try:
+        # Embed documents
+        embedded_docs = await embedder.embed_documents(
+            documents=request.documents,
+            metadata=request.metadata,
+        )
+
+        document_ids = [doc.document_id for doc in embedded_docs]
+
+        logger.info(
+            f"[embed_api_success] documents={len(request.documents)} "
+            f"created={len(document_ids)}"
+        )
+
+        return EmbedResponse(
+            document_ids=document_ids,
+            embeddings_count=len(document_ids),
+        )
+
+    except RateLimitError as e:
+        logger.error(f"[embed_api_error] rate_limit error={str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail="Embedding API rate limit exceeded. Please retry after a moment.",
+        ) from e
+
+    except NetworkError as e:
+        logger.error(f"[embed_api_error] network_error error={str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Embedding service temporarily unavailable. Please retry.",
+        ) from e
+
+    except EmbeddingError as e:
+        logger.error(f"[embed_api_error] embedding_failed error={str(e)}")
+        raise HTTPException(
+            status_code=e.status_code,
+            detail=str(e),
+        ) from e
+
+    except Exception as e:
+        logger.error(f"[embed_api_error] unexpected_error error={type(e).__name__} message={str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to embed documents: {str(e)}",
+        ) from e
 
 
 # ==================== Semantic Search ====================

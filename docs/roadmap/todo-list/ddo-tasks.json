@@ -161,9 +161,9 @@
           "id": "p2-7",
           "title": "RAG Engine: Embedder",
           "module": "llm",
-          "status": "pending",
+          "status": "done",
           "priority": "high",
-          "notes": "文本向量化，调用 Embedding API"
+          "notes": "文本向量化实现完成，支持 OpenRouter Embedding API，模型优先级：请求体 > DDO_LLM_MODEL > 系统默认"
         },
         {
           "id": "p2-8",

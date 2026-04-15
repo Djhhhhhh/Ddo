@@ -8,6 +8,7 @@
 - **分层架构**：FastAPI "大门"层 (`app/api/`) + LangChain "大脑"层 (`app/core/`)
   - FastAPI 负责：HTTP 路由、请求验证、并发控制、部署运维
   - LangChain 负责：提示模板、模型调用、逻辑编排、流式处理（2026-04-15）
+  - **RAG Embedder**：`app/core/embedder.py` 配置化 embedding 服务，支持批处理和自动重试（2026-04-15）
 
 - FastAPI 应用结构：app/main.py 创建实例，app/api/ 存放路由，app/core/ 存放配置和核心逻辑（2026-04-14）
 - 路由聚合模式：在 app/api/__init__.py 中使用 APIRouter 聚合所有子路由，统一 prefix="/api"（2026-04-14）
@@ -18,6 +19,7 @@
 ### LangChain 架构规则（新增）
 
 - **LLM Factory 模式**：创建 `app/core/llm_factory.py` 统一管理模型实例创建和链式编排（2026-04-15）
+- **Embedder 模式**：创建 `app/core/embedder.py` 封装 Embedding 服务，支持 OpenRouter 和批处理（2026-04-15）
 - **链式调用**：使用 `|` 操作符组合 Prompt → Model → Parser 链条（2026-04-15）
 - **流式处理**：使用 LangChain的 `ainvoke` / `astream` 方法，FastAPI 层只做 SSE 包装（2026-04-15）
 - **提示模板**：所有系统提示必须定义为 `ChatPromptTemplate`，支持 MessagesPlaceholder（2026-04-15）
@@ -28,18 +30,20 @@
 - 类型注解：所有函数参数和返回值使用类型注解，请求/响应模型继承自 pydantic.BaseModel（2026-04-14）
 - 路由文档：每个 endpoint 必须包含 summary 和 description，使用 Field 描述模型字段（2026-04-14）
 - 日志格式：使用 [event_name] key=value 格式，便于后续日志分析（2026-04-14）
+  - embedder 日志：`[embedder_start] documents=N`, `[embedder_success] duration_ms=X`
+  - API 日志：`[embed_api_success] documents=N`
+  - 错误日志：`[embedder_error] error_type=X message=Y`
 - 配置命名：环境变量使用大写下划线，Settings 类属性使用小写下划线（2026-04-14）
 - 错误处理：使用 FastAPI 的 HTTPException，明确返回合适的 HTTP 状态码（2026-04-14）
+  - 400 Bad Request: 请求参数验证失败
+  - 429 Too Many Requests: API 限流
+  - 503 Service Unavailable: 服务临时不可用
+  - 500 Internal Server Error: 内部错误
 - 自定义异常：外部 API 错误封装为自定义异常类，映射到合适的 HTTP 状态码（2026-04-15）
+  - EmbeddingError: 基础 embedding 异常，带 status_code 属性
+  - RateLimitError: 限流错误 (429)
+  - NetworkError: 网络错误 (503)
 - 缓存管理：缓存需记录时间戳，支持 TTL 和手动刷新，日志记录缓存命中/未命中（2026-04-15）
-
-## 常见陷阱
-
-- OpenRouter API Key 不要硬编码，必须使用环境变量或 .env 文件（2026-04-14）
-- Uvicorn 的 reload=True 只适合开发，生产环境必须禁用（2026-04-14）
-- CORS 中间件配置：开发可用 allow_origins=["*"]，生产必须限制具体域名（2026-04-14）
-- Pydantic Settings 的 `extra="ignore"` 避免未定义配置项报错（2026-04-14）
-
 ## 常见陷阱
 
 - OpenRouter API Key 不要硬编码，必须使用环境变量或 .env 文件（2026-04-14）
@@ -48,6 +52,7 @@
 - Pydantic Settings 的 `extra="ignore"` 避免未定义配置项报错（2026-04-14）
 - tenacity 重试必须指定 `retry_if_exception_type`，否则默认重试所有异常可能导致死循环（2026-04-15）
 - httpx.AsyncClient 流式读取必须用 `async with client.stream()` 上下文，否则连接可能泄漏（2026-04-15）
+- Embedding 批处理：OpenRouter 有批量限制，必须分批处理大量文档（2026-04-15）
 
 ## 示例参考
 
@@ -112,5 +117,36 @@ return StreamingResponse(
     media_type="text/event-stream",
     headers={"Cache-Control": "no-cache"},
 )
+```
+（2026-04-15）
+
+### Embedder Service 使用示例
+
+```python
+from app.core.embedder import get_embedder_service
+
+embedder = get_embedder_service()
+docs = await embedder.embed_documents(
+    documents=["Hello world", "Another document"],
+    metadata=[{"source": "test"}, {"source": "test2"}]
+)
+# docs: List[DocumentEmbedding] with document_id, content, embedding, metadata
+```
+（2026-04-15）
+
+### 异常处理模式
+
+```python
+try:
+    result = await some_operation()
+except RateLimitError as e:
+    # 已重试失败，返回 429
+    raise HTTPException(status_code=429, detail="Rate limited")
+except NetworkError as e:
+    # 已重试失败，返回 503
+    raise HTTPException(status_code=503, detail="Service unavailable")
+except EmbeddingError as e:
+    # 其他 embedding 错误，使用其 status_code
+    raise HTTPException(status_code=e.status_code, detail=str(e))
 ```
 （2026-04-15）

@@ -69,6 +69,14 @@ class Settings(BaseSettings):
         default="openai/text-embedding-3-small",
         description="Embedding model name"
     )
+    rag_embedding_batch_size: int = Field(
+        default=100,
+        description="Batch size for embedding requests"
+    )
+    rag_embedding_dimensions: int = Field(
+        default=1536,
+        description="Embedding vector dimensions (1536 for text-embedding-3-small, 3072 for text-embedding-3-large)"
+    )
     rag_top_k: int = Field(
         default=5,
         description="Number of documents to retrieve"

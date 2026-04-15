@@ -15,5 +15,8 @@ langchain-openrouter>=0.1.0
 # Fallback if langchain-openrouter unavailable
 langchain-openai>=0.2.0
 
+# Embeddings
+langchain-community>=0.3.0
+
 # Utils
 python-multipart>=0.0.6

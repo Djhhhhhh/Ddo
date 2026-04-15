@@ -30,11 +30,13 @@ services/llm-py/
 │   │   ├── chat.py              # /api/chat/* - Chat Completions ✅ LangChain 实现
 │   │   ├── models.py            # /api/models/* - 模型管理
 │   │   ├── nlp.py               # /api/nlp/* - NLP 意图识别 ✅ LangChain 实现
-│   │   └── rag.py               # /api/rag/* - RAG 知识库 (p2-7/8/9)
+│   │   └── rag.py               # /api/rag/* - RAG 知识库 ✅ p2-7 Embedder 已实现
 │   ├── core/                     # 核心模块 (LangChain "大脑" 层)
 │   │   ├── __init__.py
 │   │   ├── config.py            # Pydantic Settings 配置管理
-│   │   ├── llm_factory.py       # ← LangChain 核心：模型工厂、链式编排、提示管理
+│   │   ├── llm_factory.py       # LangChain 核心：模型工厂、链式编排、提示管理
+│   │   ├── embedder.py          # ← 新增：RAG Embedder 服务核心 (p2-7)
+│   │   ├── document_store.py    # ← 新增：文档存储（临时内存实现）(p2-7)
 │   │   └── lifespan.py          # FastAPI lifespan 生命周期
 │   └── utils/                    # 工具模块
 │       ├── __init__.py
@@ -47,8 +49,11 @@ services/llm-py/
 
 **架构分工**:
 - **FastAPI "大门"** (`app/api/`): 负责 HTTP 路由、请求验证、并发控制、序列化
-- **LangChain "大脑"** (`app/core/llm_factory.py`): 负责模型管理、提示工程、逻辑编排、流式处理
-- **OpenRouter 接入**: 通过 `langchain-openrouter` 包实现
+- **LangChain "大脑"** (`app/core/`):
+  - `llm_factory.py`: 负责 Chat/NLP 模型管理、链式编排、流式处理
+  - `embedder.py`: 负责 RAG 文档向量化、Embedding API 调用、批量处理
+- **RAG 存储** (`app/core/document_store.py`): 临时内存存储，后续替换为 ChromaDB/FAISS
+- **OpenRouter 接入**: 通过 `langchain-openrouter` / `langchain-openai` 包实现
 
 **关键文件说明**：
 - `app/main.py`: FastAPI 实例创建、CORS 中间件、路由挂载
@@ -96,4 +101,4 @@ services/llm-py/
 
 ## 🕒 最后更新时间
 
-2026-04-15 13:44:00
+2026-04-15 16:20:00
