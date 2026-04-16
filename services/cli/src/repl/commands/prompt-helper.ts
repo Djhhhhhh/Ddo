@@ -132,7 +132,7 @@ export class InteractivePrompt {
     }
 
     console.log();
-    const answer = await this.promptUserConfirm('确认执行? (y/n)');
+    const answer = await this.promptUserConfirm('确认创建? (y/n)');
     return answer;
   }
 
@@ -149,6 +149,7 @@ export class InteractivePrompt {
    * 提示用户确认
    */
   private async promptUserConfirm(message: string): Promise<boolean> {
+    console.log(chalk.cyan(message));
     const answer = await this.promptUser();
     return answer.toLowerCase() === 'y';
   }

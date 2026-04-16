@@ -40,12 +40,31 @@
   - 根据 NLP 响应中的 intent 字段路由到对应动作
   - 支持的路由类型：switch_mode、execute_command、chat、show_status、show_help、unknown
   - 意图映射表支持前缀匹配（如 `timer.create.hourly` 匹配 `timer.create`）
+  - **参数标准化**：内置 `normalizeKBParams`、`normalizeTimerParams`、`normalizeMCPParams` 函数
+  - 参数映射表处理别名：`title`←`name`←`subject`、`content`←`text`←`body` 等
 - **自然语言处理流程**：
   1. 用户在默认模式下输入非命令文本
   2. 调用 `handleUnknownCommand` 处理
   3. 调用 NLP Service `analyzeText()` 获取意图
   4. 意图路由器根据 intent 路由到对应动作
   5. 执行动作（切换模式/执行命令/进入聊天等）
+
+### 参数标准化契约（新增 2026-04-16）
+
+意图路由器是参数标准化的统一转换层，确保 NLP 返回的参数格式统一：
+
+| 命令类型 | 标准参数 | 别名映射 |
+|----------|----------|----------|
+| KB 命令 | title, content, tags | name→title, text→content |
+| Timer 命令 | name, cron, url, method | schedule→cron, endpoint→url |
+| MCP 命令 | name, type, config | - |
+
+**处理嵌套结构**：自动展平 `{params: {...}}`、`{data: {...}}`、`{metadata: {...}}` 等嵌套格式
+
+**参数验证**（`src/repl/validators.ts`）：
+- KB：`validateKBParams()` - 验证 title/content 非空
+- Timer：`validateTimerParams()` - 验证 cron 格式（5字段）、url 格式
+- MCP：`validateMCPParams()` - 验证 name/type/config 及 type 枚举值
 
 ## 代码规范
 

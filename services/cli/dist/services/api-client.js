@@ -82,10 +82,8 @@ function createApiClient(config) {
     }
     async function searchKnowledge(params) {
         const { query, top_k = 5 } = params;
-        return request('/api/v1/knowledge/search', {
-            method: 'POST',
-            body: JSON.stringify({ query, top_k }),
-        });
+        // server-go 使用 q 作为查询参数名
+        return request(`/api/v1/knowledge/search?q=${encodeURIComponent(query)}&limit=${top_k}`);
     }
     async function askKnowledge(question) {
         return request('/api/v1/knowledge/ask', {
@@ -101,9 +99,17 @@ function createApiClient(config) {
         return request(`/api/v1/timers/${uuid}`);
     }
     async function createTimer(data) {
+        // 后端使用 cron_expr 和 callback_url，需要字段映射
         return request('/api/v1/timers', {
             method: 'POST',
-            body: JSON.stringify(data),
+            body: JSON.stringify({
+                name: data.name,
+                cron_expr: data.cron,
+                callback_url: data.url,
+                callback_method: data.method || 'GET',
+                callback_headers: data.headers,
+                callback_body: data.body,
+            }),
         });
     }
     async function pauseTimer(uuid) {

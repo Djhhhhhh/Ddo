@@ -18,25 +18,30 @@ exports.timerListCommand = {
     handler: async () => {
         const apiClient = (0, api_client_1.getApiClient)();
         try {
+            // server-go 返回 { data: { total, items } }
             const result = await apiClient.getTimers();
+            const items = result.items || result.data || [];
+            const total = result.total || 0;
             console.log(chalk_1.default.cyan('\n定时任务列表:'));
             console.log(chalk_1.default.gray('─'.repeat(50)));
-            if (result.data.length === 0) {
+            if (items.length === 0) {
                 console.log(chalk_1.default.gray('  暂无定时任务'));
             }
             else {
-                for (const task of result.data) {
-                    const status = task.enabled ? chalk_1.default.green('●') : chalk_1.default.gray('○');
-                    const statusText = task.enabled ? chalk_1.default.green('运行中') : chalk_1.default.gray('已暂停');
+                for (const task of items) {
+                    // server-go 使用 status 字段，CLI 用 enabled 表示
+                    const isRunning = task.status === 'active' || task.status === 'running';
+                    const status = isRunning ? chalk_1.default.green('●') : chalk_1.default.gray('○');
+                    const statusText = isRunning ? chalk_1.default.green('运行中') : chalk_1.default.gray('已暂停');
                     console.log(`  ${status} ${chalk_1.default.cyan(task.uuid.slice(0, 8))}  ${task.name}`);
-                    console.log(chalk_1.default.gray(`    Cron: ${task.cron}  状态: ${statusText}`));
-                    if (task.next_run) {
-                        console.log(chalk_1.default.gray(`    下次执行: ${task.next_run}`));
+                    console.log(chalk_1.default.gray(`    Cron: ${task.cron_expr || task.cron}  状态: ${statusText}`));
+                    if (task.next_run_at || task.next_run) {
+                        console.log(chalk_1.default.gray(`    下次执行: ${task.next_run_at || task.next_run}`));
                     }
                 }
             }
             console.log();
-            console.log(chalk_1.default.gray(`共 ${result.total} 个任务`));
+            console.log(chalk_1.default.gray(`共 ${total} 个任务`));
             console.log();
         }
         catch (err) {

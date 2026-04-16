@@ -15,17 +15,24 @@ export const mcpListCommand: ReplCommand = {
     const apiClient = getApiClient();
 
     try {
-      const result = await apiClient.getMcpList();
+      // server-go 返回 { data: { total, items } }
+      const result = await apiClient.getMcpList() as any;
+      const items = result.items || result.mcps || [];
+      const total = result.total || items.length;
 
       console.log(chalk.cyan('\nMCP 配置列表:'));
       console.log(chalk.gray('─'.repeat(40)));
 
-      if (result.mcps.length === 0) {
+      if (items.length === 0) {
         console.log(chalk.gray('  暂无 MCP 配置'));
       } else {
-        for (const mcp of result.mcps) {
-          const status = mcp.status === 'connected' ? chalk.green('●') : chalk.red('●');
-          const statusText = mcp.status === 'connected' ? chalk.green('已连接') : chalk.red('未连接');
+        for (const mcp of items) {
+          const status = mcp.status === 'connected' || mcp.status === 'active'
+            ? chalk.green('●')
+            : chalk.red('●');
+          const statusText = mcp.status === 'connected' || mcp.status === 'active'
+            ? chalk.green('已连接')
+            : chalk.red('未连接');
           const typeIcon = mcp.type === 'stdio' ? '⬡' : mcp.type === 'http' ? '⬢' : '◈';
           console.log(`  ${status} ${chalk.cyan(mcp.uuid.slice(0, 8))}  ${mcp.name} ${chalk.gray(typeIcon)} ${mcp.type}`);
           console.log(chalk.gray(`    状态: ${statusText}`));
@@ -36,7 +43,7 @@ export const mcpListCommand: ReplCommand = {
       }
 
       console.log();
-      console.log(chalk.gray(`共 ${result.mcps.length} 个配置`));
+      console.log(chalk.gray(`共 ${total} 个配置`));
       console.log();
     } catch (err) {
       console.log(chalk.red('获取 MCP 配置失败:'), err instanceof Error ? err.message : String(err));

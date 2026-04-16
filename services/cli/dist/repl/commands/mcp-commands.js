@@ -18,16 +18,23 @@ exports.mcpListCommand = {
     handler: async () => {
         const apiClient = (0, api_client_1.getApiClient)();
         try {
+            // server-go 返回 { data: { total, items } }
             const result = await apiClient.getMcpList();
+            const items = result.items || result.mcps || [];
+            const total = result.total || items.length;
             console.log(chalk_1.default.cyan('\nMCP 配置列表:'));
             console.log(chalk_1.default.gray('─'.repeat(40)));
-            if (result.mcps.length === 0) {
+            if (items.length === 0) {
                 console.log(chalk_1.default.gray('  暂无 MCP 配置'));
             }
             else {
-                for (const mcp of result.mcps) {
-                    const status = mcp.status === 'connected' ? chalk_1.default.green('●') : chalk_1.default.red('●');
-                    const statusText = mcp.status === 'connected' ? chalk_1.default.green('已连接') : chalk_1.default.red('未连接');
+                for (const mcp of items) {
+                    const status = mcp.status === 'connected' || mcp.status === 'active'
+                        ? chalk_1.default.green('●')
+                        : chalk_1.default.red('●');
+                    const statusText = mcp.status === 'connected' || mcp.status === 'active'
+                        ? chalk_1.default.green('已连接')
+                        : chalk_1.default.red('未连接');
                     const typeIcon = mcp.type === 'stdio' ? '⬡' : mcp.type === 'http' ? '⬢' : '◈';
                     console.log(`  ${status} ${chalk_1.default.cyan(mcp.uuid.slice(0, 8))}  ${mcp.name} ${chalk_1.default.gray(typeIcon)} ${mcp.type}`);
                     console.log(chalk_1.default.gray(`    状态: ${statusText}`));
@@ -37,7 +44,7 @@ exports.mcpListCommand = {
                 }
             }
             console.log();
-            console.log(chalk_1.default.gray(`共 ${result.mcps.length} 个配置`));
+            console.log(chalk_1.default.gray(`共 ${total} 个配置`));
             console.log();
         }
         catch (err) {

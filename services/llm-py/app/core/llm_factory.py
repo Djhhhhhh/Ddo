@@ -69,7 +69,6 @@ class LLMFactory:
             )
 
         try:
-            # Try langchain-openrouter first
             from langchain_openrouter import ChatOpenRouter
 
             chat_model = ChatOpenRouter(
@@ -181,7 +180,21 @@ Analyze the user's input and extract:
 2. parameters: Relevant parameters as key-value pairs
 3. reply: A friendly response to the user
 
-Respond in JSON format."""),
+**IMPORTANT - Parameter Naming Convention**:
+- Use "title" for knowledge base entry title
+- Use "content" for knowledge base entry content
+- Use "tags" for tags array (comma-separated string)
+- Use "cron" for cron expression (e.g., "0 * * * *")
+- Use "url" for callback URL
+- Use "name" for entity name
+- Use "method" for HTTP method (GET/POST/PUT/DELETE)
+
+**IMPORTANT - Return a FLAT JSON object only**:
+- Do NOT nest parameters inside "params", "data", or "metadata"
+- Always return parameters directly in the top-level object
+- Example: parameters with title and content at top level
+
+Respond in JSON format with no markdown formatting."""),
             ("human", "{text}"),
         ])
 

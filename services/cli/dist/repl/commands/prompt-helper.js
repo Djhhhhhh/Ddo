@@ -93,7 +93,7 @@ class InteractivePrompt {
             console.log(`  ${chalk_1.default.yellow(key)}: ${displayValue}`);
         }
         console.log();
-        const answer = await this.promptUserConfirm('确认执行? (y/n)');
+        const answer = await this.promptUserConfirm('确认创建? (y/n)');
         return answer;
     }
     /**
@@ -108,6 +108,7 @@ class InteractivePrompt {
      * 提示用户确认
      */
     async promptUserConfirm(message) {
+        console.log(chalk_1.default.cyan(message));
         const answer = await this.promptUser();
         return answer.toLowerCase() === 'y';
     }

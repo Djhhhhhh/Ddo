@@ -34,7 +34,8 @@ services/cli/
 │   │   ├── index.ts          # REPL 入口，命令分发和自然语言处理
 │   │   ├── parser.ts         # 命令解析器 - 支持参数、选项、引号字符串（2026-04-14）
 │   │   ├── mode.ts           # 模式管理器 - 管理 Default/Chat/Kb/Timer/Mcp 模式（2026-04-14）
-│   │   ├── intent-router.ts  # 意图路由器 - NLP 意图路由到对应动作（2026-04-16）
+│   │   ├── intent-router.ts  # 意图路由器 - NLP 意图路由+参数标准化（2026-04-16）
+│   │   ├── validators.ts     # 参数验证工具 - KB/Timer/MCP 参数验证（2026-04-16）
 │   │   ├── completer.ts      # Tab 自动补全（2026-04-14）
 │   │   └── commands/         # REPL 命令目录（2026-04-14）
 │   │       ├── index.ts      # 命令注册中心和接口定义
@@ -110,5 +111,6 @@ services/cli/
 
 ## 🕒 最后更新时间
 
+2026-04-16：新增 NLP 参数标准化（intent-router.ts 标准化函数、validators.ts 验证工具）
 2026-04-16：新增 NLP 集成（intent-router.ts, nlp.ts）
 2026-04-14 20:30:00

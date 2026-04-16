@@ -152,10 +152,19 @@ async def chat_completions(request: ChatRequest) -> Dict[str, Any]:
     except LLMFactoryError as e:
         raise _map_llm_error_to_http(e)
     except Exception as e:
-        logger.error(f"[chat_error] error={str(e)}")
+        error_str = str(e)
+        # 处理 OpenRouter 错误响应（如 524 超时）
+        if "Response validation failed" in error_str or "validation errors" in error_str:
+            logger.error(f"[chat_openrouter_error] error={error_str}")
+            raise HTTPException(
+                status_code=status.HTTP_504_GATEWAY_TIMEOUT,
+                detail="LLM service timeout or unavailable. Please try again later.",
+            )
+        # 处理其他异常
+        logger.error(f"[chat_error] error={error_str}")
         raise HTTPException(
             status_code=status.HTTP_502_BAD_GATEWAY,
-            detail=f"Unexpected error: {str(e)}",
+            detail=f"Unexpected error: {error_str}",
         )
 
 

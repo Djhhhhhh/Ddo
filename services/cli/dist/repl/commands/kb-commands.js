@@ -18,21 +18,26 @@ exports.kbListCommand = {
     handler: async () => {
         const apiClient = (0, api_client_1.getApiClient)();
         try {
+            // server-go 返回 { data: { total, items } }
             const result = await apiClient.getKnowledgeList({ page: 1, page_size: 20 });
+            const items = result.items || result.data || [];
+            const total = result.total || 0;
             console.log(chalk_1.default.cyan('\n知识库列表:'));
             console.log(chalk_1.default.gray('─'.repeat(40)));
-            if (result.data.length === 0) {
+            if (items.length === 0) {
                 console.log(chalk_1.default.gray('  暂无知识库'));
             }
             else {
-                for (const item of result.data) {
+                for (const item of items) {
                     const tags = item.tags?.length > 0 ? ` [${item.tags.join(', ')}]` : '';
                     console.log(`  ${chalk_1.default.cyan(item.uuid.slice(0, 8))}  ${item.title}${tags}`);
-                    console.log(chalk_1.default.gray(`    ${item.content.slice(0, 60)}${item.content.length > 60 ? '...' : ''}`));
+                    if (item.content) {
+                        console.log(chalk_1.default.gray(`    ${item.content.slice(0, 60)}${item.content.length > 60 ? '...' : ''}`));
+                    }
                 }
             }
             console.log();
-            console.log(chalk_1.default.gray(`共 ${result.total} 条`));
+            console.log(chalk_1.default.gray(`共 ${total} 条`));
             console.log();
         }
         catch (err) {

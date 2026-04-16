@@ -25,6 +25,44 @@
 - **提示模板**：所有系统提示必须定义为 `ChatPromptTemplate`，支持 MessagesPlaceholder（2026-04-15）
 - **模型路由**：通过 `langchain-openrouter` 或 fallback 到 `ChatOpenAI` + OpenRouter base_url（2026-04-15）
 
+### LangChain 提示词模板规则（新增 2026-04-16）
+
+- **禁止在提示词中直接使用 JSON 示例**：LangChain 使用 `{}` 作为变量占位符，直接写 JSON 会导致 "Nested replacement fields are not allowed" 错误
+- **正确做法**：
+  ```python
+  # 错误 ❌ - 会导致解析错误
+  "Example: {'intent': 'kb.add', 'parameters': {'title': '...'}"
+  
+  # 正确 ✓ - 用文字描述代替
+  "Example: parameters with title and content at top level"
+  ```
+- **如果必须展示 JSON 结构**：使用字典对象而非字符串，让模型自己序列化
+- **变量占位符**：只用 `{variable_name}` 格式，不要嵌套大括号
+
+### NLP 参数契约（新增 2026-04-16）
+
+**意图识别（Intent Recognition）** 参数命名规范：
+- KB 命令：`title`（标题）、`content`（内容）、`tags`（标签数组）
+- Timer 命令：`name`（名称）、`cron`（cron 表达式）、`url`（回调 URL）、`method`（HTTP 方法）
+- MCP 命令：`name`（名称）、`type`（类型）、`config`（配置）
+
+**重要**：NLP 提示词必须强调：
+1. 返回扁平 JSON 对象，禁止嵌套参数
+2. 使用标准参数名（见上方规范）
+3. 不使用 markdown 格式包裹 JSON
+
+**示例提示词片段**：
+```
+**IMPORTANT - Parameter Naming Convention**:
+- Use "title" for knowledge base entry title
+- Use "content" for knowledge base entry content
+- Use "cron" for cron expression
+
+**IMPORTANT - Return a FLAT JSON object only**:
+- Do NOT nest parameters inside "params", "data", or "metadata"
+- Always return parameters directly in the top-level object
+```
+
 ## 代码规范
 
 - 类型注解：所有函数参数和返回值使用类型注解，请求/响应模型继承自 pydantic.BaseModel（2026-04-14）

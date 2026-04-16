@@ -15,27 +15,32 @@ export const timerListCommand: ReplCommand = {
     const apiClient = getApiClient();
 
     try {
-      const result = await apiClient.getTimers();
+      // server-go 返回 { data: { total, items } }
+      const result = await apiClient.getTimers() as any;
+      const items = result.items || result.data || [];
+      const total = result.total || 0;
 
       console.log(chalk.cyan('\n定时任务列表:'));
       console.log(chalk.gray('─'.repeat(50)));
 
-      if (result.data.length === 0) {
+      if (items.length === 0) {
         console.log(chalk.gray('  暂无定时任务'));
       } else {
-        for (const task of result.data) {
-          const status = task.enabled ? chalk.green('●') : chalk.gray('○');
-          const statusText = task.enabled ? chalk.green('运行中') : chalk.gray('已暂停');
+        for (const task of items) {
+          // server-go 使用 status 字段，CLI 用 enabled 表示
+          const isRunning = task.status === 'active' || task.status === 'running';
+          const status = isRunning ? chalk.green('●') : chalk.gray('○');
+          const statusText = isRunning ? chalk.green('运行中') : chalk.gray('已暂停');
           console.log(`  ${status} ${chalk.cyan(task.uuid.slice(0, 8))}  ${task.name}`);
-          console.log(chalk.gray(`    Cron: ${task.cron}  状态: ${statusText}`));
-          if (task.next_run) {
-            console.log(chalk.gray(`    下次执行: ${task.next_run}`));
+          console.log(chalk.gray(`    Cron: ${task.cron_expr || task.cron}  状态: ${statusText}`));
+          if (task.next_run_at || task.next_run) {
+            console.log(chalk.gray(`    下次执行: ${task.next_run_at || task.next_run}`));
           }
         }
       }
 
       console.log();
-      console.log(chalk.gray(`共 ${result.total} 个任务`));
+      console.log(chalk.gray(`共 ${total} 个任务`));
       console.log();
     } catch (err) {
       console.log(chalk.red('获取定时任务失败:'), err instanceof Error ? err.message : String(err));

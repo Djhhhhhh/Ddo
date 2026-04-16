@@ -14,7 +14,7 @@ import (
 
 const (
 	defaultLLMTimeout = 60 * time.Second
-	defaultLLMBaseURL  = "http://localhost:8000"
+	defaultLLMBaseURL = "http://localhost:8000"
 )
 
 // LLMProxy LLM 代理服务接口
@@ -60,8 +60,8 @@ type Message struct {
 
 // ChatResponse 对话响应
 type ChatResponse struct {
-	Content string  `json:"content"`
-	Usage   *Usage  `json:"usage,omitempty"`
+	Content string `json:"content"`
+	Usage   *Usage `json:"usage,omitempty"`
 }
 
 // Usage token 使用量
@@ -255,7 +255,7 @@ func (r *llmProxy) NLP(ctx context.Context, req *NLPRequest) (*NLPResponse, erro
 		return nil, fmt.Errorf("marshal nlp request failed: %w", err)
 	}
 
-	httpReq, err := http.NewRequestWithContext(ctx, http.MethodPost, r.baseURL+"/api/nlp", bytes.NewReader(body))
+	httpReq, err := http.NewRequestWithContext(ctx, http.MethodPost, r.baseURL+"/api/nlp/", bytes.NewReader(body))
 	if err != nil {
 		return nil, fmt.Errorf("create nlp request failed: %w", err)
 	}

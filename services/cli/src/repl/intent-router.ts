@@ -94,6 +94,100 @@ const KEYWORD_FALLBACK: { keywords: string[]; action: RouteActionType; targetMod
 ];
 
 /**
+ * 参数标准化映射
+ * 定义各类型命令的标准参数名和别名
+ */
+
+/** 知识库命令参数映射 */
+const KB_PARAM_MAP: Record<string, string[]> = {
+  title: ['title', 'name', 'subject', 'heading', '标题'],
+  content: ['content', 'text', 'body', 'description', 'value', '内容'],
+  tags: ['tags', 'tag', 'labels', 'categories', '标签'],
+  category: ['category', 'type', 'kind', '分类'],
+};
+
+/** 定时任务命令参数映射 */
+const TIMER_PARAM_MAP: Record<string, string[]> = {
+  name: ['name', 'title', 'subject', '名称'],
+  cron: ['cron', 'schedule', 'time', 'interval', 'frequency', 'cron表达式'],
+  url: ['url', 'endpoint', 'webhook', 'callback', 'callback_url', '回调', '地址'],
+  method: ['method', 'http_method', 'verb', 'http方法'],
+};
+
+/** MCP 命令参数映射 */
+const MCP_PARAM_MAP: Record<string, string[]> = {
+  name: ['name', 'title', '名称'],
+  type: ['type', 'kind', '类型'],
+  config: ['config', 'url', 'command', 'endpoint', '配置'],
+};
+
+/**
+ * 参数标准化函数
+ * 将 NLP 返回的各种格式参数转换为标准格式
+ */
+function normalizeParams(
+  params: Record<string, unknown> | undefined,
+  paramMap: Record<string, string[]>
+): Record<string, string> {
+  if (!params || typeof params !== 'object') {
+    return {};
+  }
+
+  const result: Record<string, string> = {};
+
+  // 处理嵌套结构：params, data, metadata
+  let flatParams: Record<string, unknown> = { ...params };
+  if ((params as any).params && typeof (params as any).params === 'object') {
+    flatParams = { ...flatParams, ...(params as any).params };
+  }
+  if ((params as any).data && typeof (params as any).data === 'object') {
+    flatParams = { ...flatParams, ...(params as any).data };
+  }
+  if ((params as any).metadata && typeof (params as any).metadata === 'object') {
+    flatParams = { ...flatParams, ...(params as any).metadata };
+  }
+
+  // 遍历目标参数名，查找第一个匹配的源参数
+  for (const [targetKey, sourceKeys] of Object.entries(paramMap)) {
+    for (const sourceKey of sourceKeys) {
+      if (flatParams[sourceKey] !== undefined && flatParams[sourceKey] !== null) {
+        const value = flatParams[sourceKey];
+        // 处理数组（如 tags）
+        if (Array.isArray(value)) {
+          result[targetKey] = value.map(v => String(v)).join(',');
+        } else {
+          result[targetKey] = String(value);
+        }
+        break;
+      }
+    }
+  }
+
+  return result;
+}
+
+/**
+ * 标准化知识库参数
+ */
+function normalizeKBParams(params: Record<string, unknown> | undefined): Record<string, string> {
+  return normalizeParams(params, KB_PARAM_MAP);
+}
+
+/**
+ * 标准化定时任务参数
+ */
+function normalizeTimerParams(params: Record<string, unknown> | undefined): Record<string, string> {
+  return normalizeParams(params, TIMER_PARAM_MAP);
+}
+
+/**
+ * 标准化 MCP 参数
+ */
+function normalizeMCPParams(params: Record<string, unknown> | undefined): Record<string, string> {
+  return normalizeParams(params, MCP_PARAM_MAP);
+}
+
+/**
  * 意图路由器
  */
 export function createIntentRouter() {
@@ -154,10 +248,29 @@ export function createIntentRouter() {
       };
     }
 
+    // 根据意图类型标准化参数
+    let normalizedParams: Record<string, unknown> = {};
+
+    switch (mapping.action) {
+      case 'switch_mode':
+        if (mapping.targetMode === ReplMode.Kb) {
+          normalizedParams = normalizeKBParams(parameters);
+        } else if (mapping.targetMode === ReplMode.Timer) {
+          normalizedParams = normalizeTimerParams(parameters);
+        } else if (mapping.targetMode === ReplMode.Mcp) {
+          normalizedParams = normalizeMCPParams(parameters);
+        } else {
+          normalizedParams = parameters || {};
+        }
+        break;
+      default:
+        normalizedParams = parameters || {};
+    }
+
     // 构建路由动作
     const action: RouteAction = {
       type: mapping.action,
-      parameters,
+      parameters: normalizedParams,
     };
 
     switch (mapping.action) {
