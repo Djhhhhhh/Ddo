@@ -6,7 +6,7 @@ require (
 	github.com/dgraph-io/badger/v4 v4.2.0
 	github.com/gin-gonic/gin v1.9.1
 	github.com/google/uuid v1.6.0
-	github.com/google/wire v0.6.0
+	github.com/robfig/cron/v3 v3.0.1
 	github.com/spf13/viper v1.18.2
 	go.uber.org/zap v1.27.0
 	gorm.io/driver/mysql v1.5.7

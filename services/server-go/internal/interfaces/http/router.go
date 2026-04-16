@@ -36,7 +36,11 @@ func NewRouter(logger *zap.Logger) *Router {
 }
 
 // RegisterRoutes 注册路由
-func (r *Router) RegisterRoutes(healthHandler *handler.HealthHandler, knowledgeHandler *handler.KnowledgeHandler) {
+func (r *Router) RegisterRoutes(
+	healthHandler *handler.HealthHandler,
+	knowledgeHandler *handler.KnowledgeHandler,
+	timerHandler *handler.TimerHandler,
+) {
 	// 健康检查
 	r.engine.GET("/health", healthHandler.HealthCheck)
 
@@ -54,6 +58,20 @@ func (r *Router) RegisterRoutes(healthHandler *handler.HealthHandler, knowledgeH
 			knowledge.POST("/ask", knowledgeHandler.AskKnowledge)               // RAG 问答
 			knowledge.GET("/:uuid", knowledgeHandler.GetKnowledge)              // 获取详情
 			knowledge.POST("/:uuid/delete", knowledgeHandler.DeleteKnowledge)   // 删除知识
+		}
+
+		// 定时任务路由组
+		timers := v1.Group("/timers")
+		{
+			timers.POST("", timerHandler.CreateTimer)                    // 创建定时任务
+			timers.GET("", timerHandler.ListTimers)                      // 查询列表
+			timers.GET("/:uuid", timerHandler.GetTimer)                  // 获取详情
+			timers.POST("/:uuid/update", timerHandler.UpdateTimer)      // 更新定时任务
+			timers.POST("/:uuid/pause", timerHandler.PauseTimer)        // 暂停定时任务
+			timers.POST("/:uuid/resume", timerHandler.ResumeTimer)      // 恢复定时任务
+			timers.POST("/:uuid/delete", timerHandler.DeleteTimer)      // 删除定时任务
+			timers.POST("/:uuid/trigger", timerHandler.TriggerTimer)    // 手动触发
+			timers.GET("/:uuid/logs", timerHandler.ListTimerLogs)       // 查询执行日志
 		}
 	}
 }

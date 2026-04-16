@@ -9,24 +9,28 @@ import (
 
 	"go.uber.org/zap"
 
+	"github.com/ddo/server-go/internal/application/service"
 	"github.com/ddo/server-go/internal/db"
 	"github.com/ddo/server-go/internal/db/models"
 	"github.com/ddo/server-go/internal/infrastructure/config"
 	"github.com/ddo/server-go/internal/infrastructure/server"
 	"github.com/ddo/server-go/internal/queue"
+	"github.com/ddo/server-go/internal/scheduler"
 	httpinterface "github.com/ddo/server-go/internal/interfaces/http"
 	"github.com/ddo/server-go/internal/interfaces/http/handler"
 )
 
 // App 应用生命周期管理
 type App struct {
-	router         *httpinterface.Router
-	healthHandler  *handler.HealthHandler
-	server         *server.GinServer
-	config         *config.Config
-	logger         *zap.Logger
-	dbConn         *db.MySQLConn
-	queue          queue.Queue
+	router           *httpinterface.Router
+	healthHandler     *handler.HealthHandler
+	server           *server.GinServer
+	config           *config.Config
+	logger           *zap.Logger
+	dbConn           *db.MySQLConn
+	queue            queue.Queue
+	scheduler        *scheduler.Scheduler
+	callbackExecutor *service.CallbackExecutor
 }
 
 // NewApp 创建应用实例
@@ -36,13 +40,17 @@ func NewApp(
 	httpServer *server.GinServer,
 	dbConn *db.MySQLConn,
 	queue queue.Queue,
+	scheduler *scheduler.Scheduler,
+	callbackExecutor *service.CallbackExecutor,
 ) *App {
 	return &App{
-		server: httpServer,
-		config: cfg,
-		logger: logger,
-		dbConn: dbConn,
-		queue:  queue,
+		server:           httpServer,
+		config:           cfg,
+		logger:           logger,
+		dbConn:           dbConn,
+		queue:            queue,
+		scheduler:        scheduler,
+		callbackExecutor: callbackExecutor,
 	}
 }
 
@@ -65,6 +73,21 @@ func (a *App) Start() error {
 		// 迁移失败不阻止服务启动，但 MySQL 状态会显示错误
 	}
 
+	// 启动 Scheduler
+	if a.scheduler != nil {
+		if err := a.scheduler.Start(context.Background()); err != nil {
+			a.logger.Error("Failed to start scheduler", zap.Error(err))
+		} else {
+			a.logger.Info("Scheduler started successfully")
+		}
+	}
+
+	// 启动 Callback Executor
+	if a.callbackExecutor != nil {
+		a.callbackExecutor.Start()
+		a.logger.Info("Callback executor started")
+	}
+
 	// 启动服务器
 	if err := a.server.Start(); err != nil {
 		return fmt.Errorf("start server failed: %w", err)
@@ -81,6 +104,20 @@ func (a *App) Start() error {
 // 优雅关闭 HTTP 服务器
 func (a *App) Stop(ctx context.Context) error {
 	a.logger.Info("Application stopping...")
+
+	// 停止 Callback Executor
+	if a.callbackExecutor != nil {
+		a.callbackExecutor.Stop()
+		a.logger.Info("Callback executor stopped")
+	}
+
+	// 停止 Scheduler
+	if a.scheduler != nil {
+		if err := a.scheduler.Stop(); err != nil {
+			a.logger.Error("Scheduler stop error", zap.Error(err))
+		}
+		a.logger.Info("Scheduler stopped")
+	}
 
 	// 关闭 HTTP 服务器
 	if err := a.server.Stop(); err != nil {

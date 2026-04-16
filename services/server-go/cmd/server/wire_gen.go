@@ -8,6 +8,7 @@ import (
 	"github.com/ddo/server-go/internal/application/service"
 	"github.com/ddo/server-go/internal/application/usecase/health"
 	"github.com/ddo/server-go/internal/application/usecase/knowledge"
+	"github.com/ddo/server-go/internal/application/usecase/timer"
 	"github.com/ddo/server-go/internal/bootstrap"
 	"github.com/ddo/server-go/internal/db"
 	"github.com/ddo/server-go/internal/db/repository"
@@ -15,6 +16,7 @@ import (
 	"github.com/ddo/server-go/internal/infrastructure/logger"
 	"github.com/ddo/server-go/internal/infrastructure/server"
 	"github.com/ddo/server-go/internal/queue"
+	"github.com/ddo/server-go/internal/scheduler"
 	http "github.com/ddo/server-go/internal/interfaces/http"
 	"github.com/ddo/server-go/internal/interfaces/http/handler"
 	"github.com/gin-gonic/gin"
@@ -53,6 +55,20 @@ func InitializeApp(cfgPath string) (*bootstrap.App, func(), error) {
 		return nil, nil, err
 	}
 
+	// 初始化 Repository
+	var timerRepo repository.TimerRepository
+	var timerLogRepo repository.TimerLogRepository
+	if mySQLConn != nil && mySQLConn.DB() != nil {
+		timerRepo = repository.NewTimerRepository(mySQLConn.DB())
+		timerLogRepo = repository.NewTimerLogRepository(mySQLConn.DB())
+	}
+
+	// 初始化 Scheduler
+	cronScheduler := scheduler.NewScheduler(queueQueue, timerRepo, zapLogger)
+
+	// 初始化 Callback Executor
+	callbackExecutor := service.NewCallbackExecutor(queueQueue, timerLogRepo, zapLogger)
+
 	// 初始化路由
 	router := http.NewRouter(zapLogger)
 	engine := provideEngine(router)
@@ -60,9 +76,6 @@ func InitializeApp(cfgPath string) (*bootstrap.App, func(), error) {
 	// 初始化用例
 	version := provideVersion()
 	checkHealthUseCase := health.NewUseCase(version, mySQLConn)
-
-	// 初始化 Handler
-	healthHandler := handler.NewHealthHandler(checkHealthUseCase, version)
 
 	// 初始化 RAG 代理
 	ragProxy := service.NewRAGProxy()
@@ -81,7 +94,20 @@ func InitializeApp(cfgPath string) (*bootstrap.App, func(), error) {
 	searchKnowledgeUseCase := knowledge.NewSearchKnowledgeUseCase(knowledgeRepo, ragProxy)
 	askKnowledgeUseCase := knowledge.NewAskKnowledgeUseCase(ragProxy)
 
-	// 初始化知识库 Handler
+	// 初始化定时任务 UseCase
+	createTimerUseCase := timer.NewCreateTimerUseCase(timerRepo, cronScheduler)
+	listTimerUseCase := timer.NewListTimerUseCase(timerRepo)
+	getTimerUseCase := timer.NewGetTimerUseCase(timerRepo, timerLogRepo)
+	updateTimerUseCase := timer.NewUpdateTimerUseCase(timerRepo, cronScheduler)
+	pauseTimerUseCase := timer.NewPauseTimerUseCase(timerRepo, cronScheduler)
+	resumeTimerUseCase := timer.NewResumeTimerUseCase(timerRepo, cronScheduler)
+	deleteTimerUseCase := timer.NewDeleteTimerUseCase(timerRepo, cronScheduler)
+	triggerTimerUseCase := timer.NewTriggerTimerUseCase(timerRepo, queueQueue)
+	listTimerLogsUseCase := timer.NewListTimerLogsUseCase(timerLogRepo)
+
+	// 初始化 Handler
+	healthHandler := handler.NewHealthHandler(checkHealthUseCase, version)
+
 	knowledgeHandler := handler.NewKnowledgeHandler(
 		createKnowledgeUseCase,
 		listKnowledgeUseCase,
@@ -92,14 +118,27 @@ func InitializeApp(cfgPath string) (*bootstrap.App, func(), error) {
 		zapLogger,
 	)
 
+	timerHandler := handler.NewTimerHandler(
+		createTimerUseCase,
+		listTimerUseCase,
+		getTimerUseCase,
+		updateTimerUseCase,
+		pauseTimerUseCase,
+		resumeTimerUseCase,
+		deleteTimerUseCase,
+		triggerTimerUseCase,
+		listTimerLogsUseCase,
+		zapLogger,
+	)
+
 	// 注册路由
-	router.RegisterRoutes(healthHandler, knowledgeHandler)
+	router.RegisterRoutes(healthHandler, knowledgeHandler, timerHandler)
 
 	// 初始化服务器
 	ginServer := server.NewGinServer(cfg, zapLogger, engine)
 
 	// 创建应用
-	app := bootstrap.NewApp(cfg, zapLogger, ginServer, mySQLConn, queueQueue)
+	app := bootstrap.NewApp(cfg, zapLogger, ginServer, mySQLConn, queueQueue, cronScheduler, callbackExecutor)
 
 	// 组装 cleanup 函数
 	cleanup := func() {
