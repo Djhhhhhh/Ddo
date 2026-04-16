@@ -5,6 +5,10 @@
 package main
 
 import (
+	"fmt"
+	"os"
+	"path/filepath"
+
 	"github.com/ddo/server-go/internal/application/service"
 	"github.com/ddo/server-go/internal/application/usecase/health"
 	"github.com/ddo/server-go/internal/application/usecase/knowledge"
@@ -226,8 +230,13 @@ func provideMySQLConn(cfg *config.Config, logger *zap.Logger) (*db.MySQLConn, fu
 
 // provideQueue 提供消息队列
 func provideQueue(cfg *config.Config, logger *zap.Logger) (queue.Queue, func(), error) {
-	// 使用默认配置，数据目录在 ~/.ddo/data/badger/queue
-	qCfg := queue.DefaultConfig(cfg.Database.DBName)
+	// 数据目录在 ~/.ddo/data/badger/queue
+	homeDir, err := os.UserHomeDir()
+	if err != nil {
+		return nil, func() {}, fmt.Errorf("get user home dir failed: %w", err)
+	}
+	dataDir := filepath.Join(homeDir, ".ddo", "data", "badger", "queue")
+	qCfg := queue.DefaultConfig(dataDir)
 	q, cleanup, err := queue.NewBadgerQueue(qCfg, logger)
 	if err != nil {
 		logger.Error("Failed to create queue", zap.Error(err))

@@ -50,7 +50,11 @@ const (
 // NewBadgerQueue 创建 BadgerDB 队列
 func NewBadgerQueue(config *Config, logger *zap.Logger) (*BadgerQueue, func(), error) {
 	if config == nil {
-		config = DefaultConfig(filepath.Join(os.Getenv("HOME"), ".ddo", "data", "badger", "queue"))
+		homeDir, err := os.UserHomeDir()
+		if err != nil {
+			return nil, nil, fmt.Errorf("get user home dir failed: %w", err)
+		}
+		config = DefaultConfig(filepath.Join(homeDir, ".ddo", "data", "badger", "queue"))
 	}
 
 	// 创建数据目录
