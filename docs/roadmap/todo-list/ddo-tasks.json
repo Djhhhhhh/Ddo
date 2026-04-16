@@ -137,9 +137,9 @@
           "id": "p2-4",
           "title": "CLI: NLP 集成",
           "module": "cli",
-          "status": "pending",
+          "status": "done",
           "priority": "medium",
-          "notes": "等待 llm-py /api/nlp 接口"
+          "notes": "NLP Service + Intent Router 实现完成，默认模式自然语言输入调用 llm-py /api/nlp"
         },
         {
           "id": "p2-5",

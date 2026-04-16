@@ -28,11 +28,13 @@ services/cli/
 │   ├── services/
 │   │   ├── manager.ts        # 服务管理器 - 统一管理服务生命周期
 │   │   ├── pid-file.ts       # PID 文件操作 - 读写进程ID
-│   │   └── health-check.ts   # 健康检查 - HTTP 轮询检查服务就绪
+│   │   ├── health-check.ts   # 健康检查 - HTTP 轮询检查服务就绪
+│   │   └── nlp.ts            # NLP Service - llm-py NLP 接口封装（2026-04-16）
 │   ├── repl/
 │   │   ├── index.ts          # REPL 入口，命令分发和自然语言处理
 │   │   ├── parser.ts         # 命令解析器 - 支持参数、选项、引号字符串（2026-04-14）
 │   │   ├── mode.ts           # 模式管理器 - 管理 Default/Chat/Kb/Timer/Mcp 模式（2026-04-14）
+│   │   ├── intent-router.ts  # 意图路由器 - NLP 意图路由到对应动作（2026-04-16）
 │   │   ├── completer.ts      # Tab 自动补全（2026-04-14）
 │   │   └── commands/         # REPL 命令目录（2026-04-14）
 │   │       ├── index.ts      # 命令注册中心和接口定义
@@ -58,7 +60,9 @@ services/cli/
 │   ├── roadmap/
 │   │   └── mvp.md            # MVP 需求文档
 │   └── feature/              # 技术方案目录
-│       └── 2026-04-14-ddo-init/
+│       ├── 2026-04-14-ddo-init/
+│       │   └── 技术方案.md
+│       └── 2026-04-16-nlp-integration/  # NLP 集成（2026-04-16）
 │           └── 技术方案.md
 ├── .claude/
 │   └── rules/
@@ -106,4 +110,5 @@ services/cli/
 
 ## 🕒 最后更新时间
 
+2026-04-16：新增 NLP 集成（intent-router.ts, nlp.ts）
 2026-04-14 20:30:00

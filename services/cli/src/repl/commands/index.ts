@@ -4,6 +4,7 @@
  */
 
 import * as readline from 'readline';
+import chalk from 'chalk';
 import { ReplMode, ModeManager } from '../mode';
 import { ParsedCommand } from '../parser';
 
@@ -362,6 +363,7 @@ async function handleMcpSubCommand(
 
 /**
  * 处理未知命令（默认模式）
+ * 使用 NLP 进行意图识别和路由
  */
 async function handleUnknownCommand(
   name: string,
@@ -369,9 +371,93 @@ async function handleUnknownCommand(
 ): Promise<boolean> {
   // 在默认模式下，未知命令视为自然语言输入
   if (ctx.mode === ReplMode.Default) {
-    console.log(`理解输入: "${name} ${ctx.args.join(' ')}"`);
-    console.log('自然语言处理功能将在后续实现...');
-    return true;
+    const fullText = [name, ...ctx.args].join(' ').trim();
+
+    if (!fullText) {
+      console.log('请输入内容');
+      return true;
+    }
+
+    console.log(chalk.cyan('正在分析...'));
+
+    try {
+      // 调用 NLP 服务进行意图识别
+      const nlpService = await import('../../services/nlp').then(m => m.getNLPService());
+      const intentRouter = await import('../intent-router').then(m => m.getIntentRouter());
+
+      const nlpResponse = await nlpService.analyzeText(fullText);
+      console.log(chalk.gray(`意图: ${nlpResponse.intent} (${Math.round(nlpResponse.confidence * 100)}%)`));
+
+      // 路由到对应动作
+      const action = intentRouter.route(nlpResponse);
+
+      // 如果有回复，显示给用户
+      if (action.reply) {
+        console.log(chalk.green(action.reply));
+      }
+
+      // 执行路由动作
+      switch (action.type) {
+        case 'switch_mode':
+          if (action.targetMode) {
+            ctx.setMode(action.targetMode);
+            // 显示进入模式的提示
+            const modeNames: Record<ReplMode, string> = {
+              [ReplMode.Default]: '默认',
+              [ReplMode.Chat]: '聊天',
+              [ReplMode.Kb]: '知识库',
+              [ReplMode.Timer]: '定时任务',
+              [ReplMode.Mcp]: 'MCP',
+            };
+            console.log(chalk.gray(`已进入 ${modeNames[action.targetMode]} 模式`));
+          }
+          return true;
+
+        case 'execute_command':
+          if (action.targetCommand) {
+            // 递归执行命令
+            const cmd = registry.get(action.targetCommand);
+            if (cmd) {
+              return await cmd.handler(ctx);
+            }
+          }
+          return true;
+
+        case 'chat':
+          // 进入 chat 模式
+          ctx.setMode(ReplMode.Chat);
+          return true;
+
+        case 'show_status':
+          // 执行 status 命令
+          const statusCmd = registry.get('status');
+          if (statusCmd) {
+            return await statusCmd.handler(ctx);
+          }
+          return true;
+
+        case 'show_help':
+          // 执行 help 命令
+          const helpCmd = registry.get('help');
+          if (helpCmd) {
+            return await helpCmd.handler(ctx);
+          }
+          return true;
+
+        case 'unknown':
+        default:
+          // 无法识别，默认进入聊天模式
+          console.log(chalk.yellow('无法理解意图，进入聊天模式...'));
+          ctx.setMode(ReplMode.Chat);
+          return true;
+      }
+    } catch (err) {
+      // NLP 服务调用失败，降级到聊天模式
+      console.log(chalk.yellow('NLP 服务暂时不可用，进入聊天模式...'));
+      console.log(chalk.gray(`错误: ${err instanceof Error ? err.message : String(err)}`));
+      ctx.setMode(ReplMode.Chat);
+      return true;
+    }
   }
 
   console.log(`未知命令: ${name}`);

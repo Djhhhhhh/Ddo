@@ -2,6 +2,7 @@
 
 > 由 AI 在开发过程中自动维护的规则文件。
 > 发现时间：2026-04-14
+> 更新时间：2026-04-16
 
 ## 架构规则
 
@@ -12,10 +13,11 @@
 - 所有业务逻辑通过 API 调用委托给 server-go 或 llm-py
 - 目录结构：
   - `src/commands/` - CLI 命令实现（init、start、stop、status、logs）
-  - `src/services/` - 服务管理模块（PID文件、健康检查、进程管理）
-  - `src/repl/` - REPL 交互模式（命令解析、模式管理、命令注册）
+  - `src/services/` - 服务管理模块（PID文件、健康检查、进程管理、NLP）
+  - `src/repl/` - REPL 交互模式（命令解析、模式管理、命令注册、意图路由）
     - `src/repl/parser.ts` - 命令解析，支持参数、flags、引号字符串
     - `src/repl/mode.ts` - 模式管理（Default/Chat/Kb/Timer/Mcp）
+    - `src/repl/intent-router.ts` - 意图路由器，根据 NLP 结果路由到对应动作
     - `src/repl/commands/` - REPL 命令实现（/exit、/help、/chat、/status、/kb、/timer、/mcp）
     - `src/repl/completer.ts` - Tab 自动补全
   - `src/utils/` - 通用工具函数
@@ -26,6 +28,24 @@
   - 命令定义实现 `ReplCommand` 接口，包含 name、description、aliases、handler
   - 支持子命令模式（/kb、/timer、/mcp），模式内直接输入子命令
   - 解析器支持 `-a`、`-abc` 组合选项、`--long`、`--key=value` 格式
+
+### NLP 集成架构（新增 2026-04-16）
+
+- **NLP Service** (`src/services/nlp.ts`)：
+  - 封装与 llm-py `/api/nlp` 接口的通信
+  - 提供 `analyzeText()` 和 `parseCommand()` 两个核心方法
+  - 支持超时控制和错误处理
+  - 降级机制：NLP 服务不可用时自动进入 chat 模式
+- **意图路由器** (`src/repl/intent-router.ts`)：
+  - 根据 NLP 响应中的 intent 字段路由到对应动作
+  - 支持的路由类型：switch_mode、execute_command、chat、show_status、show_help、unknown
+  - 意图映射表支持前缀匹配（如 `timer.create.hourly` 匹配 `timer.create`）
+- **自然语言处理流程**：
+  1. 用户在默认模式下输入非命令文本
+  2. 调用 `handleUnknownCommand` 处理
+  3. 调用 NLP Service `analyzeText()` 获取意图
+  4. 意图路由器根据 intent 路由到对应动作
+  5. 执行动作（切换模式/执行命令/进入聊天等）
 
 ## 代码规范
 
@@ -48,6 +68,8 @@
 - 健康检查通过 HTTP 轮询 `/health` 端点，超时 30 秒
 - 服务启动失败时自动回滚已启动的服务
 - Windows 进程使用 `tasklist`/`taskkill` 管理，Unix 使用 `kill` 信号
+- NLP 调用使用动态 import 避免循环依赖
+- NLP 服务不可用时必须降级到 chat 模式，不能直接报错退出
 
 ## 示例参考
 
@@ -95,4 +117,50 @@ program
       process.exit(1);
     }
   });
+```
+
+### NLP Service 使用示例（新增 2026-04-16）
+
+```typescript
+import { getNLPService } from '../services/nlp';
+
+// 获取 NLP Service 实例
+const nlpService = getNLPService();
+
+// 意图识别
+const response = await nlpService.analyzeText('创建一个每小时的定时任务');
+console.log(`意图: ${response.intent}, 置信度: ${response.confidence}`);
+
+// 命令解析
+const parseResult = await nlpService.parseCommand(
+  '帮我查一下知识库',
+  ['kb.add', 'kb.search', 'kb.list']
+);
+console.log(`解析命令: ${parseResult.command}`);
+
+// 检查服务可用性
+const available = await nlpService.isAvailable();
+```
+
+### 意图路由器使用示例（新增 2026-04-16）
+
+```typescript
+import { getIntentRouter } from '../repl/intent-router';
+
+const router = getIntentRouter();
+
+// 路由 NLP 响应到对应动作
+const action = router.route(nlpResponse);
+
+switch (action.type) {
+  case 'switch_mode':
+    console.log(`切换到 ${action.targetMode} 模式`);
+    break;
+  case 'execute_command':
+    console.log(`执行命令: ${action.targetCommand}`);
+    break;
+  case 'chat':
+    console.log('进入聊天模式');
+    break;
+}
 ```

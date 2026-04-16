@@ -3,9 +3,46 @@
  * REPL 命令注册中心
  * 统一管理和分发所有 REPL 命令
  */
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || (function () {
+    var ownKeys = function(o) {
+        ownKeys = Object.getOwnPropertyNames || function (o) {
+            var ar = [];
+            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
+            return ar;
+        };
+        return ownKeys(o);
+    };
+    return function (mod) {
+        if (mod && mod.__esModule) return mod;
+        var result = {};
+        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
+        __setModuleDefault(result, mod);
+        return result;
+    };
+})();
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.registry = void 0;
 exports.executeCommand = executeCommand;
+const chalk_1 = __importDefault(require("chalk"));
 const mode_1 = require("../mode");
 /**
  * 命令注册表
@@ -282,13 +319,87 @@ async function handleMcpSubCommand(cmd, args, _ctx) {
 }
 /**
  * 处理未知命令（默认模式）
+ * 使用 NLP 进行意图识别和路由
  */
 async function handleUnknownCommand(name, ctx) {
     // 在默认模式下，未知命令视为自然语言输入
     if (ctx.mode === mode_1.ReplMode.Default) {
-        console.log(`理解输入: "${name} ${ctx.args.join(' ')}"`);
-        console.log('自然语言处理功能将在后续实现...');
-        return true;
+        const fullText = [name, ...ctx.args].join(' ').trim();
+        if (!fullText) {
+            console.log('请输入内容');
+            return true;
+        }
+        console.log(chalk_1.default.cyan('正在分析...'));
+        try {
+            // 调用 NLP 服务进行意图识别
+            const nlpService = await Promise.resolve().then(() => __importStar(require('../../services/nlp'))).then(m => m.getNLPService());
+            const intentRouter = await Promise.resolve().then(() => __importStar(require('../intent-router'))).then(m => m.getIntentRouter());
+            const nlpResponse = await nlpService.analyzeText(fullText);
+            console.log(chalk_1.default.gray(`意图: ${nlpResponse.intent} (${Math.round(nlpResponse.confidence * 100)}%)`));
+            // 路由到对应动作
+            const action = intentRouter.route(nlpResponse);
+            // 如果有回复，显示给用户
+            if (action.reply) {
+                console.log(chalk_1.default.green(action.reply));
+            }
+            // 执行路由动作
+            switch (action.type) {
+                case 'switch_mode':
+                    if (action.targetMode) {
+                        ctx.setMode(action.targetMode);
+                        // 显示进入模式的提示
+                        const modeNames = {
+                            [mode_1.ReplMode.Default]: '默认',
+                            [mode_1.ReplMode.Chat]: '聊天',
+                            [mode_1.ReplMode.Kb]: '知识库',
+                            [mode_1.ReplMode.Timer]: '定时任务',
+                            [mode_1.ReplMode.Mcp]: 'MCP',
+                        };
+                        console.log(chalk_1.default.gray(`已进入 ${modeNames[action.targetMode]} 模式`));
+                    }
+                    return true;
+                case 'execute_command':
+                    if (action.targetCommand) {
+                        // 递归执行命令
+                        const cmd = exports.registry.get(action.targetCommand);
+                        if (cmd) {
+                            return await cmd.handler(ctx);
+                        }
+                    }
+                    return true;
+                case 'chat':
+                    // 进入 chat 模式
+                    ctx.setMode(mode_1.ReplMode.Chat);
+                    return true;
+                case 'show_status':
+                    // 执行 status 命令
+                    const statusCmd = exports.registry.get('status');
+                    if (statusCmd) {
+                        return await statusCmd.handler(ctx);
+                    }
+                    return true;
+                case 'show_help':
+                    // 执行 help 命令
+                    const helpCmd = exports.registry.get('help');
+                    if (helpCmd) {
+                        return await helpCmd.handler(ctx);
+                    }
+                    return true;
+                case 'unknown':
+                default:
+                    // 无法识别，默认进入聊天模式
+                    console.log(chalk_1.default.yellow('无法理解意图，进入聊天模式...'));
+                    ctx.setMode(mode_1.ReplMode.Chat);
+                    return true;
+            }
+        }
+        catch (err) {
+            // NLP 服务调用失败，降级到聊天模式
+            console.log(chalk_1.default.yellow('NLP 服务暂时不可用，进入聊天模式...'));
+            console.log(chalk_1.default.gray(`错误: ${err instanceof Error ? err.message : String(err)}`));
+            ctx.setMode(mode_1.ReplMode.Chat);
+            return true;
+        }
     }
     console.log(`未知命令: ${name}`);
     console.log('输入 /help 查看可用命令');
