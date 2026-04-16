@@ -1,56 +1,49 @@
 import chalk from 'chalk';
-import { ReplCommand } from './index';
-import { ReplMode } from '../mode';
+import { ReplCommand, CommandContext } from './index';
+import { registry } from './index';
 
 /**
- * 模式切换命令工厂
+ * 创建快捷命令（不切换模式，只是执行对应子命令）
+ * 这些命令原本是模式切换命令，现在改为直接执行对应操作
  */
-function createModeCommand(
+function createQuickCommand(
   name: string,
-  mode: ReplMode,
-  description: string,
-  welcomeMessage: string
+  subCommand: string,
+  description: string
 ): ReplCommand {
   return {
     name,
     description,
     usage: `/${name}`,
-    handler: async ({ setMode, modeManager }) => {
-      if (modeManager.mode === mode) {
-        console.log(chalk.gray(`已在 ${name} 模式`));
-        return true;
+    handler: async (ctx: CommandContext) => {
+      // 直接执行对应子命令
+      const cmd = registry.get(subCommand);
+      if (cmd) {
+        return await cmd.handler(ctx);
       }
-
-      setMode(mode);
-      console.log();
-      console.log(chalk.cyan(welcomeMessage));
-      console.log(chalk.gray('提示: 输入 /back 返回默认模式，/help 查看可用命令'));
-      console.log();
+      console.log(chalk.red(`命令 ${subCommand} 不存在`));
       return true;
     },
   };
 }
 
-/** 知识库模式 */
-export const kbCommand = createModeCommand(
+/** 知识库快捷命令 */
+export const kbCommand = createQuickCommand(
   'kb',
-  ReplMode.Kb,
-  '进入知识库管理模式',
-  '📚 已进入知识库管理模式\n\n可用命令:\n  list           - 列出知识库\n  add <n> <p>    - 添加知识库\n  search <q>     - 搜索\n  remove <n>     - 删除知识库'
+  'kb-list',
+  '查看知识库列表'
 );
 
-/** 定时任务模式 */
-export const timerCommand = createModeCommand(
+/** 定时任务快捷命令 */
+export const timerCommand = createQuickCommand(
   'timer',
-  ReplMode.Timer,
-  '进入定时任务管理模式',
-  '⏰ 已进入定时任务管理模式\n\n可用命令:\n  list           - 列出定时任务\n  add <c> <cmd>  - 添加定时任务\n  remove <id>    - 删除定时任务'
+  'timer-list',
+  '查看定时任务列表'
 );
 
-/** MCP 模式 */
-export const mcpCommand = createModeCommand(
+/** MCP 快捷命令 */
+export const mcpCommand = createQuickCommand(
   'mcp',
-  ReplMode.Mcp,
-  '进入 MCP 管理模式',
-  '🔌 已进入 MCP 管理模式\n\n可用命令:\n  list           - 列出 MCP 服务\n  add <n> <url>  - 添加 MCP 服务\n  remove <n>     - 删除 MCP 服务'
+  'mcp-list',
+  '查看 MCP 配置列表'
 );

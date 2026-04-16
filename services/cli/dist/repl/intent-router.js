@@ -3,13 +3,9 @@
  * 意图路由器
  * 根据 NLP 识别结果路由到对应的处理函数
  */
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.createIntentRouter = createIntentRouter;
 exports.getIntentRouter = getIntentRouter;
-const chalk_1 = __importDefault(require("chalk"));
 const mode_1 = require("./mode");
 /** 意图映射表 */
 const INTENT_MAP = [
@@ -98,22 +94,18 @@ function createIntentRouter() {
             // 尝试关键词兜底匹配
             const keywordFallback = findKeywordFallback(intent);
             if (keywordFallback) {
-                console.log(chalk_1.default.gray(`(关键词匹配: ${intent})`));
                 const action = {
                     type: keywordFallback.action,
                     parameters,
-                    reply: reply || `进入 ${keywordFallback.targetMode} 模式`,
                 };
                 if (keywordFallback.targetMode) {
                     action.targetMode = keywordFallback.targetMode;
                 }
                 return action;
             }
-            // 没有找到映射，默认进入 chat 模式
-            console.log(chalk_1.default.yellow(`未识别到特定意图 (${intent})，进入聊天模式...`));
+            // 没有找到映射，默认进入 chat 模式（静默处理，不显示技术性信息）
             return {
                 type: 'chat',
-                reply: reply || '好的，让我来帮你。',
             };
         }
         // 构建路由动作

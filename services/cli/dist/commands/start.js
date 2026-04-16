@@ -220,18 +220,32 @@ async function startCommand(options = {}) {
     }
     logger_1.default.info('正在进入 REPL 交互模式...');
     logger_1.default.newline();
-    // 准备服务状态列表（如果没有后端服务，只显示 CLI）
-    const replServices = runningStatuses.length > 0
-        ? runningStatuses.map((s) => ({
-            name: s.name,
-            displayName: s.displayName,
-            running: s.running,
-            port: s.port,
-        }))
-        : [
-            { name: 'cli', displayName: 'CLI', running: true, port: 0 },
-            { name: 'mysql', displayName: 'MySQL', running: true, port: 3306 },
-        ];
+    // 准备服务状态列表（只显示 go、llm-py、CLI，不显示 MySQL）
+    // 通过 API 健康检查逐个检测服务状态
+    const replServices = [];
+    // 始终包含 CLI
+    replServices.push({ name: 'cli', displayName: 'CLI', running: true, port: 0 });
+    // 通过 API 健康检查检测 server-go 和 llm-py
+    try {
+        const { getApiClient } = await Promise.resolve().then(() => __importStar(require('../services/api-client')));
+        const apiClient = getApiClient();
+        const [healthResult, metricsResult] = await Promise.allSettled([
+            apiClient.getHealth(),
+            apiClient.getMetrics(),
+        ]);
+        if (healthResult.status === 'fulfilled') {
+            replServices.push({ name: 'server-go', displayName: 'server-go', running: true, port: 8080 });
+        }
+        if (metricsResult.status === 'fulfilled') {
+            const m = metricsResult.value;
+            if (m.services?.llm_py === 'running') {
+                replServices.push({ name: 'llm-py', displayName: 'llm-py', running: true, port: 8000 });
+            }
+        }
+    }
+    catch {
+        // 健康检查失败，忽略
+    }
     // 进入 REPL
     await (0, repl_1.startRepl)({
         services: replServices,

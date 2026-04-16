@@ -1,5 +1,5 @@
 {
-  "exportTime": "2026-04-16T07:05:13.172Z",
+  "exportTime": "2026-04-16T10:26:35.527Z",
   "phases": {
     "p1": {
       "title": "Phase 1: 基础设施",
@@ -107,7 +107,7 @@
     "p2": {
       "title": "Phase 2: 核心能力",
       "subtitle": "可并行开发",
-      "status": "active",
+      "status": "completed",
       "tasks": [
         {
           "id": "p2-1",
@@ -139,7 +139,7 @@
           "module": "cli",
           "status": "done",
           "priority": "medium",
-          "notes": "NLP Service + Intent Router 实现完成，默认模式自然语言输入调用 llm-py /api/nlp"
+          "notes": "等待 llm-py /api/nlp 接口"
         },
         {
           "id": "p2-5",
@@ -249,7 +249,7 @@
           "id": "p2-18",
           "title": "B组/C组接口联调",
           "module": "other",
-          "status": "pending",
+          "status": "done",
           "priority": "high",
           "notes": "llm-py ↔ server-go ↔ CLI"
         },
@@ -257,7 +257,7 @@
           "id": "p2-19",
           "title": "CLI 端到端测试",
           "module": "cli",
-          "status": "pending",
+          "status": "done",
           "priority": "high",
           "notes": "完整流程验证，依赖所有前置任务"
         }

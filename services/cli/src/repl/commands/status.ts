@@ -1,38 +1,43 @@
 import chalk from 'chalk';
 import { ReplCommand } from './index';
+import { getApiClient } from '../../services/api-client';
 
 export const statusCommand: ReplCommand = {
   name: 'status',
   description: '查看所有服务状态',
   usage: '/status',
   handler: async () => {
+    const apiClient = getApiClient();
+
     console.log(chalk.cyan('\n服务状态:'));
     console.log(chalk.gray('─'.repeat(40)));
 
-    const services = [
-      { name: 'CLI', status: 'running', version: '0.1.0' },
-      { name: 'MySQL', status: 'unknown', version: '-' },
-      { name: 'server-go', status: 'unknown', version: '-' },
-      { name: 'llm-py', status: 'unknown', version: '-' },
-      { name: 'web-ui', status: 'unknown', version: '-' },
-    ];
+    // 并行调用健康检查和综合指标
+    const [healthResult, metricsResult] = await Promise.allSettled([
+      apiClient.getHealth(),
+      apiClient.getMetrics(),
+    ]);
 
-    for (const svc of services) {
-      const statusColor =
-        svc.status === 'running'
-          ? chalk.green
-          : svc.status === 'stopped'
-            ? chalk.red
-            : chalk.gray;
-      const statusIcon = svc.status === 'running' ? '●' : svc.status === 'stopped' ? '○' : '?';
-
-      console.log(`  ${statusColor(statusIcon)} ${svc.name.padEnd(12)} ${statusColor(svc.status.padEnd(8))} ${chalk.gray(svc.version)}`);
+    // server-go 健康状态
+    if (healthResult.status === 'fulfilled') {
+      console.log(`  ${chalk.green('●')} server-go  ${chalk.green('running')}`);
+    } else {
+      console.log(`  ${chalk.red('●')} server-go  ${chalk.red('stopped')}`);
     }
 
-    console.log();
-    console.log(chalk.gray('提示: 状态检查功能将在后续完善'));
-    console.log();
+    // llm-py 状态（通过 metrics）
+    if (metricsResult.status === 'fulfilled') {
+      const m = metricsResult.value;
+      const llmPyStatus = m.services?.llm_py;
+      console.log(`  ${llmPyStatus === 'running' ? chalk.green('●') : chalk.red('●')} llm-py   ${llmPyStatus ? chalk.green(llmPyStatus) : chalk.red('stopped')}`);
+    } else {
+      console.log(`  ${chalk.red('●')} llm-py   ${chalk.red('unknown')}`);
+    }
 
+    // CLI 状态（始终 running，因为 REPL 在运行）
+    console.log(`  ${chalk.green('●')} CLI       ${chalk.green('running')}`);
+
+    console.log();
     return true;
   },
 };

@@ -6,6 +6,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.chatCommand = void 0;
 const chalk_1 = __importDefault(require("chalk"));
 const mode_1 = require("../mode");
+const api_client_1 = require("../../services/api-client");
 exports.chatCommand = {
     name: 'chat',
     description: '与 AI 助手对话',
@@ -33,8 +34,22 @@ exports.chatCommand = {
         }
         console.log(chalk_1.default.cyan('你:'), message);
         console.log();
-        console.log(chalk_1.default.gray('正在发送请求到 llm-py...'));
-        console.log(chalk_1.default.yellow('注意: 聊天功能尚未完整实现'));
+        const apiClient = (0, api_client_1.getApiClient)();
+        try {
+            console.log(chalk_1.default.gray('正在等待 AI 回复...'));
+            console.log();
+            const response = await apiClient.chat([
+                { role: 'user', content: message }
+            ], false);
+            console.log(chalk_1.default.green('AI:'), response.content);
+            if (response.usage) {
+                console.log();
+                console.log(chalk_1.default.gray(`(tokens: ${response.usage.input_tokens} in / ${response.usage.output_tokens} out)`));
+            }
+        }
+        catch (err) {
+            console.log(chalk_1.default.red('请求失败:'), err instanceof Error ? err.message : String(err));
+        }
         console.log();
         return true;
     },

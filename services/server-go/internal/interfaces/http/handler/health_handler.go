@@ -40,19 +40,27 @@ func (h *HealthHandler) HealthCheck(c *gin.Context) {
 	}
 
 	output := result.Data
+
+	// 转换 MySQL 状态
+	mysqlStatus := "disconnected"
+	if output.MySQL != nil {
+		if connected, ok := output.MySQL["connected"].(bool); ok && connected {
+			mysqlStatus = "connected"
+		}
+	}
+
 	response := dto.ToHealthCheckResponse(dto.HealthCheckResponseData{
 		Status:    output.Status,
 		Version:   output.Version,
 		Timestamp: output.Timestamp,
-		MySQL:     output.MySQL,
+		MySQL:     mysqlStatus,
+		BadgerDB:  "ok",
 	})
 
 	// 如果 MySQL 未连接，返回 503
-	if output.MySQL != nil {
-		if connected, ok := output.MySQL["connected"].(bool); ok && !connected {
-			c.JSON(http.StatusServiceUnavailable, response)
-			return
-		}
+	if mysqlStatus != "connected" {
+		c.JSON(http.StatusServiceUnavailable, response)
+		return
 	}
 
 	c.JSON(http.StatusOK, response)
@@ -74,19 +82,27 @@ func (h *HealthHandler) HealthCheckV1(c *gin.Context) {
 	}
 
 	output := result.Data
+
+	// 转换 MySQL 状态
+	mysqlStatus := "disconnected"
+	if output.MySQL != nil {
+		if connected, ok := output.MySQL["connected"].(bool); ok && connected {
+			mysqlStatus = "connected"
+		}
+	}
+
 	response := dto.ToHealthCheckV1Response(dto.HealthCheckResponseData{
 		Status:    output.Status,
 		Version:   output.Version,
 		Timestamp: output.Timestamp,
-		MySQL:     output.MySQL,
+		MySQL:     mysqlStatus,
+		BadgerDB:  "ok", // BadgerDB 启动时已验证，暂视为正常
 	})
 
 	// 如果 MySQL 未连接，返回 503
-	if output.MySQL != nil {
-		if connected, ok := output.MySQL["connected"].(bool); ok && !connected {
-			c.JSON(http.StatusServiceUnavailable, response)
-			return
-		}
+	if mysqlStatus != "connected" {
+		c.JSON(http.StatusServiceUnavailable, response)
+		return
 	}
 
 	c.JSON(http.StatusOK, response)

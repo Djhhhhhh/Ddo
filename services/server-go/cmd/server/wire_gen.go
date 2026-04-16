@@ -126,6 +126,10 @@ func InitializeApp(cfgPath string) (*bootstrap.App, func(), error) {
 	// 初始化 Handler
 	healthHandler := handler.NewHealthHandler(checkHealthUseCase, version)
 
+	// 初始化 LLM 代理
+	llmProxy := service.NewLLMProxy()
+	llmHandler := handler.NewLLMHandler(llmProxy)
+
 	knowledgeHandler := handler.NewKnowledgeHandler(
 		createKnowledgeUseCase,
 		listKnowledgeUseCase,
@@ -158,8 +162,12 @@ func InitializeApp(cfgPath string) (*bootstrap.App, func(), error) {
 		zapLogger,
 	)
 
+	// 初始化 Metrics Handler
+	llmPyURL := "http://localhost:8000" // 将来从配置读取
+	metricsHandler := handler.NewMetricsHandler(mySQLConn, queueQueue, llmPyURL)
+
 	// 注册路由
-	router.RegisterRoutes(healthHandler, knowledgeHandler, timerHandler, mcpHandler)
+	router.RegisterRoutes(healthHandler, knowledgeHandler, timerHandler, mcpHandler, llmHandler, metricsHandler)
 
 	// 初始化服务器
 	ginServer := server.NewGinServer(cfg, zapLogger, engine)

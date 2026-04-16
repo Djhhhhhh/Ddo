@@ -18,37 +18,38 @@ var ReplMode;
 })(ReplMode || (exports.ReplMode = ReplMode = {}));
 /**
  * 模式配置映射
+ * 所有模式的 displayName 设为空字符串，实现统一提示符
  */
 const MODE_CONFIG = {
     [ReplMode.Default]: {
         name: 'default',
-        displayName: '默认',
+        displayName: '',
         promptColor: chalk_1.default.cyan,
-        description: '默认模式，支持所有命令和自然语言输入',
+        description: '默认模式，统一对话入口',
     },
     [ReplMode.Chat]: {
         name: 'chat',
-        displayName: '聊天',
+        displayName: '',
         promptColor: chalk_1.default.green,
-        description: '持续对话模式，直接输入消息与 AI 交谈',
+        description: '持续对话模式',
     },
     [ReplMode.Kb]: {
         name: 'kb',
-        displayName: '知识库',
+        displayName: '',
         promptColor: chalk_1.default.magenta,
-        description: '知识库管理模式，支持 add, list, search 等子命令',
+        description: '',
     },
     [ReplMode.Timer]: {
         name: 'timer',
-        displayName: '定时任务',
+        displayName: '',
         promptColor: chalk_1.default.yellow,
-        description: '定时任务管理模式，支持调度任务管理',
+        description: '',
     },
     [ReplMode.Mcp]: {
         name: 'mcp',
-        displayName: 'MCP',
+        displayName: '',
         promptColor: chalk_1.default.blue,
-        description: 'MCP 服务管理模式，管理模型上下文协议服务',
+        description: '',
     },
 };
 /**

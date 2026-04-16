@@ -1,6 +1,7 @@
 import chalk from 'chalk';
 import { ReplCommand } from './index';
 import { ReplMode } from '../mode';
+import { getApiClient } from '../../services/api-client';
 
 export const chatCommand: ReplCommand = {
   name: 'chat',
@@ -30,10 +31,28 @@ export const chatCommand: ReplCommand = {
 
     console.log(chalk.cyan('你:'), message);
     console.log();
-    console.log(chalk.gray('正在发送请求到 llm-py...'));
-    console.log(chalk.yellow('注意: 聊天功能尚未完整实现'));
-    console.log();
 
+    const apiClient = getApiClient();
+
+    try {
+      console.log(chalk.gray('正在等待 AI 回复...'));
+      console.log();
+
+      const response = await apiClient.chat([
+        { role: 'user', content: message }
+      ], false);
+
+      console.log(chalk.green('AI:'), response.content);
+
+      if (response.usage) {
+        console.log();
+        console.log(chalk.gray(`(tokens: ${response.usage.input_tokens} in / ${response.usage.output_tokens} out)`));
+      }
+    } catch (err) {
+      console.log(chalk.red('请求失败:'), err instanceof Error ? err.message : String(err));
+    }
+
+    console.log();
     return true;
   },
 };

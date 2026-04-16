@@ -19,6 +19,13 @@ import { clearCommand } from './commands/clear';
 import { statusCommand } from './commands/status';
 import { kbCommand, timerCommand, mcpCommand } from './commands/mode-switch';
 
+// KB 子命令
+import { kbListCommand, kbAddCommand, kbSearchCommand, kbRemoveCommand, kbHelpCommand } from './commands/kb-commands';
+// Timer 子命令
+import { timerListCommand, timerAddCommand, timerPauseCommand, timerResumeCommand, timerRemoveCommand, timerHelpCommand } from './commands/timer-commands';
+// MCP 子命令
+import { mcpListCommand, mcpAddCommand, mcpTestCommand, mcpRemoveCommand, mcpHelpCommand } from './commands/mcp-commands';
+
 // 注册命令
 registry.register(exitCommand);
 registry.register(backCommand);
@@ -29,6 +36,28 @@ registry.register(statusCommand);
 registry.register(kbCommand);
 registry.register(timerCommand);
 registry.register(mcpCommand);
+
+// 注册 KB 子命令
+registry.register(kbListCommand);
+registry.register(kbAddCommand);
+registry.register(kbSearchCommand);
+registry.register(kbRemoveCommand);
+registry.register(kbHelpCommand);
+
+// 注册 Timer 子命令
+registry.register(timerListCommand);
+registry.register(timerAddCommand);
+registry.register(timerPauseCommand);
+registry.register(timerResumeCommand);
+registry.register(timerRemoveCommand);
+registry.register(timerHelpCommand);
+
+// 注册 MCP 子命令
+registry.register(mcpListCommand);
+registry.register(mcpAddCommand);
+registry.register(mcpTestCommand);
+registry.register(mcpRemoveCommand);
+registry.register(mcpHelpCommand);
 
 /**
  * REPL 选项
@@ -134,7 +163,7 @@ export async function startRepl(options: ReplOptions): Promise<void> {
   });
 
   // 保持进程运行
-  return new Promise(() => {});
+  return new Promise(() => { });
 }
 
 /**
@@ -158,16 +187,8 @@ function showWelcome(services: ReplOptions['services']): void {
   }
   console.log();
 
-  console.log(chalk.gray('可用命令:'));
-  console.log(`  ${chalk.yellow('/chat <msg>')}     与 AI 助手对话`);
-  console.log(`  ${chalk.yellow('/kb')}             进入知识库管理模式`);
-  console.log(`  ${chalk.yellow('/timer')}          进入定时任务管理模式`);
-  console.log(`  ${chalk.yellow('/mcp')}            进入 MCP 管理模式`);
-  console.log(`  ${chalk.yellow('/status')}         查看服务状态`);
-  console.log(`  ${chalk.yellow('/exit')}           退出 REPL`);
   console.log();
-  console.log(chalk.gray('直接输入自然语言描述任务，AI 将自动理解并执行'));
-  console.log(chalk.gray('按 Tab 键可查看命令补全提示'));
+  console.log(chalk.cyan(' ~ '), chalk.gray('像跟人聊天一样说话，或者直接丢个任务给我，也可以输入 '), chalk.yellow('/help'), chalk.gray(' 看看我能做什么'));
   console.log();
   logger.divider();
   console.log();

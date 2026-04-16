@@ -221,10 +221,24 @@ program
     logger_1.default.info(chalk_1.default.yellow('config 命令尚未实现'));
     logger_1.default.info(`配置文件位置: ${(0, paths_1.prettyPath)(`${dataDir}/config.yaml`)}`);
 });
-// 解析命令行参数
-program.parse(process.argv);
-// 如果没有提供命令，显示帮助
+// 如果没有提供命令，直接启动 REPL
 if (!process.argv.slice(2).length) {
-    program.outputHelp();
+    (async () => {
+        try {
+            const result = await (0, start_1.startCommand)({});
+            if (!result.success) {
+                logger_1.default.error(result.error || '启动失败');
+                process.exit(1);
+            }
+        }
+        catch (err) {
+            logger_1.default.error(`启动过程出错: ${err instanceof Error ? err.message : String(err)}`);
+            process.exit(1);
+        }
+    })();
+}
+else {
+    // 解析命令行参数
+    program.parse(process.argv);
 }
 //# sourceMappingURL=index.js.map

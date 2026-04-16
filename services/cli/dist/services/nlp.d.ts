@@ -1,6 +1,7 @@
 /**
  * NLP Service
- * 与 llm-py 服务通信，提供意图识别和命令解析能力
+ * 通过 server-go 代理调用 llm-py 的 NLP 意图识别能力
+ * 注意：不使用超时限制，因为 LLM 推理时间不可预知
  */
 /** NLP API 响应 - 意图识别 */
 export interface NLPResponse {
@@ -26,10 +27,8 @@ export interface NLPParseResponse {
 }
 /** NLP Service 配置 */
 interface NLPServiceConfig {
-    /** llm-py 服务地址 */
+    /** server-go 服务地址（NLP 代理端点） */
     baseUrl: string;
-    /** 请求超时（毫秒） */
-    timeout: number;
 }
 /**
  * NLP Service 错误类
@@ -40,6 +39,7 @@ export declare class NLPServiceError extends Error {
 }
 /**
  * 创建 NLP Service
+ * 不使用超时限制，因为 LLM 推理时间不可预知
  */
 export declare function createNLPService(config: NLPServiceConfig): {
     analyzeText: (text: string, context?: Record<string, unknown>, model?: string) => Promise<NLPResponse>;
@@ -48,7 +48,7 @@ export declare function createNLPService(config: NLPServiceConfig): {
 };
 /**
  * 获取默认 NLP Service
- * 使用默认配置：http://localhost:8000, 10秒超时
+ * 使用默认配置：http://localhost:8080（server-go 地址）
  */
 export declare function getNLPService(): ReturnType<typeof createNLPService>;
 /**

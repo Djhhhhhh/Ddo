@@ -161,161 +161,39 @@ async function executeCommand(parsed, rl, modeManager) {
 }
 /**
  * 处理子命令模式下的输入
+ * 现在只处理 Chat 模式，其他模式已统一为对话模式
  */
 async function handleSubModeInput(input, args, ctx) {
     const mode = ctx.modeManager.mode;
     switch (mode) {
         case mode_1.ReplMode.Chat:
             // 在 chat 模式下，所有输入都视为聊天消息
-            console.log(`[Chat] ${input} ${args.join(' ')}`);
-            console.log('聊天功能将在后续实现...');
-            return true;
-        case mode_1.ReplMode.Kb:
-            return await handleKbSubCommand(input, args, ctx);
-        case mode_1.ReplMode.Timer:
-            return await handleTimerSubCommand(input, args, ctx);
-        case mode_1.ReplMode.Mcp:
-            return await handleMcpSubCommand(input, args, ctx);
+            {
+                const fullText = [input, ...args].join(' ').trim();
+                if (!fullText) {
+                    return true;
+                }
+                console.log(chalk_1.default.cyan('你:'), fullText);
+                console.log();
+                try {
+                    const { getApiClient } = await Promise.resolve().then(() => __importStar(require('../../services/api-client')));
+                    const apiClient = getApiClient();
+                    console.log(chalk_1.default.gray('正在等待 AI 回复...'));
+                    console.log();
+                    const response = await apiClient.chat([
+                        { role: 'user', content: fullText }
+                    ], false);
+                    console.log(chalk_1.default.green('AI:'), response.content);
+                }
+                catch (err) {
+                    console.log(chalk_1.default.red('请求失败:'), err instanceof Error ? err.message : String(err));
+                }
+                console.log();
+                return true;
+            }
         default:
             return await handleUnknownCommand(input, ctx);
     }
-}
-/**
- * 处理知识库子命令
- */
-async function handleKbSubCommand(cmd, args, _ctx) {
-    switch (cmd.toLowerCase()) {
-        case 'list':
-            console.log('知识库列表：');
-            console.log('  暂无知识库');
-            break;
-        case 'add':
-            if (args.length < 2) {
-                console.log('用法: add <名称> <路径>');
-            }
-            else {
-                console.log(`添加知识库: ${args[0]} -> ${args[1]}`);
-                console.log('功能将在后续实现...');
-            }
-            break;
-        case 'search':
-            if (args.length === 0) {
-                console.log('用法: search <查询内容>');
-            }
-            else {
-                console.log(`搜索: ${args.join(' ')}`);
-                console.log('功能将在后续实现...');
-            }
-            break;
-        case 'remove':
-        case 'rm':
-            if (args.length === 0) {
-                console.log('用法: remove <名称>');
-            }
-            else {
-                console.log(`删除知识库: ${args[0]}`);
-                console.log('功能将在后续实现...');
-            }
-            break;
-        case 'help':
-        case 'h':
-            console.log('知识库管理命令：');
-            console.log('  list           - 列出所有知识库');
-            console.log('  add <n> <p>    - 添加知识库');
-            console.log('  search <q>     - 搜索知识库');
-            console.log('  remove <n>     - 删除知识库');
-            console.log('  help           - 显示帮助');
-            break;
-        default:
-            console.log(`未知命令: ${cmd}`);
-            console.log('输入 "help" 查看可用命令');
-    }
-    return true;
-}
-/**
- * 处理定时任务子命令
- */
-async function handleTimerSubCommand(cmd, args, _ctx) {
-    switch (cmd.toLowerCase()) {
-        case 'list':
-            console.log('定时任务列表：');
-            console.log('  暂无定时任务');
-            break;
-        case 'add':
-            if (args.length < 2) {
-                console.log('用法: add <cron表达式> <命令>');
-                console.log('示例: add "0 9 * * *" "echo good morning"');
-            }
-            else {
-                console.log(`添加定时任务: ${args[0]} -> ${args.slice(1).join(' ')}`);
-                console.log('功能将在后续实现...');
-            }
-            break;
-        case 'remove':
-        case 'rm':
-            if (args.length === 0) {
-                console.log('用法: remove <任务ID>');
-            }
-            else {
-                console.log(`删除定时任务: ${args[0]}`);
-                console.log('功能将在后续实现...');
-            }
-            break;
-        case 'help':
-        case 'h':
-            console.log('定时任务管理命令：');
-            console.log('  list           - 列出所有定时任务');
-            console.log('  add <c> <cmd>  - 添加定时任务');
-            console.log('  remove <id>    - 删除定时任务');
-            console.log('  help           - 显示帮助');
-            break;
-        default:
-            console.log(`未知命令: ${cmd}`);
-            console.log('输入 "help" 查看可用命令');
-    }
-    return true;
-}
-/**
- * 处理 MCP 子命令
- */
-async function handleMcpSubCommand(cmd, args, _ctx) {
-    switch (cmd.toLowerCase()) {
-        case 'list':
-            console.log('MCP 服务列表：');
-            console.log('  暂无 MCP 配置');
-            break;
-        case 'add':
-            if (args.length < 2) {
-                console.log('用法: add <名称> <URL>');
-            }
-            else {
-                console.log(`添加 MCP: ${args[0]} -> ${args[1]}`);
-                console.log('功能将在后续实现...');
-            }
-            break;
-        case 'remove':
-        case 'rm':
-            if (args.length === 0) {
-                console.log('用法: remove <名称>');
-            }
-            else {
-                console.log(`删除 MCP: ${args[0]}`);
-                console.log('功能将在后续实现...');
-            }
-            break;
-        case 'help':
-        case 'h':
-            console.log('MCP 管理命令：');
-            console.log('  list           - 列出所有 MCP 服务');
-            console.log('  add <n> <url>  - 添加 MCP 服务');
-            console.log('  remove <n>     - 删除 MCP 服务');
-            console.log('  help           - 显示帮助');
-            break;
-        default:
-            console.log(`未知命令: ${cmd}`);
-            console.log('输入 "help" 查看可用命令');
-    }
-    return true;
 }
 /**
  * 处理未知命令（默认模式）
@@ -335,27 +213,35 @@ async function handleUnknownCommand(name, ctx) {
             const nlpService = await Promise.resolve().then(() => __importStar(require('../../services/nlp'))).then(m => m.getNLPService());
             const intentRouter = await Promise.resolve().then(() => __importStar(require('../intent-router'))).then(m => m.getIntentRouter());
             const nlpResponse = await nlpService.analyzeText(fullText);
-            console.log(chalk_1.default.gray(`意图: ${nlpResponse.intent} (${Math.round(nlpResponse.confidence * 100)}%)`));
             // 路由到对应动作
             const action = intentRouter.route(nlpResponse);
-            // 如果有回复，显示给用户
-            if (action.reply) {
-                console.log(chalk_1.default.green(action.reply));
-            }
             // 执行路由动作
             switch (action.type) {
                 case 'switch_mode':
                     if (action.targetMode) {
+                        // 保存 NLP 参数到上下文
+                        ctx.nlpParameters = action.parameters;
+                        // Timer/Kb/Mcp 模式直接路由到对应命令，不切换显示模式
+                        if (action.targetMode === mode_1.ReplMode.Timer) {
+                            const cmd = exports.registry.get('timer-add');
+                            if (cmd) {
+                                return await cmd.handler(ctx);
+                            }
+                        }
+                        else if (action.targetMode === mode_1.ReplMode.Kb) {
+                            const cmd = exports.registry.get('kb-add');
+                            if (cmd) {
+                                return await cmd.handler(ctx);
+                            }
+                        }
+                        else if (action.targetMode === mode_1.ReplMode.Mcp) {
+                            const cmd = exports.registry.get('mcp-add');
+                            if (cmd) {
+                                return await cmd.handler(ctx);
+                            }
+                        }
+                        // Chat 和 Default 模式正常处理
                         ctx.setMode(action.targetMode);
-                        // 显示进入模式的提示
-                        const modeNames = {
-                            [mode_1.ReplMode.Default]: '默认',
-                            [mode_1.ReplMode.Chat]: '聊天',
-                            [mode_1.ReplMode.Kb]: '知识库',
-                            [mode_1.ReplMode.Timer]: '定时任务',
-                            [mode_1.ReplMode.Mcp]: 'MCP',
-                        };
-                        console.log(chalk_1.default.gray(`已进入 ${modeNames[action.targetMode]} 模式`));
                     }
                     return true;
                 case 'execute_command':
@@ -368,9 +254,25 @@ async function handleUnknownCommand(name, ctx) {
                     }
                     return true;
                 case 'chat':
-                    // 进入 chat 模式
-                    ctx.setMode(mode_1.ReplMode.Chat);
-                    return true;
+                    // chat 意图时调用 chat API 进行对话
+                    // 不显示"你: xxx"，直接显示思考中和AI回复
+                    {
+                        const fullText = [name, ...ctx.args].join(' ').trim();
+                        try {
+                            const { getApiClient } = await Promise.resolve().then(() => __importStar(require('../../services/api-client')));
+                            const apiClient = getApiClient();
+                            console.log(chalk_1.default.gray('正在思考...'));
+                            const response = await apiClient.chat([
+                                { role: 'user', content: fullText }
+                            ], false);
+                            console.log(chalk_1.default.cyan(' ◆ '), response.content);
+                        }
+                        catch (err) {
+                            console.log(chalk_1.default.red('请求失败:'), err instanceof Error ? err.message : String(err));
+                        }
+                        console.log();
+                        return true;
+                    }
                 case 'show_status':
                     // 执行 status 命令
                     const statusCmd = exports.registry.get('status');

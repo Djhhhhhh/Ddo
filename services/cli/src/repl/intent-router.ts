@@ -138,11 +138,9 @@ export function createIntentRouter() {
       // 尝试关键词兜底匹配
       const keywordFallback = findKeywordFallback(intent);
       if (keywordFallback) {
-        console.log(chalk.gray(`(关键词匹配: ${intent})`));
         const action: RouteAction = {
           type: keywordFallback.action,
           parameters,
-          reply: reply || `进入 ${keywordFallback.targetMode} 模式`,
         };
         if (keywordFallback.targetMode) {
           action.targetMode = keywordFallback.targetMode;
@@ -150,11 +148,9 @@ export function createIntentRouter() {
         return action;
       }
 
-      // 没有找到映射，默认进入 chat 模式
-      console.log(chalk.yellow(`未识别到特定意图 (${intent})，进入聊天模式...`));
+      // 没有找到映射，默认进入 chat 模式（静默处理，不显示技术性信息）
       return {
         type: 'chat',
-        reply: reply || '好的，让我来帮你。',
       };
     }
 

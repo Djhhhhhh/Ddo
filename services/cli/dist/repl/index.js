@@ -57,6 +57,12 @@ const chat_1 = require("./commands/chat");
 const clear_1 = require("./commands/clear");
 const status_1 = require("./commands/status");
 const mode_switch_1 = require("./commands/mode-switch");
+// KB 子命令
+const kb_commands_1 = require("./commands/kb-commands");
+// Timer 子命令
+const timer_commands_1 = require("./commands/timer-commands");
+// MCP 子命令
+const mcp_commands_1 = require("./commands/mcp-commands");
 // 注册命令
 commands_1.registry.register(exit_1.exitCommand);
 commands_1.registry.register(exit_1.backCommand);
@@ -67,6 +73,25 @@ commands_1.registry.register(status_1.statusCommand);
 commands_1.registry.register(mode_switch_1.kbCommand);
 commands_1.registry.register(mode_switch_1.timerCommand);
 commands_1.registry.register(mode_switch_1.mcpCommand);
+// 注册 KB 子命令
+commands_1.registry.register(kb_commands_1.kbListCommand);
+commands_1.registry.register(kb_commands_1.kbAddCommand);
+commands_1.registry.register(kb_commands_1.kbSearchCommand);
+commands_1.registry.register(kb_commands_1.kbRemoveCommand);
+commands_1.registry.register(kb_commands_1.kbHelpCommand);
+// 注册 Timer 子命令
+commands_1.registry.register(timer_commands_1.timerListCommand);
+commands_1.registry.register(timer_commands_1.timerAddCommand);
+commands_1.registry.register(timer_commands_1.timerPauseCommand);
+commands_1.registry.register(timer_commands_1.timerResumeCommand);
+commands_1.registry.register(timer_commands_1.timerRemoveCommand);
+commands_1.registry.register(timer_commands_1.timerHelpCommand);
+// 注册 MCP 子命令
+commands_1.registry.register(mcp_commands_1.mcpListCommand);
+commands_1.registry.register(mcp_commands_1.mcpAddCommand);
+commands_1.registry.register(mcp_commands_1.mcpTestCommand);
+commands_1.registry.register(mcp_commands_1.mcpRemoveCommand);
+commands_1.registry.register(mcp_commands_1.mcpHelpCommand);
 // ASCII 艺术字
 const ASCII_ART = `
  /$$$$$$$        /$$
@@ -157,16 +182,8 @@ function showWelcome(services) {
         console.log(`  ${status} ${svc.displayName} ${chalk_1.default.gray(`(端口 ${svc.port})`)}`);
     }
     console.log();
-    console.log(chalk_1.default.gray('可用命令:'));
-    console.log(`  ${chalk_1.default.yellow('/chat <msg>')}     与 AI 助手对话`);
-    console.log(`  ${chalk_1.default.yellow('/kb')}             进入知识库管理模式`);
-    console.log(`  ${chalk_1.default.yellow('/timer')}          进入定时任务管理模式`);
-    console.log(`  ${chalk_1.default.yellow('/mcp')}            进入 MCP 管理模式`);
-    console.log(`  ${chalk_1.default.yellow('/status')}         查看服务状态`);
-    console.log(`  ${chalk_1.default.yellow('/exit')}           退出 REPL`);
     console.log();
-    console.log(chalk_1.default.gray('直接输入自然语言描述任务，AI 将自动理解并执行'));
-    console.log(chalk_1.default.gray('按 Tab 键可查看命令补全提示'));
+    console.log(chalk_1.default.cyan(' ~ '), chalk_1.default.gray('像跟人聊天一样说话，或者直接丢个任务给我，也可以输入 '), chalk_1.default.yellow('/help'), chalk_1.default.gray(' 看看我能做什么'));
     console.log();
     logger_1.default.divider();
     console.log();

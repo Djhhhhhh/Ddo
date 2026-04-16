@@ -23,6 +23,8 @@ export interface CommandContext {
     setMode: (mode: ReplMode) => void;
     /** 原始解析后的命令 */
     parsed: ParsedCommand;
+    /** NLP 提取的参数（用于自然语言命令） */
+    nlpParameters?: Record<string, unknown>;
 }
 /**
  * 命令定义接口

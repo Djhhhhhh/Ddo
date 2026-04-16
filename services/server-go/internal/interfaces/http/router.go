@@ -41,6 +41,8 @@ func (r *Router) RegisterRoutes(
 	knowledgeHandler *handler.KnowledgeHandler,
 	timerHandler *handler.TimerHandler,
 	mcpHandler *handler.MCPHandler,
+	llmHandler *handler.LLMHandler,
+	metricsHandler *handler.MetricsHandler,
 ) {
 	// 健康检查
 	r.engine.GET("/health", healthHandler.HealthCheck)
@@ -49,6 +51,11 @@ func (r *Router) RegisterRoutes(
 	v1 := r.engine.Group("/api/v1")
 	{
 		v1.GET("/health", healthHandler.HealthCheckV1)
+		v1.GET("/metrics", metricsHandler.Metrics)
+
+		// LLM 代理路由
+		v1.POST("/chat", llmHandler.Chat)         // 对话
+		v1.POST("/chat/nlp", llmHandler.NLP)      // NLP 意图识别
 
 		// 知识库路由组
 		knowledge := v1.Group("/knowledge")

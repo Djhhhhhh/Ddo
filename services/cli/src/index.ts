@@ -205,10 +205,21 @@ program
     logger.info(`配置文件位置: ${prettyPath(`${dataDir}/config.yaml`)}`);
   });
 
-// 解析命令行参数
-program.parse(process.argv);
-
-// 如果没有提供命令，显示帮助
+// 如果没有提供命令，直接启动 REPL
 if (!process.argv.slice(2).length) {
-  program.outputHelp();
+  (async () => {
+    try {
+      const result = await startCommand({});
+      if (!result.success) {
+        logger.error(result.error || '启动失败');
+        process.exit(1);
+      }
+    } catch (err) {
+      logger.error(`启动过程出错: ${err instanceof Error ? err.message : String(err)}`);
+      process.exit(1);
+    }
+  })();
+} else {
+  // 解析命令行参数
+  program.parse(process.argv);
 }
