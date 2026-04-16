@@ -1,5 +1,5 @@
 {
-  "exportTime": "2026-04-15T11:43:38.183Z",
+  "exportTime": "2026-04-15T14:59:02.305Z",
   "phases": {
     "p1": {
       "title": "Phase 1: 基础设施",
@@ -185,7 +185,7 @@
           "id": "p2-10",
           "title": "llm-py API 文档",
           "module": "llm",
-          "status": "pending",
+          "status": "done",
           "priority": "medium",
           "notes": "FastAPI /docs 自动生成"
         },
@@ -217,7 +217,7 @@
           "id": "p2-14",
           "title": "server-go: 知识库 CRUD",
           "module": "server",
-          "status": "pending",
+          "status": "done",
           "priority": "high",
           "notes": "元数据管理，RAG代理到llm-py，依赖 p2-12"
         },

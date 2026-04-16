@@ -13,14 +13,14 @@ server-go 是 Ddo 平台的核心网关服务，负责提供统一的 API 路由
 server-go/
 ├── cmd/
 │   └── server/
-│       ├── main.go                          # 服务启动入口（2026-04-14）
-│       ├── wire.go                          # Wire 依赖注入配置（2026-04-15）
-│       └── wire_gen.go                      # Wire 生成的代码（2026-04-15）
+│       └── main.go                          # 服务启动入口（2026-04-14）
 ├── configs/
 │   └── config.yaml                          # 配置文件模板（2026-04-14）
 ├── internal/
-│   ├── bootstrap/
-│   │   └── app.go                           # 应用生命周期管理（2026-04-15）
+│   ├── bootstrap/                           # ← 更新：应用引导层（2026-04-15）
+│   │   ├── app.go                           # 应用生命周期管理
+│   │   ├── wire.go                          # Wire 依赖注入配置
+│   │   └── wire_gen.go                      # Wire 生成的代码（手动维护）
 │   ├── domain/                              # ★ 领域层（核心业务）
 │   │   ├── common/                          # 领域共享组件（2026-04-14）
 │   │   │   ├── entity.go                    # 实体基类
@@ -33,20 +33,31 @@ server-go/
 │   ├── application/                         # 应用层（用例编排）
 │   │   ├── result/
 │   │   │   └── result.go                    # 统一响应结果封装（2026-04-14）
+│   │   ├── service/
+│   │   │   └── rag_proxy.go                 # RAG 代理服务，转发到 llm-py（2026-04-15）
 │   │   └── usecase/
-│   │       └── health/
-│   │           └── check_health.go          # CheckHealth 用例实现（2026-04-15）
+│   │       ├── health/
+│   │       │   └── check_health.go          # CheckHealth 用例实现（2026-04-15）
+│   │       └── knowledge/                   # ← 新增：知识库用例层（2026-04-15）
+│   │           ├── create_knowledge.go      # 创建知识条目
+│   │           ├── list_knowledge.go        # 查询知识列表
+│   │           ├── get_knowledge.go         # 获取知识详情
+│   │           ├── delete_knowledge.go      # 删除知识条目
+│   │           ├── search_knowledge.go      # 语义搜索
+│   │           └── ask_knowledge.go         # RAG 问答
 │   ├── interfaces/                          # 接口层（协议适配）
 │   │   └── http/
 │   │       ├── handler/
-│   │       │   └── health_handler.go        # 健康检查 Handler（2026-04-15）
+│   │       │   ├── health_handler.go        # 健康检查 Handler（2026-04-15）
+│   │       │   └── knowledge_handler.go     # ← 新增：知识库 Handler（2026-04-15）
 │   │       ├── middleware/
 │   │       │   ├── recovery.go              # 异常恢复（2026-04-14）
 │   │       │   ├── logger.go                # 请求日志（2026-04-14）
 │   │       │   ├── cors.go                  # 跨域支持（2026-04-14）
 │   │       │   └── request_id.go            # 请求ID追踪（2026-04-14）
 │   │       ├── dto/
-│   │       │   └── health_dto.go            # HTTP DTO（2026-04-15）
+│   │       │   ├── health_dto.go            # HTTP DTO（2026-04-15）
+│   │       │   └── knowledge_dto.go         # ← 新增：知识库 DTO（2026-04-15）
 │   │       └── router.go                    # 路由注册（2026-04-14）
 │   ├── infrastructure/                      # 基础设施层（技术实现）
 │   │   ├── config/
@@ -57,11 +68,14 @@ server-go/
 │   │       └── gin_server.go                # Gin HTTP 服务器适配器（2026-04-14）
 │   ├── db/                                  # ← 新增：数据库层（2026-04-15）
 │   │   ├── mysql.go                         # GORM MySQL 连接管理
-│   │   └── models/                          # 数据模型定义
-│   │       ├── knowledge.go                 # 知识库模型
-│   │       ├── timer.go                     # 定时任务模型
-│   │       ├── timer_log.go                 # 定时任务日志模型
-│   │       └── mcp.go                       # MCP 配置模型
+│   │   ├── models/                          # 数据模型定义
+│   │   │   ├── knowledge.go                 # 知识库模型
+│   │   │   ├── timer.go                     # 定时任务模型
+│   │   │   ├── timer_log.go                 # 定时任务日志模型
+│   │   │   └── mcp.go                       # MCP 配置模型
+│   │   └── repository/                      # ← 新增：数据访问层（2026-04-15）
+│   │       ├── knowledge_repo.go            # 知识库 Repository
+│   │       └── timer_repo.go                # 定时任务 Repository
 │   ├── queue/                               # ← 新增：消息队列层（2026-04-15）
 │   │   ├── queue.go                         # Queue 接口定义
 │   │   └── badger_queue.go                  # BadgerDB 队列实现
@@ -124,4 +138,4 @@ server-go/
 
 ## 🕒 最后更新时间
 
-2026-04-15 16:30:00
+2026-04-15 19:30:00

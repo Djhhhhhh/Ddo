@@ -47,6 +47,11 @@ func (c *Config) ServerAddr() string {
 	return fmt.Sprintf("%s:%d", c.Server.Host, c.Server.Port)
 }
 
+// QueueDataDir 获取队列数据目录
+func (c *Config) QueueDataDir() string {
+	return "./data/queue"
+}
+
 // MySQLDSN 获取 MySQL DSN
 func (c *Config) MySQLDSN() string {
 	return fmt.Sprintf("%s:%s@tcp(%s:%d)/%s?charset=%s&parseTime=True&loc=Local",

@@ -164,3 +164,32 @@ err := queue.Publish(ctx, "notify", payload, 0, 5*time.Second)
 // 发布高优先级消息
 err := queue.Publish(ctx, "critical", payload, 1, 0)
 ```
+
+### 知识库模块依赖注入模式（2026-04-15）
+Repository 模式 + UseCase 编排 + Handler 适配：
+```go
+// Repository 定义接口和实现分离
+type KnowledgeRepository interface {
+    Create(ctx context.Context, knowledge *models.Knowledge) error
+    GetByUUID(ctx context.Context, uuid string) (*models.Knowledge, error)
+    // ...
+}
+
+// UseCase 组合 Repository 和 Service
+func NewCreateKnowledgeUseCase(
+    knowledgeRepo repository.KnowledgeRepository,
+    ragProxy service.RAGProxy,
+) CreateKnowledgeUseCase {
+    return &createKnowledgeUseCase{
+        knowledgeRepo: knowledgeRepo,
+        ragProxy:      ragProxy,
+    }
+}
+
+// Handler 聚合所有 UseCase
+type KnowledgeHandler struct {
+    createUseCase  knowledge.CreateKnowledgeUseCase
+    listUseCase    knowledge.ListKnowledgeUseCase
+    // ...
+}
+```

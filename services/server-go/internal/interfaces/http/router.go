@@ -36,7 +36,7 @@ func NewRouter(logger *zap.Logger) *Router {
 }
 
 // RegisterRoutes 注册路由
-func (r *Router) RegisterRoutes(healthHandler *handler.HealthHandler) {
+func (r *Router) RegisterRoutes(healthHandler *handler.HealthHandler, knowledgeHandler *handler.KnowledgeHandler) {
 	// 健康检查
 	r.engine.GET("/health", healthHandler.HealthCheck)
 
@@ -44,6 +44,17 @@ func (r *Router) RegisterRoutes(healthHandler *handler.HealthHandler) {
 	v1 := r.engine.Group("/api/v1")
 	{
 		v1.GET("/health", healthHandler.HealthCheckV1)
+
+		// 知识库路由组
+		knowledge := v1.Group("/knowledge")
+		{
+			knowledge.POST("", knowledgeHandler.CreateKnowledge)                // 创建知识
+			knowledge.GET("", knowledgeHandler.ListKnowledge)                   // 查询列表
+			knowledge.GET("/search", knowledgeHandler.SearchKnowledge)          // 语义搜索
+			knowledge.POST("/ask", knowledgeHandler.AskKnowledge)               // RAG 问答
+			knowledge.GET("/:uuid", knowledgeHandler.GetKnowledge)              // 获取详情
+			knowledge.POST("/:uuid/delete", knowledgeHandler.DeleteKnowledge)   // 删除知识
+		}
 	}
 }
 
