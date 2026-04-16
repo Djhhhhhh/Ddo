@@ -1,5 +1,5 @@
 {
-  "exportTime": "2026-04-15T14:59:02.305Z",
+  "exportTime": "2026-04-16T07:05:13.172Z",
   "phases": {
     "p1": {
       "title": "Phase 1: 基础设施",
@@ -225,7 +225,7 @@
           "id": "p2-15",
           "title": "server-go: 定时任务 API",
           "module": "server",
-          "status": "pending",
+          "status": "done",
           "priority": "medium",
           "notes": "Cron调度、HTTP回调、robfig/cron，依赖 p2-12"
         },
@@ -233,7 +233,7 @@
           "id": "p2-16",
           "title": "server-go: MCP 管理 API",
           "module": "server",
-          "status": "pending",
+          "status": "done",
           "priority": "medium",
           "notes": "MCP配置CRUD、连接池、测试接口，依赖 p2-12"
         },

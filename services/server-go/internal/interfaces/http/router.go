@@ -40,6 +40,7 @@ func (r *Router) RegisterRoutes(
 	healthHandler *handler.HealthHandler,
 	knowledgeHandler *handler.KnowledgeHandler,
 	timerHandler *handler.TimerHandler,
+	mcpHandler *handler.MCPHandler,
 ) {
 	// 健康检查
 	r.engine.GET("/health", healthHandler.HealthCheck)
@@ -72,6 +73,16 @@ func (r *Router) RegisterRoutes(
 			timers.POST("/:uuid/delete", timerHandler.DeleteTimer)      // 删除定时任务
 			timers.POST("/:uuid/trigger", timerHandler.TriggerTimer)    // 手动触发
 			timers.GET("/:uuid/logs", timerHandler.ListTimerLogs)       // 查询执行日志
+		}
+
+		// MCP 管理路由组
+		mcps := v1.Group("/mcps")
+		{
+			mcps.POST("", mcpHandler.CreateMCP)                    // 创建 MCP 配置
+			mcps.GET("", mcpHandler.ListMCP)                      // 查询 MCP 列表
+			mcps.GET("/:uuid", mcpHandler.GetMCP)                  // 获取 MCP 详情
+			mcps.POST("/:uuid/delete", mcpHandler.DeleteMCP)      // 删除 MCP 配置
+			mcps.POST("/:uuid/test", mcpHandler.TestMCP)          // 测试 MCP 连接
 		}
 	}
 }

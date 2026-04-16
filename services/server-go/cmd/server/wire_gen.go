@@ -8,6 +8,7 @@ import (
 	"github.com/ddo/server-go/internal/application/service"
 	"github.com/ddo/server-go/internal/application/usecase/health"
 	"github.com/ddo/server-go/internal/application/usecase/knowledge"
+	"github.com/ddo/server-go/internal/application/usecase/mcp"
 	"github.com/ddo/server-go/internal/application/usecase/timer"
 	"github.com/ddo/server-go/internal/bootstrap"
 	"github.com/ddo/server-go/internal/db"
@@ -17,10 +18,11 @@ import (
 	"github.com/ddo/server-go/internal/infrastructure/server"
 	"github.com/ddo/server-go/internal/queue"
 	"github.com/ddo/server-go/internal/scheduler"
-	http "github.com/ddo/server-go/internal/interfaces/http"
+	httpinterface "github.com/ddo/server-go/internal/interfaces/http"
 	"github.com/ddo/server-go/internal/interfaces/http/handler"
 	"github.com/gin-gonic/gin"
 	"go.uber.org/zap"
+	mcpclient "github.com/ddo/server-go/internal/mcp"
 )
 
 // Injectors from wire.go:
@@ -70,7 +72,7 @@ func InitializeApp(cfgPath string) (*bootstrap.App, func(), error) {
 	callbackExecutor := service.NewCallbackExecutor(queueQueue, timerLogRepo, zapLogger)
 
 	// 初始化路由
-	router := http.NewRouter(zapLogger)
+	router := httpinterface.NewRouter(zapLogger)
 	engine := provideEngine(router)
 
 	// 初始化用例
@@ -105,6 +107,22 @@ func InitializeApp(cfgPath string) (*bootstrap.App, func(), error) {
 	triggerTimerUseCase := timer.NewTriggerTimerUseCase(timerRepo, queueQueue)
 	listTimerLogsUseCase := timer.NewListTimerLogsUseCase(timerLogRepo)
 
+	// 初始化 MCP 连接池
+	mcpClientPool := mcpclient.NewClientPool()
+
+	// 初始化 MCP Repository
+	var mcpRepo repository.MCPRepository
+	if mySQLConn != nil && mySQLConn.DB() != nil {
+		mcpRepo = repository.NewMCPRepository(mySQLConn.DB())
+	}
+
+	// 初始化 MCP UseCase
+	createMCPUseCase := mcp.NewCreateMCPUseCase(mcpRepo)
+	listMCPUseCase := mcp.NewListMCPUseCase(mcpRepo)
+	getMCPUseCase := mcp.NewGetMCPUseCase(mcpRepo)
+	deleteMCPUseCase := mcp.NewDeleteMCPUseCase(mcpRepo)
+	testMCPUseCase := mcp.NewTestMCPUseCase(mcpRepo, mcpClientPool)
+
 	// 初始化 Handler
 	healthHandler := handler.NewHealthHandler(checkHealthUseCase, version)
 
@@ -131,8 +149,17 @@ func InitializeApp(cfgPath string) (*bootstrap.App, func(), error) {
 		zapLogger,
 	)
 
+	mcpHandler := handler.NewMCPHandler(
+		createMCPUseCase,
+		listMCPUseCase,
+		getMCPUseCase,
+		deleteMCPUseCase,
+		testMCPUseCase,
+		zapLogger,
+	)
+
 	// 注册路由
-	router.RegisterRoutes(healthHandler, knowledgeHandler, timerHandler)
+	router.RegisterRoutes(healthHandler, knowledgeHandler, timerHandler, mcpHandler)
 
 	// 初始化服务器
 	ginServer := server.NewGinServer(cfg, zapLogger, engine)
@@ -142,6 +169,10 @@ func InitializeApp(cfgPath string) (*bootstrap.App, func(), error) {
 
 	// 组装 cleanup 函数
 	cleanup := func() {
+		// 关闭 MCP 连接池
+		if mcpClientPool != nil {
+			mcpClientPool.Close()
+		}
 		queueCleanup()
 		mysqlCleanup()
 		logCleanup()
@@ -198,7 +229,7 @@ func provideQueue(cfg *config.Config, logger *zap.Logger) (queue.Queue, func(), 
 }
 
 // provideEngine 提供 Gin Engine
-func provideEngine(router *http.Router) *gin.Engine {
+func provideEngine(router *httpinterface.Router) *gin.Engine {
 	return router.Engine()
 }
 
