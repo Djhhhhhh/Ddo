@@ -1,5 +1,5 @@
 import chalk from 'chalk';
-import { ReplCommand } from './index';
+import { ReplCommand, CommandResult, CommandType } from './index';
 import { ReplMode } from '../mode';
 import { getApiClient } from '../../services/api-client';
 
@@ -7,13 +7,13 @@ export const chatCommand: ReplCommand = {
   name: 'chat',
   description: '与 AI 助手对话',
   usage: '/chat <消息> 或 /chat -m "消息内容"',
-  handler: async ({ args, flags, modeManager, setMode }) => {
+  handler: async ({ args, flags, modeManager, setMode }): Promise<CommandResult> => {
     // 如果没有参数，进入持续聊天模式
     if (args.length === 0 && Object.keys(flags).length === 0) {
       setMode(ReplMode.Chat);
       console.log(chalk.green('已进入聊天模式，直接输入消息与 AI 对话'));
       console.log(chalk.gray('提示: 输入 /back 返回默认模式，输入 /exit 退出 REPL'));
-      return true;
+      return { shouldContinue: true, outputType: CommandType.Command };
     }
 
     // 获取消息内容
@@ -26,7 +26,7 @@ export const chatCommand: ReplCommand = {
     } else {
       console.log(chalk.yellow('请输入对话内容'));
       console.log(chalk.gray('用法: /chat <消息> 或 /chat -m "消息内容"'));
-      return true;
+      return { shouldContinue: true, outputType: CommandType.Command };
     }
 
     console.log(chalk.cyan('你:'), message);
@@ -53,6 +53,6 @@ export const chatCommand: ReplCommand = {
     }
 
     console.log();
-    return true;
+    return { shouldContinue: true, outputType: CommandType.Chat };
   },
 };

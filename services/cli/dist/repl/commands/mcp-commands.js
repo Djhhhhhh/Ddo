@@ -5,6 +5,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.mcpHelpCommand = exports.mcpRemoveCommand = exports.mcpTestCommand = exports.mcpAddCommand = exports.mcpListCommand = void 0;
 const chalk_1 = __importDefault(require("chalk"));
+const index_1 = require("./index");
 const api_client_1 = require("../../services/api-client");
 const prompt_helper_1 = require("./prompt-helper");
 /**
@@ -50,7 +51,7 @@ exports.mcpListCommand = {
         catch (err) {
             console.log(chalk_1.default.red('获取 MCP 配置失败:'), err instanceof Error ? err.message : String(err));
         }
-        return true;
+        return { shouldContinue: true, outputType: index_1.CommandType.Command };
     },
 };
 /**
@@ -111,7 +112,7 @@ exports.mcpAddCommand = {
             });
             if (!confirmed) {
                 console.log(chalk_1.default.yellow('\n已取消添加'));
-                return true;
+                return { shouldContinue: true, outputType: index_1.CommandType.Command };
             }
             const apiClient = (0, api_client_1.getApiClient)();
             try {
@@ -134,7 +135,7 @@ exports.mcpAddCommand = {
                 }
                 else {
                     console.log(chalk_1.default.red('\n✗ 参数不完整'));
-                    return true;
+                    return { shouldContinue: true, outputType: index_1.CommandType.Command };
                 }
                 const result = await apiClient.createMcp(data);
                 console.log(chalk_1.default.green('\n✓ MCP 配置创建成功!'));
@@ -146,7 +147,7 @@ exports.mcpAddCommand = {
                 console.log(chalk_1.default.red('\n✗ 创建 MCP 配置失败:'), err instanceof Error ? err.message : String(err));
             }
         }
-        return true;
+        return { shouldContinue: true, outputType: index_1.CommandType.Command };
     },
 };
 /**
@@ -160,7 +161,7 @@ exports.mcpTestCommand = {
     handler: async ({ args }) => {
         if (args.length === 0) {
             console.log(chalk_1.default.yellow('用法: /mcp-test <uuid>'));
-            return true;
+            return { shouldContinue: true, outputType: index_1.CommandType.Command };
         }
         const uuid = args[0];
         const apiClient = (0, api_client_1.getApiClient)();
@@ -180,7 +181,7 @@ exports.mcpTestCommand = {
         catch (err) {
             console.log(chalk_1.default.red('测试 MCP 连接失败:'), err instanceof Error ? err.message : String(err));
         }
-        return true;
+        return { shouldContinue: true, outputType: index_1.CommandType.Command };
     },
 };
 /**
@@ -194,7 +195,7 @@ exports.mcpRemoveCommand = {
     handler: async ({ args }) => {
         if (args.length === 0) {
             console.log(chalk_1.default.yellow('用法: /mcp-remove <uuid>'));
-            return true;
+            return { shouldContinue: true, outputType: index_1.CommandType.Command };
         }
         const uuid = args[0];
         const apiClient = (0, api_client_1.getApiClient)();
@@ -206,7 +207,7 @@ exports.mcpRemoveCommand = {
         catch (err) {
             console.log(chalk_1.default.red('删除 MCP 配置失败:'), err instanceof Error ? err.message : String(err));
         }
-        return true;
+        return { shouldContinue: true, outputType: index_1.CommandType.Command };
     },
 };
 /**
@@ -230,7 +231,7 @@ exports.mcpHelpCommand = {
         console.log(`  ${chalk_1.default.gray('/mcp-add "my-mcp" stdio "npx -y some-server"')}`);
         console.log(`  ${chalk_1.default.gray('/mcp-add "my-mcp" http "http://localhost:3000/mcp"')}`);
         console.log();
-        return true;
+        return { shouldContinue: true, outputType: index_1.CommandType.Command };
     },
 };
 //# sourceMappingURL=mcp-commands.js.map

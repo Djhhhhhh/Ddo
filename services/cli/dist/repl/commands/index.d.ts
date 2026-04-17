@@ -27,6 +27,27 @@ export interface CommandContext {
     nlpParameters?: Record<string, unknown>;
 }
 /**
+ * 命令输出类型
+ * 用于区分 AI 对话和普通命令，控制提示符换行行为
+ */
+export declare enum CommandType {
+    /** AI 对话 */
+    Chat = 0,
+    /** 普通命令 */
+    Command = 1
+}
+/**
+ * 命令执行结果
+ */
+export interface CommandResult {
+    /** 是否继续 REPL */
+    shouldContinue: boolean;
+    /** 输出类型 */
+    outputType: CommandType;
+    /** 命令输出（可选） */
+    response?: string;
+}
+/**
  * 命令定义接口
  */
 export interface ReplCommand {
@@ -42,9 +63,9 @@ export interface ReplCommand {
     modes?: ReplMode[];
     /**
      * 命令处理器
-     * @returns 返回 true 表示继续 REPL，返回 false 表示退出
+     * @returns 返回 CommandResult 控制 REPL 行为和输出类型
      */
-    handler: (ctx: CommandContext) => Promise<boolean>;
+    handler: (ctx: CommandContext) => Promise<CommandResult>;
 }
 /**
  * 命令注册表
@@ -81,6 +102,6 @@ export declare const registry: CommandRegistry;
 /**
    * 执行命令
    */
-export declare function executeCommand(parsed: ParsedCommand, rl: readline.Interface, modeManager: ModeManager): Promise<boolean>;
+export declare function executeCommand(parsed: ParsedCommand, rl: readline.Interface, modeManager: ModeManager): Promise<CommandResult>;
 export {};
 //# sourceMappingURL=index.d.ts.map

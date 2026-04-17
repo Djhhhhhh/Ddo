@@ -58,12 +58,26 @@ const MODE_CONFIG = {
 class ModeManager {
     constructor() {
         this.currentMode = ReplMode.Default;
+        /** 知识库优先模式 */
+        this._kbPriorityMode = false;
     }
     /**
      * 获取当前模式
      */
     get mode() {
         return this.currentMode;
+    }
+    /**
+     * 获取知识库优先模式状态
+     */
+    get kbPriorityMode() {
+        return this._kbPriorityMode;
+    }
+    /**
+     * 切换知识库优先模式
+     */
+    toggleKbPriority() {
+        this._kbPriorityMode = !this._kbPriorityMode;
     }
     /**
      * 设置模式
@@ -109,10 +123,11 @@ class ModeManager {
      */
     getPrompt() {
         const info = this.getModeInfo();
+        const suffix = this._kbPriorityMode ? ' 📚' : '';
         if (this.currentMode === ReplMode.Default) {
-            return info.promptColor('ddo> ');
+            return info.promptColor(`ddo${suffix}> `);
         }
-        return info.promptColor(`ddo/${info.name}> `);
+        return info.promptColor(`ddo/${info.name}${suffix}> `);
     }
     /**
      * 检查是否在子命令模式

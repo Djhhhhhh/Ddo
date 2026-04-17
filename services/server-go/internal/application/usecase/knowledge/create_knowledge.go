@@ -102,7 +102,9 @@ func (uc *createKnowledgeUseCase) Execute(ctx context.Context, input CreateKnowl
 			existing, err := uc.categoryRepo.GetByName(ctx, catName)
 			if err != nil {
 				// 分类不存在，需要创建
-				if isNewCategories == nil || len(isNewCategories) <= i || isNewCategories[i] {
+				// 修复：当 isNewCategories 为 nil、空数组、或超出范围时，都视为新分类
+				shouldCreate := isNewCategories == nil || len(isNewCategories) == 0 || i >= len(isNewCategories) || isNewCategories[i]
+				if shouldCreate {
 					newCat := &models.Category{
 						Name: catName,
 					}
@@ -117,6 +119,11 @@ func (uc *createKnowledgeUseCase) Execute(ctx context.Context, input CreateKnowl
 				categoryIDs = append(categoryIDs, catID)
 			}
 		}
+	}
+
+	// 额外检查：如果用户提供了 category 但不在 categoryIDs 中，也应该自动创建
+	if input.Category != "" {
+		categoryIDs = append(categoryIDs, input.Category)
 	}
 
 	// 4. 序列化标签

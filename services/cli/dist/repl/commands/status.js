@@ -5,6 +5,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.statusCommand = void 0;
 const chalk_1 = __importDefault(require("chalk"));
+const index_1 = require("./index");
 const api_client_1 = require("../../services/api-client");
 exports.statusCommand = {
     name: 'status',
@@ -38,7 +39,7 @@ exports.statusCommand = {
         // CLI 状态（始终 running，因为 REPL 在运行）
         console.log(`  ${chalk_1.default.green('●')} CLI       ${chalk_1.default.green('running')}`);
         console.log();
-        return true;
+        return { shouldContinue: true, outputType: index_1.CommandType.Command };
     },
 };
 //# sourceMappingURL=status.js.map

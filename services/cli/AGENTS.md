@@ -111,6 +111,7 @@ services/cli/
 
 ## 🕒 最后更新时间
 
+2026-04-17：REPL 交互模式增强（Shift+Tab 切换知识库优先、输入去重、AI 对话换行）
 2026-04-17：知识库增强功能（kb-add 命令自动添加 source: "cli"）
 2026-04-16：新增 NLP 参数标准化（intent-router.ts 标准化函数、validators.ts 验证工具）
 2026-04-16：新增 NLP 集成（intent-router.ts, nlp.ts）

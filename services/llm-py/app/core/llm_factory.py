@@ -206,13 +206,14 @@ class LLMFactory:
         def parse_analysis_output(output: str) -> dict:
             """Parse JSON from model output."""
             if isinstance(output, dict):
-                return output
+                return _normalize_result(output)
 
             text = output.strip()
 
             # Try direct JSON parsing
             try:
-                return json.loads(text)
+                result = json.loads(text)
+                return _normalize_result(result)
             except json.JSONDecodeError:
                 pass
 
@@ -220,14 +221,16 @@ class LLMFactory:
             if "```json" in text:
                 json_text = text.split("```json")[1].split("```")[0].strip()
                 try:
-                    return json.loads(json_text)
+                    result = json.loads(json_text)
+                    return _normalize_result(result)
                 except:
                     pass
 
             if "```" in text:
                 json_text = text.split("```")[1].split("```")[0].strip()
                 try:
-                    return json.loads(json_text)
+                    result = json.loads(json_text)
+                    return _normalize_result(result)
                 except:
                     pass
 
@@ -238,6 +241,30 @@ class LLMFactory:
                 "is_new_categories": [],
                 "suggested_reply": "分析失败，请手动添加标签和分类",
             }
+
+        def _normalize_result(result: dict) -> dict:
+            """Normalize tags and categories to always be lists."""
+            # Handle tags - may be string or list
+            tags = result.get("tags")
+            if isinstance(tags, str):
+                # Split comma-separated string into list
+                result["tags"] = [t.strip() for t in tags.split(",") if t.strip()]
+            elif not isinstance(tags, list):
+                result["tags"] = []
+
+            # Handle categories - may be string or list
+            categories = result.get("categories")
+            if isinstance(categories, str):
+                result["categories"] = [c.strip() for c in categories.split(",") if c.strip()]
+            elif not isinstance(categories, list):
+                result["categories"] = []
+
+            # Ensure is_new_categories is list
+            is_new = result.get("is_new_categories")
+            if not isinstance(is_new, list):
+                result["is_new_categories"] = [False] * len(result.get("categories", []))
+
+            return result
 
         from langchain_core.output_parsers import StrOutputParser
 

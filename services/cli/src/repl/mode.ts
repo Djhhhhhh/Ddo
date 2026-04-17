@@ -68,11 +68,28 @@ const MODE_CONFIG: Record<ReplMode, ModeInfo> = {
 export class ModeManager {
   private currentMode: ReplMode = ReplMode.Default;
 
+  /** 知识库优先模式 */
+  private _kbPriorityMode: boolean = false;
+
   /**
    * 获取当前模式
    */
   get mode(): ReplMode {
     return this.currentMode;
+  }
+
+  /**
+   * 获取知识库优先模式状态
+   */
+  get kbPriorityMode(): boolean {
+    return this._kbPriorityMode;
+  }
+
+  /**
+   * 切换知识库优先模式
+   */
+  toggleKbPriority(): void {
+    this._kbPriorityMode = !this._kbPriorityMode;
   }
 
   /**
@@ -125,10 +142,11 @@ export class ModeManager {
    */
   getPrompt(): string {
     const info = this.getModeInfo();
+    const suffix = this._kbPriorityMode ? ' 📚' : '';
     if (this.currentMode === ReplMode.Default) {
-      return info.promptColor('ddo> ');
+      return info.promptColor(`ddo${suffix}> `);
     }
-    return info.promptColor(`ddo/${info.name}> `);
+    return info.promptColor(`ddo/${info.name}${suffix}> `);
   }
 
   /**

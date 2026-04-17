@@ -1,5 +1,5 @@
 import chalk from 'chalk';
-import { ReplCommand, CommandContext } from './index';
+import { ReplCommand, CommandContext, CommandResult, CommandType } from './index';
 import { getApiClient } from '../../services/api-client';
 import { InteractivePrompt, ParameterDef, validateCron, validateUrl } from './prompt-helper';
 
@@ -11,7 +11,7 @@ export const timerListCommand: ReplCommand = {
   aliases: ['tl', 'timer:list'],
   description: '查看定时任务列表',
   usage: '/timer-list',
-  handler: async () => {
+  handler: async (): Promise<CommandResult> => {
     const apiClient = getApiClient();
 
     try {
@@ -46,7 +46,7 @@ export const timerListCommand: ReplCommand = {
       console.log(chalk.red('获取定时任务失败:'), err instanceof Error ? err.message : String(err));
     }
 
-    return true;
+    return { shouldContinue: true, outputType: CommandType.Command };
   },
 };
 
@@ -59,7 +59,7 @@ export const timerAddCommand: ReplCommand = {
   aliases: ['ta', 'timer:create'],
   description: '创建定时任务',
   usage: '/timer-add [cron] [url] [method]',
-  handler: async (ctx) => {
+  handler: async (ctx): Promise<CommandResult> => {
     const { args, nlpParameters, rl } = ctx;
     const prompt = new InteractivePrompt(rl);
 
@@ -129,7 +129,7 @@ export const timerAddCommand: ReplCommand = {
 
       if (!confirmed) {
         console.log(chalk.yellow('\n已取消创建'));
-        return true;
+        return { shouldContinue: true, outputType: CommandType.Command };
       }
 
       const apiClient = getApiClient();
@@ -151,7 +151,7 @@ export const timerAddCommand: ReplCommand = {
       }
     }
 
-    return true;
+    return { shouldContinue: true, outputType: CommandType.Command };
   },
 };
 
@@ -163,10 +163,10 @@ export const timerPauseCommand: ReplCommand = {
   aliases: ['tp', 'timer:pause'],
   description: '暂停定时任务',
   usage: '/timer-pause <uuid>',
-  handler: async ({ args }) => {
+  handler: async ({ args }): Promise<CommandResult> => {
     if (args.length === 0) {
       console.log(chalk.yellow('用法: /timer-pause <uuid>'));
-      return true;
+      return { shouldContinue: true, outputType: CommandType.Command };
     }
 
     const uuid = args[0];
@@ -180,7 +180,7 @@ export const timerPauseCommand: ReplCommand = {
       console.log(chalk.red('暂停定时任务失败:'), err instanceof Error ? err.message : String(err));
     }
 
-    return true;
+    return { shouldContinue: true, outputType: CommandType.Command };
   },
 };
 
@@ -192,10 +192,10 @@ export const timerResumeCommand: ReplCommand = {
   aliases: ['tr', 'timer:resume'],
   description: '恢复定时任务',
   usage: '/timer-resume <uuid>',
-  handler: async ({ args }) => {
+  handler: async ({ args }): Promise<CommandResult> => {
     if (args.length === 0) {
       console.log(chalk.yellow('用法: /timer-resume <uuid>'));
-      return true;
+      return { shouldContinue: true, outputType: CommandType.Command };
     }
 
     const uuid = args[0];
@@ -209,7 +209,7 @@ export const timerResumeCommand: ReplCommand = {
       console.log(chalk.red('恢复定时任务失败:'), err instanceof Error ? err.message : String(err));
     }
 
-    return true;
+    return { shouldContinue: true, outputType: CommandType.Command };
   },
 };
 
@@ -221,10 +221,10 @@ export const timerRemoveCommand: ReplCommand = {
   aliases: ['trm', 'timer:delete'],
   description: '删除定时任务',
   usage: '/timer-remove <uuid>',
-  handler: async ({ args }) => {
+  handler: async ({ args }): Promise<CommandResult> => {
     if (args.length === 0) {
       console.log(chalk.yellow('用法: /timer-remove <uuid>'));
-      return true;
+      return { shouldContinue: true, outputType: CommandType.Command };
     }
 
     const uuid = args[0];
@@ -238,7 +238,7 @@ export const timerRemoveCommand: ReplCommand = {
       console.log(chalk.red('删除定时任务失败:'), err instanceof Error ? err.message : String(err));
     }
 
-    return true;
+    return { shouldContinue: true, outputType: CommandType.Command };
   },
 };
 
@@ -250,7 +250,7 @@ export const timerHelpCommand: ReplCommand = {
   aliases: ['th', 'timer:help'],
   description: '显示定时任务帮助',
   usage: '/timer-help',
-  handler: async () => {
+  handler: async (): Promise<CommandResult> => {
     console.log(chalk.cyan('\n定时任务管理命令:'));
     console.log(chalk.gray('─'.repeat(40)));
     console.log(`  ${chalk.yellow('timer-list')}      - 列出所有定时任务`);
@@ -264,6 +264,6 @@ export const timerHelpCommand: ReplCommand = {
     console.log(`  ${chalk.gray('/timer-add "0 9 * * *" "http://localhost:8080/callback" POST')}`);
     console.log(`  ${chalk.gray('帮我创建一个每小时执行的任务')}`);
     console.log();
-    return true;
+    return { shouldContinue: true, outputType: CommandType.Command };
   },
 };

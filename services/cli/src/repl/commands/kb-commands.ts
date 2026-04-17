@@ -1,5 +1,5 @@
 import chalk from 'chalk';
-import { ReplCommand, CommandContext } from './index';
+import { ReplCommand, CommandContext, CommandResult, CommandType } from './index';
 import { getApiClient } from '../../services/api-client';
 import { InteractivePrompt, ParameterDef } from './prompt-helper';
 
@@ -11,7 +11,7 @@ export const kbListCommand: ReplCommand = {
   aliases: ['kl', 'kb:list'],
   description: '查看知识库列表',
   usage: '/kb-list',
-  handler: async () => {
+  handler: async (): Promise<CommandResult> => {
     const apiClient = getApiClient();
 
     try {
@@ -42,7 +42,7 @@ export const kbListCommand: ReplCommand = {
       console.log(chalk.red('获取知识库失败:'), err instanceof Error ? err.message : String(err));
     }
 
-    return true;
+    return { shouldContinue: true, outputType: CommandType.Command };
   },
 };
 
@@ -55,7 +55,7 @@ export const kbAddCommand: ReplCommand = {
   aliases: ['ka', 'kb:create'],
   description: '添加知识库词条',
   usage: '/kb-add [title] [content]',
-  handler: async (ctx) => {
+  handler: async (ctx): Promise<CommandResult> => {
     const { args, nlpParameters, rl } = ctx;
     const prompt = new InteractivePrompt(rl);
 
@@ -103,7 +103,7 @@ export const kbAddCommand: ReplCommand = {
 
       if (!confirmed) {
         console.log(chalk.yellow('\n已取消添加'));
-        return true;
+        return { shouldContinue: true, outputType: CommandType.Command };
       }
 
       const apiClient = getApiClient();
@@ -131,7 +131,7 @@ export const kbAddCommand: ReplCommand = {
       }
     }
 
-    return true;
+    return { shouldContinue: true, outputType: CommandType.Command };
   },
 };
 
@@ -143,10 +143,10 @@ export const kbSearchCommand: ReplCommand = {
   aliases: ['ks', 'kb:search'],
   description: '搜索知识库',
   usage: '/kb-search <查询内容>',
-  handler: async ({ args }) => {
+  handler: async ({ args }): Promise<CommandResult> => {
     if (args.length === 0) {
       console.log(chalk.yellow('用法: /kb-search <查询内容>'));
-      return true;
+      return { shouldContinue: true, outputType: CommandType.Command };
     }
 
     const query = args.join(' ');
@@ -173,7 +173,7 @@ export const kbSearchCommand: ReplCommand = {
       console.log(chalk.red('搜索失败:'), err instanceof Error ? err.message : String(err));
     }
 
-    return true;
+    return { shouldContinue: true, outputType: CommandType.Command };
   },
 };
 
@@ -185,10 +185,10 @@ export const kbRemoveCommand: ReplCommand = {
   aliases: ['krm', 'kb:delete'],
   description: '删除知识库',
   usage: '/kb-remove <UUID>',
-  handler: async ({ args }) => {
+  handler: async ({ args }): Promise<CommandResult> => {
     if (args.length === 0) {
       console.log(chalk.yellow('用法: /kb-remove <UUID>'));
-      return true;
+      return { shouldContinue: true, outputType: CommandType.Command };
     }
 
     const uuid = args[0];
@@ -202,7 +202,7 @@ export const kbRemoveCommand: ReplCommand = {
       console.log(chalk.red('删除知识库失败:'), err instanceof Error ? err.message : String(err));
     }
 
-    return true;
+    return { shouldContinue: true, outputType: CommandType.Command };
   },
 };
 
@@ -214,7 +214,7 @@ export const kbHelpCommand: ReplCommand = {
   aliases: ['kh', 'kb:help'],
   description: '显示知识库帮助',
   usage: '/kb-help',
-  handler: async () => {
+  handler: async (): Promise<CommandResult> => {
     console.log(chalk.cyan('\n知识库管理命令:'));
     console.log(chalk.gray('─'.repeat(40)));
     console.log(`  ${chalk.yellow('kb-list')}        - 列出所有知识库`);
@@ -227,6 +227,6 @@ export const kbHelpCommand: ReplCommand = {
     console.log(`  ${chalk.gray('/kb-add "我的笔记" "这是一段重要的内容"')}`);
     console.log(`  ${chalk.gray('帮我添加一条知识库：标题是"如何设置定时任务"，内容是"使用 cron 表达式..."')}`);
     console.log();
-    return true;
+    return { shouldContinue: true, outputType: CommandType.Command };
   },
 };

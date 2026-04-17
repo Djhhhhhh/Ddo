@@ -1,12 +1,12 @@
 import chalk from 'chalk';
-import { ReplCommand } from './index';
+import { ReplCommand, CommandResult, CommandType } from './index';
 import { getApiClient } from '../../services/api-client';
 
 export const statusCommand: ReplCommand = {
   name: 'status',
   description: '查看所有服务状态',
   usage: '/status',
-  handler: async () => {
+  handler: async (): Promise<CommandResult> => {
     const apiClient = getApiClient();
 
     console.log(chalk.cyan('\n服务状态:'));
@@ -38,6 +38,6 @@ export const statusCommand: ReplCommand = {
     console.log(`  ${chalk.green('●')} CLI       ${chalk.green('running')}`);
 
     console.log();
-    return true;
+    return { shouldContinue: true, outputType: CommandType.Command };
   },
 };

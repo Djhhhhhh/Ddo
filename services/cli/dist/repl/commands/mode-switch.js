@@ -6,6 +6,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.mcpCommand = exports.timerCommand = exports.kbCommand = void 0;
 const chalk_1 = __importDefault(require("chalk"));
 const index_1 = require("./index");
+const index_2 = require("./index");
 /**
  * 创建快捷命令（不切换模式，只是执行对应子命令）
  * 这些命令原本是模式切换命令，现在改为直接执行对应操作
@@ -17,12 +18,12 @@ function createQuickCommand(name, subCommand, description) {
         usage: `/${name}`,
         handler: async (ctx) => {
             // 直接执行对应子命令
-            const cmd = index_1.registry.get(subCommand);
+            const cmd = index_2.registry.get(subCommand);
             if (cmd) {
                 return await cmd.handler(ctx);
             }
             console.log(chalk_1.default.red(`命令 ${subCommand} 不存在`));
-            return true;
+            return { shouldContinue: true, outputType: index_1.CommandType.Command };
         },
     };
 }

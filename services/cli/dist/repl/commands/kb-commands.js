@@ -5,6 +5,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.kbHelpCommand = exports.kbRemoveCommand = exports.kbSearchCommand = exports.kbAddCommand = exports.kbListCommand = void 0;
 const chalk_1 = __importDefault(require("chalk"));
+const index_1 = require("./index");
 const api_client_1 = require("../../services/api-client");
 const prompt_helper_1 = require("./prompt-helper");
 /**
@@ -43,7 +44,7 @@ exports.kbListCommand = {
         catch (err) {
             console.log(chalk_1.default.red('获取知识库失败:'), err instanceof Error ? err.message : String(err));
         }
-        return true;
+        return { shouldContinue: true, outputType: index_1.CommandType.Command };
     },
 };
 /**
@@ -101,7 +102,7 @@ exports.kbAddCommand = {
             });
             if (!confirmed) {
                 console.log(chalk_1.default.yellow('\n已取消添加'));
-                return true;
+                return { shouldContinue: true, outputType: index_1.CommandType.Command };
             }
             const apiClient = (0, api_client_1.getApiClient)();
             try {
@@ -126,7 +127,7 @@ exports.kbAddCommand = {
                 console.log(chalk_1.default.red('\n✗ 添加知识库失败:'), err instanceof Error ? err.message : String(err));
             }
         }
-        return true;
+        return { shouldContinue: true, outputType: index_1.CommandType.Command };
     },
 };
 /**
@@ -140,7 +141,7 @@ exports.kbSearchCommand = {
     handler: async ({ args }) => {
         if (args.length === 0) {
             console.log(chalk_1.default.yellow('用法: /kb-search <查询内容>'));
-            return true;
+            return { shouldContinue: true, outputType: index_1.CommandType.Command };
         }
         const query = args.join(' ');
         const apiClient = (0, api_client_1.getApiClient)();
@@ -162,7 +163,7 @@ exports.kbSearchCommand = {
         catch (err) {
             console.log(chalk_1.default.red('搜索失败:'), err instanceof Error ? err.message : String(err));
         }
-        return true;
+        return { shouldContinue: true, outputType: index_1.CommandType.Command };
     },
 };
 /**
@@ -176,7 +177,7 @@ exports.kbRemoveCommand = {
     handler: async ({ args }) => {
         if (args.length === 0) {
             console.log(chalk_1.default.yellow('用法: /kb-remove <UUID>'));
-            return true;
+            return { shouldContinue: true, outputType: index_1.CommandType.Command };
         }
         const uuid = args[0];
         const apiClient = (0, api_client_1.getApiClient)();
@@ -188,7 +189,7 @@ exports.kbRemoveCommand = {
         catch (err) {
             console.log(chalk_1.default.red('删除知识库失败:'), err instanceof Error ? err.message : String(err));
         }
-        return true;
+        return { shouldContinue: true, outputType: index_1.CommandType.Command };
     },
 };
 /**
@@ -212,7 +213,7 @@ exports.kbHelpCommand = {
         console.log(`  ${chalk_1.default.gray('/kb-add "我的笔记" "这是一段重要的内容"')}`);
         console.log(`  ${chalk_1.default.gray('帮我添加一条知识库：标题是"如何设置定时任务"，内容是"使用 cron 表达式..."')}`);
         console.log();
-        return true;
+        return { shouldContinue: true, outputType: index_1.CommandType.Command };
     },
 };
 //# sourceMappingURL=kb-commands.js.map

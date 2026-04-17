@@ -1,5 +1,5 @@
 import chalk from 'chalk';
-import { ReplCommand, CommandContext } from './index';
+import { ReplCommand, CommandContext, CommandResult, CommandType } from './index';
 import { getApiClient } from '../../services/api-client';
 import { InteractivePrompt, ParameterDef } from './prompt-helper';
 
@@ -11,7 +11,7 @@ export const mcpListCommand: ReplCommand = {
   aliases: ['ml', 'mcp:list'],
   description: '查看 MCP 配置列表',
   usage: '/mcp-list',
-  handler: async () => {
+  handler: async (): Promise<CommandResult> => {
     const apiClient = getApiClient();
 
     try {
@@ -49,7 +49,7 @@ export const mcpListCommand: ReplCommand = {
       console.log(chalk.red('获取 MCP 配置失败:'), err instanceof Error ? err.message : String(err));
     }
 
-    return true;
+    return { shouldContinue: true, outputType: CommandType.Command };
   },
 };
 
@@ -62,7 +62,7 @@ export const mcpAddCommand: ReplCommand = {
   aliases: ['ma', 'mcp:create'],
   description: '添加 MCP 配置',
   usage: '/mcp-add [name] [type] [config]',
-  handler: async (ctx) => {
+  handler: async (ctx): Promise<CommandResult> => {
     const { args, nlpParameters, rl } = ctx;
     const prompt = new InteractivePrompt(rl);
 
@@ -111,7 +111,7 @@ export const mcpAddCommand: ReplCommand = {
 
       if (!confirmed) {
         console.log(chalk.yellow('\n已取消添加'));
-        return true;
+        return { shouldContinue: true, outputType: CommandType.Command };
       }
 
       const apiClient = getApiClient();
@@ -141,7 +141,7 @@ export const mcpAddCommand: ReplCommand = {
           };
         } else {
           console.log(chalk.red('\n✗ 参数不完整'));
-          return true;
+          return { shouldContinue: true, outputType: CommandType.Command };
         }
 
         const result = await apiClient.createMcp(data);
@@ -155,7 +155,7 @@ export const mcpAddCommand: ReplCommand = {
       }
     }
 
-    return true;
+    return { shouldContinue: true, outputType: CommandType.Command };
   },
 };
 
@@ -167,10 +167,10 @@ export const mcpTestCommand: ReplCommand = {
   aliases: ['mt', 'mcp:test'],
   description: '测试 MCP 连接',
   usage: '/mcp-test <uuid>',
-  handler: async ({ args }) => {
+  handler: async ({ args }): Promise<CommandResult> => {
     if (args.length === 0) {
       console.log(chalk.yellow('用法: /mcp-test <uuid>'));
-      return true;
+      return { shouldContinue: true, outputType: CommandType.Command };
     }
 
     const uuid = args[0];
@@ -194,7 +194,7 @@ export const mcpTestCommand: ReplCommand = {
       console.log(chalk.red('测试 MCP 连接失败:'), err instanceof Error ? err.message : String(err));
     }
 
-    return true;
+    return { shouldContinue: true, outputType: CommandType.Command };
   },
 };
 
@@ -206,10 +206,10 @@ export const mcpRemoveCommand: ReplCommand = {
   aliases: ['mrm', 'mcp:delete'],
   description: '删除 MCP 配置',
   usage: '/mcp-remove <uuid>',
-  handler: async ({ args }) => {
+  handler: async ({ args }): Promise<CommandResult> => {
     if (args.length === 0) {
       console.log(chalk.yellow('用法: /mcp-remove <uuid>'));
-      return true;
+      return { shouldContinue: true, outputType: CommandType.Command };
     }
 
     const uuid = args[0];
@@ -223,7 +223,7 @@ export const mcpRemoveCommand: ReplCommand = {
       console.log(chalk.red('删除 MCP 配置失败:'), err instanceof Error ? err.message : String(err));
     }
 
-    return true;
+    return { shouldContinue: true, outputType: CommandType.Command };
   },
 };
 
@@ -235,7 +235,7 @@ export const mcpHelpCommand: ReplCommand = {
   aliases: ['mh', 'mcp:help'],
   description: '显示 MCP 帮助',
   usage: '/mcp-help',
-  handler: async () => {
+  handler: async (): Promise<CommandResult> => {
     console.log(chalk.cyan('\nMCP 管理命令:'));
     console.log(chalk.gray('─'.repeat(40)));
     console.log(`  ${chalk.yellow('mcp-list')}        - 列出所有 MCP 配置`);
@@ -248,6 +248,6 @@ export const mcpHelpCommand: ReplCommand = {
     console.log(`  ${chalk.gray('/mcp-add "my-mcp" stdio "npx -y some-server"')}`);
     console.log(`  ${chalk.gray('/mcp-add "my-mcp" http "http://localhost:3000/mcp"')}`);
     console.log();
-    return true;
+    return { shouldContinue: true, outputType: CommandType.Command };
   },
 };

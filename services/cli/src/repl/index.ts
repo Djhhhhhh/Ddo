@@ -8,7 +8,7 @@ import chalk from 'chalk';
 import logger from '../utils/logger';
 import { parseCommand } from './parser';
 import { ModeManager, ModeInfo } from './mode';
-import { registry, executeCommand } from './commands';
+import { registry, executeCommand, CommandResult, CommandType } from './commands';
 import { createCompleter } from './completer';
 
 // 导入并注册所有命令
@@ -128,9 +128,50 @@ export async function startRepl(options: ReplOptions): Promise<void> {
   // 设置提示符
   rl.prompt();
 
+  // 输入去重：避免重复处理相同输入
+  let lastInput = '';
+  let lastInputTime = 0;
+  const INPUT_DEDUP_INTERVAL = 100; // ms
+
+  // Tab 键监听：切换知识库优先模式
+  readline.emitKeypressEvents(process.stdin);
+  if (process.stdin.isTTY) {
+    process.stdin.setRawMode?.(true);
+  }
+
+  process.stdin.on('keypress', (str: string, key: { name: string; shift: boolean }) => {
+    // Shift+Tab: 切换知识库优先模式
+    if (key.name === 'tab' && key.shift) {
+      modeManager.toggleKbPriority();
+      rl.write('\r\n');
+      const status = modeManager.kbPriorityMode ? '开启' : '关闭';
+      console.log(chalk.magenta(`📚 知识库优先模式: ${status}`));
+      rl.setPrompt(modeManager.getPrompt());
+      rl.prompt();
+      return;
+    }
+
+    // 普通 Tab: 保持自动补全功能（不切换模式）
+    if (key.name === 'tab' && !key.shift) {
+      // 自动补全功能由 readline 接口的 completer 处理
+      // 此处不做额外处理
+    }
+  });
+
   // 处理输入
   rl.on('line', async (input: string) => {
     const trimmed = input.trim();
+    const now = Date.now();
+
+    // 去重：相同输入且间隔小于阈值
+    if (trimmed !== '' && input === lastInput && now - lastInputTime < INPUT_DEDUP_INTERVAL) {
+      rl.prompt();
+      return;
+    }
+
+    // 更新去重状态
+    lastInput = input;
+    lastInputTime = now;
 
     if (trimmed === '') {
       rl.prompt();
@@ -146,12 +187,15 @@ export async function startRepl(options: ReplOptions): Promise<void> {
     }
 
     // 执行命令
-    const shouldContinue = await executeCommand(parsed, rl, modeManager);
+    const result: CommandResult = await executeCommand(parsed, rl, modeManager);
 
     // 更新提示符（模式可能已改变）
     rl.setPrompt(modeManager.getPrompt());
 
-    if (shouldContinue) {
+    if (result.shouldContinue) {
+      // 根据输出类型决定是否换行
+      // AI 对话答复时直接显示提示符（命令输出已有换行）
+      // 普通命令：直接显示提示符，不额外换行
       rl.prompt();
     }
   });

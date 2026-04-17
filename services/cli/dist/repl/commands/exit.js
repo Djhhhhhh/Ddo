@@ -5,6 +5,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.backCommand = exports.exitCommand = void 0;
 const chalk_1 = __importDefault(require("chalk"));
+const index_1 = require("./index");
 exports.exitCommand = {
     name: 'exit',
     description: '退出 REPL',
@@ -13,7 +14,7 @@ exports.exitCommand = {
     handler: async ({ rl }) => {
         console.log(chalk_1.default.gray('再见! 👋'));
         rl.close();
-        return false; // 返回 false 表示退出 REPL
+        return { shouldContinue: false, outputType: index_1.CommandType.Command }; // 返回 false 表示退出 REPL
     },
 };
 exports.backCommand = {
@@ -30,7 +31,7 @@ exports.backCommand = {
         else {
             console.log(chalk_1.default.gray('已在默认模式下'));
         }
-        return true;
+        return { shouldContinue: true, outputType: index_1.CommandType.Command };
     },
 };
 //# sourceMappingURL=exit.js.map

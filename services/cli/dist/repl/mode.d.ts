@@ -27,10 +27,20 @@ export interface ModeInfo {
  */
 export declare class ModeManager {
     private currentMode;
+    /** 知识库优先模式 */
+    private _kbPriorityMode;
     /**
      * 获取当前模式
      */
     get mode(): ReplMode;
+    /**
+     * 获取知识库优先模式状态
+     */
+    get kbPriorityMode(): boolean;
+    /**
+     * 切换知识库优先模式
+     */
+    toggleKbPriority(): void;
     /**
      * 设置模式
      */

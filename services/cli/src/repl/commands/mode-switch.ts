@@ -1,5 +1,5 @@
 import chalk from 'chalk';
-import { ReplCommand, CommandContext } from './index';
+import { ReplCommand, CommandContext, CommandResult, CommandType } from './index';
 import { registry } from './index';
 
 /**
@@ -15,14 +15,14 @@ function createQuickCommand(
     name,
     description,
     usage: `/${name}`,
-    handler: async (ctx: CommandContext) => {
+    handler: async (ctx: CommandContext): Promise<CommandResult> => {
       // 直接执行对应子命令
       const cmd = registry.get(subCommand);
       if (cmd) {
         return await cmd.handler(ctx);
       }
       console.log(chalk.red(`命令 ${subCommand} 不存在`));
-      return true;
+      return { shouldContinue: true, outputType: CommandType.Command };
     },
   };
 }

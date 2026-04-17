@@ -5,6 +5,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.timerHelpCommand = exports.timerRemoveCommand = exports.timerResumeCommand = exports.timerPauseCommand = exports.timerAddCommand = exports.timerListCommand = void 0;
 const chalk_1 = __importDefault(require("chalk"));
+const index_1 = require("./index");
 const api_client_1 = require("../../services/api-client");
 const prompt_helper_1 = require("./prompt-helper");
 /**
@@ -47,7 +48,7 @@ exports.timerListCommand = {
         catch (err) {
             console.log(chalk_1.default.red('获取定时任务失败:'), err instanceof Error ? err.message : String(err));
         }
-        return true;
+        return { shouldContinue: true, outputType: index_1.CommandType.Command };
     },
 };
 /**
@@ -130,7 +131,7 @@ exports.timerAddCommand = {
             });
             if (!confirmed) {
                 console.log(chalk_1.default.yellow('\n已取消创建'));
-                return true;
+                return { shouldContinue: true, outputType: index_1.CommandType.Command };
             }
             const apiClient = (0, api_client_1.getApiClient)();
             try {
@@ -149,7 +150,7 @@ exports.timerAddCommand = {
                 console.log(chalk_1.default.red('\n✗ 创建定时任务失败:'), err instanceof Error ? err.message : String(err));
             }
         }
-        return true;
+        return { shouldContinue: true, outputType: index_1.CommandType.Command };
     },
 };
 /**
@@ -163,7 +164,7 @@ exports.timerPauseCommand = {
     handler: async ({ args }) => {
         if (args.length === 0) {
             console.log(chalk_1.default.yellow('用法: /timer-pause <uuid>'));
-            return true;
+            return { shouldContinue: true, outputType: index_1.CommandType.Command };
         }
         const uuid = args[0];
         const apiClient = (0, api_client_1.getApiClient)();
@@ -175,7 +176,7 @@ exports.timerPauseCommand = {
         catch (err) {
             console.log(chalk_1.default.red('暂停定时任务失败:'), err instanceof Error ? err.message : String(err));
         }
-        return true;
+        return { shouldContinue: true, outputType: index_1.CommandType.Command };
     },
 };
 /**
@@ -189,7 +190,7 @@ exports.timerResumeCommand = {
     handler: async ({ args }) => {
         if (args.length === 0) {
             console.log(chalk_1.default.yellow('用法: /timer-resume <uuid>'));
-            return true;
+            return { shouldContinue: true, outputType: index_1.CommandType.Command };
         }
         const uuid = args[0];
         const apiClient = (0, api_client_1.getApiClient)();
@@ -201,7 +202,7 @@ exports.timerResumeCommand = {
         catch (err) {
             console.log(chalk_1.default.red('恢复定时任务失败:'), err instanceof Error ? err.message : String(err));
         }
-        return true;
+        return { shouldContinue: true, outputType: index_1.CommandType.Command };
     },
 };
 /**
@@ -215,7 +216,7 @@ exports.timerRemoveCommand = {
     handler: async ({ args }) => {
         if (args.length === 0) {
             console.log(chalk_1.default.yellow('用法: /timer-remove <uuid>'));
-            return true;
+            return { shouldContinue: true, outputType: index_1.CommandType.Command };
         }
         const uuid = args[0];
         const apiClient = (0, api_client_1.getApiClient)();
@@ -227,7 +228,7 @@ exports.timerRemoveCommand = {
         catch (err) {
             console.log(chalk_1.default.red('删除定时任务失败:'), err instanceof Error ? err.message : String(err));
         }
-        return true;
+        return { shouldContinue: true, outputType: index_1.CommandType.Command };
     },
 };
 /**
@@ -252,7 +253,7 @@ exports.timerHelpCommand = {
         console.log(`  ${chalk_1.default.gray('/timer-add "0 9 * * *" "http://localhost:8080/callback" POST')}`);
         console.log(`  ${chalk_1.default.gray('帮我创建一个每小时执行的任务')}`);
         console.log();
-        return true;
+        return { shouldContinue: true, outputType: index_1.CommandType.Command };
     },
 };
 //# sourceMappingURL=timer-commands.js.map

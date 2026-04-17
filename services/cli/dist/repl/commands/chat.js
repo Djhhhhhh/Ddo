@@ -5,6 +5,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.chatCommand = void 0;
 const chalk_1 = __importDefault(require("chalk"));
+const index_1 = require("./index");
 const mode_1 = require("../mode");
 const api_client_1 = require("../../services/api-client");
 exports.chatCommand = {
@@ -17,7 +18,7 @@ exports.chatCommand = {
             setMode(mode_1.ReplMode.Chat);
             console.log(chalk_1.default.green('已进入聊天模式，直接输入消息与 AI 对话'));
             console.log(chalk_1.default.gray('提示: 输入 /back 返回默认模式，输入 /exit 退出 REPL'));
-            return true;
+            return { shouldContinue: true, outputType: index_1.CommandType.Command };
         }
         // 获取消息内容
         let message;
@@ -30,7 +31,7 @@ exports.chatCommand = {
         else {
             console.log(chalk_1.default.yellow('请输入对话内容'));
             console.log(chalk_1.default.gray('用法: /chat <消息> 或 /chat -m "消息内容"'));
-            return true;
+            return { shouldContinue: true, outputType: index_1.CommandType.Command };
         }
         console.log(chalk_1.default.cyan('你:'), message);
         console.log();
@@ -51,7 +52,7 @@ exports.chatCommand = {
             console.log(chalk_1.default.red('请求失败:'), err instanceof Error ? err.message : String(err));
         }
         console.log();
-        return true;
+        return { shouldContinue: true, outputType: index_1.CommandType.Chat };
     },
 };
 //# sourceMappingURL=chat.js.map

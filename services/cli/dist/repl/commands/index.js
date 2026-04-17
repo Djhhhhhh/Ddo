@@ -40,10 +40,21 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.registry = void 0;
+exports.registry = exports.CommandType = void 0;
 exports.executeCommand = executeCommand;
 const chalk_1 = __importDefault(require("chalk"));
 const mode_1 = require("../mode");
+/**
+ * 命令输出类型
+ * 用于区分 AI 对话和普通命令，控制提示符换行行为
+ */
+var CommandType;
+(function (CommandType) {
+    /** AI 对话 */
+    CommandType[CommandType["Chat"] = 0] = "Chat";
+    /** 普通命令 */
+    CommandType[CommandType["Command"] = 1] = "Command";
+})(CommandType || (exports.CommandType = CommandType = {}));
 /**
  * 命令注册表
  */
@@ -145,7 +156,7 @@ async function executeCommand(parsed, rl, modeManager) {
     if (command.modes && command.modes.length > 0) {
         if (!command.modes.includes(modeManager.mode)) {
             console.log(`命令 "${name}" 在当前模式下不可用`);
-            return true;
+            return { shouldContinue: true, outputType: CommandType.Command };
         }
     }
     const ctx = {
@@ -171,10 +182,9 @@ async function handleSubModeInput(input, args, ctx) {
             {
                 const fullText = [input, ...args].join(' ').trim();
                 if (!fullText) {
-                    return true;
+                    return { shouldContinue: true, outputType: CommandType.Chat };
                 }
-                console.log(chalk_1.default.cyan('你:'), fullText);
-                console.log();
+                // Chat 模式下不显示"你:"，直接显示 AI 回复
                 try {
                     const { getApiClient } = await Promise.resolve().then(() => __importStar(require('../../services/api-client')));
                     const apiClient = getApiClient();
@@ -189,7 +199,7 @@ async function handleSubModeInput(input, args, ctx) {
                     console.log(chalk_1.default.red('请求失败:'), err instanceof Error ? err.message : String(err));
                 }
                 console.log();
-                return true;
+                return { shouldContinue: true, outputType: CommandType.Chat };
             }
         default:
             return await handleUnknownCommand(input, ctx);
@@ -205,7 +215,26 @@ async function handleUnknownCommand(name, ctx) {
         const fullText = [name, ...ctx.args].join(' ').trim();
         if (!fullText) {
             console.log('请输入内容');
-            return true;
+            return { shouldContinue: true, outputType: CommandType.Command };
+        }
+        // 知识库优先模式：只显示检索中提示，不显示用户输入
+        if (ctx.modeManager.kbPriorityMode) {
+            try {
+                const { getApiClient } = await Promise.resolve().then(() => __importStar(require('../../services/api-client')));
+                const apiClient = getApiClient();
+                console.log(chalk_1.default.magenta('📚 正在检索知识库...'));
+                const kbResult = await apiClient.askKnowledge(fullText);
+                if (kbResult && kbResult.answer) {
+                    console.log(chalk_1.default.magenta('📚 知识库回复:'), kbResult.answer);
+                    console.log();
+                    return { shouldContinue: true, outputType: CommandType.Chat };
+                }
+            }
+            catch (err) {
+                // 知识库检索失败，继续正常的意图识别流程
+                console.log(chalk_1.default.gray('知识库检索失败，继续分析意图...'));
+                console.log();
+            }
         }
         console.log(chalk_1.default.cyan('正在分析...'));
         try {
@@ -243,7 +272,7 @@ async function handleUnknownCommand(name, ctx) {
                         // Chat 和 Default 模式正常处理
                         ctx.setMode(action.targetMode);
                     }
-                    return true;
+                    return { shouldContinue: true, outputType: CommandType.Command };
                 case 'execute_command':
                     if (action.targetCommand) {
                         // 递归执行命令
@@ -252,7 +281,7 @@ async function handleUnknownCommand(name, ctx) {
                             return await cmd.handler(ctx);
                         }
                     }
-                    return true;
+                    return { shouldContinue: true, outputType: CommandType.Command };
                 case 'chat':
                     // chat 意图时调用 chat API 进行对话
                     // 不显示"你: xxx"，直接显示思考中和AI回复
@@ -271,7 +300,7 @@ async function handleUnknownCommand(name, ctx) {
                             console.log(chalk_1.default.red('请求失败:'), err instanceof Error ? err.message : String(err));
                         }
                         console.log();
-                        return true;
+                        return { shouldContinue: true, outputType: CommandType.Chat };
                     }
                 case 'show_status':
                     // 执行 status 命令
@@ -279,20 +308,20 @@ async function handleUnknownCommand(name, ctx) {
                     if (statusCmd) {
                         return await statusCmd.handler(ctx);
                     }
-                    return true;
+                    return { shouldContinue: true, outputType: CommandType.Command };
                 case 'show_help':
                     // 执行 help 命令
                     const helpCmd = exports.registry.get('help');
                     if (helpCmd) {
                         return await helpCmd.handler(ctx);
                     }
-                    return true;
+                    return { shouldContinue: true, outputType: CommandType.Command };
                 case 'unknown':
                 default:
                     // 无法识别，默认进入聊天模式
                     console.log(chalk_1.default.yellow('无法理解意图，进入聊天模式...'));
                     ctx.setMode(mode_1.ReplMode.Chat);
-                    return true;
+                    return { shouldContinue: true, outputType: CommandType.Chat };
             }
         }
         catch (err) {
@@ -300,11 +329,11 @@ async function handleUnknownCommand(name, ctx) {
             console.log(chalk_1.default.yellow('NLP 服务暂时不可用，进入聊天模式...'));
             console.log(chalk_1.default.gray(`错误: ${err instanceof Error ? err.message : String(err)}`));
             ctx.setMode(mode_1.ReplMode.Chat);
-            return true;
+            return { shouldContinue: true, outputType: CommandType.Chat };
         }
     }
     console.log(`未知命令: ${name}`);
     console.log('输入 /help 查看可用命令');
-    return true;
+    return { shouldContinue: true, outputType: CommandType.Command };
 }
 //# sourceMappingURL=index.js.map

@@ -18,7 +18,7 @@ exports.helpCommand = {
             const command = index_1.registry.get(cmdName);
             if (!command) {
                 console.log(chalk_1.default.red(`未知命令: ${cmdName}`));
-                return true;
+                return { shouldContinue: true, outputType: index_1.CommandType.Command };
             }
             console.log();
             console.log(chalk_1.default.bold.cyan(`命令: /${command.name}`));
@@ -34,7 +34,7 @@ exports.helpCommand = {
                 console.log(chalk_1.default.gray('适用模式:'), command.modes.join(', '));
             }
             console.log();
-            return true;
+            return { shouldContinue: true, outputType: index_1.CommandType.Command };
         }
         // 显示通用帮助
         console.log();
@@ -91,7 +91,7 @@ exports.helpCommand = {
         console.log();
         console.log(chalk_1.default.gray('提示: 使用 "/help <命令名>" 查看详细说明'));
         console.log();
-        return true;
+        return { shouldContinue: true, outputType: index_1.CommandType.Command };
     },
 };
 //# sourceMappingURL=help.js.map

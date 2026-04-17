@@ -1,12 +1,12 @@
 import chalk from 'chalk';
-import { ReplCommand, registry } from './index';
+import { ReplCommand, CommandResult, CommandType, registry } from './index';
 
 export const helpCommand: ReplCommand = {
   name: 'help',
   description: '显示帮助信息',
   aliases: ['h', '?'],
   usage: '/help [命令名]',
-  handler: async ({ args, mode }) => {
+  handler: async ({ args, mode }): Promise<CommandResult> => {
     // 如果指定了命令名，显示该命令的详细帮助
     if (args.length > 0) {
       const cmdName = args[0];
@@ -14,7 +14,7 @@ export const helpCommand: ReplCommand = {
 
       if (!command) {
         console.log(chalk.red(`未知命令: ${cmdName}`));
-        return true;
+        return { shouldContinue: true, outputType: CommandType.Command };
       }
 
       console.log();
@@ -35,7 +35,7 @@ export const helpCommand: ReplCommand = {
       }
 
       console.log();
-      return true;
+      return { shouldContinue: true, outputType: CommandType.Command };
     }
 
     // 显示通用帮助
@@ -100,6 +100,6 @@ export const helpCommand: ReplCommand = {
     console.log(chalk.gray('提示: 使用 "/help <命令名>" 查看详细说明'));
     console.log();
 
-    return true;
+    return { shouldContinue: true, outputType: CommandType.Command };
   },
 };

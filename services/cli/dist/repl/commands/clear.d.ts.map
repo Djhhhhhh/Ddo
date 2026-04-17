@@ -1,1 +1,1 @@
-{"version":3,"file":"clear.d.ts","sourceRoot":"","sources":["../../../src/repl/commands/clear.ts"],"names":[],"mappings":"AAAA,OAAO,EAAE,WAAW,EAAE,MAAM,SAAS,CAAC;AAGtC,eAAO,MAAM,YAAY,EAAE,WAU1B,CAAC"}
+{"version":3,"file":"clear.d.ts","sourceRoot":"","sources":["../../../src/repl/commands/clear.ts"],"names":[],"mappings":"AAAA,OAAO,EAAE,WAAW,EAA8B,MAAM,SAAS,CAAC;AAGlE,eAAO,MAAM,YAAY,EAAE,WAU1B,CAAC"}

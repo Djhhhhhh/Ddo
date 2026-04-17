@@ -9,49 +9,71 @@ exports.getIntentRouter = getIntentRouter;
 const mode_1 = require("./mode");
 /** 意图映射表 */
 const INTENT_MAP = [
-    // Timer 相关
+    // === Timer 相关 ===
     { intent: 'timer.create', action: 'switch_mode', targetMode: mode_1.ReplMode.Timer },
     { intent: 'timer.list', action: 'switch_mode', targetMode: mode_1.ReplMode.Timer },
     { intent: 'timer.add', action: 'switch_mode', targetMode: mode_1.ReplMode.Timer },
     { intent: 'timer.show', action: 'switch_mode', targetMode: mode_1.ReplMode.Timer },
     { intent: 'timer.delete', action: 'switch_mode', targetMode: mode_1.ReplMode.Timer },
+    { intent: 'timer.pause', action: 'switch_mode', targetMode: mode_1.ReplMode.Timer },
+    { intent: 'timer.resume', action: 'switch_mode', targetMode: mode_1.ReplMode.Timer },
+    { intent: 'timer.remove', action: 'switch_mode', targetMode: mode_1.ReplMode.Timer },
     { intent: 'schedule.create', action: 'switch_mode', targetMode: mode_1.ReplMode.Timer },
     { intent: 'schedule.add', action: 'switch_mode', targetMode: mode_1.ReplMode.Timer },
-    // Knowledge Base 相关
+    { intent: '定时任务.创建', action: 'switch_mode', targetMode: mode_1.ReplMode.Timer },
+    { intent: '定时任务.添加', action: 'switch_mode', targetMode: mode_1.ReplMode.Timer },
+    // === Knowledge Base 相关 ===
     { intent: 'kb.add', action: 'switch_mode', targetMode: mode_1.ReplMode.Kb },
     { intent: 'kb.search', action: 'switch_mode', targetMode: mode_1.ReplMode.Kb },
     { intent: 'kb.list', action: 'switch_mode', targetMode: mode_1.ReplMode.Kb },
     { intent: 'kb.query', action: 'switch_mode', targetMode: mode_1.ReplMode.Kb },
+    { intent: 'kb.remove', action: 'switch_mode', targetMode: mode_1.ReplMode.Kb },
     { intent: 'knowledge.add', action: 'switch_mode', targetMode: mode_1.ReplMode.Kb },
     { intent: 'knowledge.search', action: 'switch_mode', targetMode: mode_1.ReplMode.Kb },
-    // MCP 相关
+    { intent: 'knowledge.list', action: 'switch_mode', targetMode: mode_1.ReplMode.Kb },
+    { intent: '知识库.添加', action: 'switch_mode', targetMode: mode_1.ReplMode.Kb },
+    { intent: '知识库.搜索', action: 'switch_mode', targetMode: mode_1.ReplMode.Kb },
+    { intent: '知识库.查询', action: 'switch_mode', targetMode: mode_1.ReplMode.Kb },
+    { intent: '知识库.列表', action: 'switch_mode', targetMode: mode_1.ReplMode.Kb },
+    // === MCP 相关 ===
     { intent: 'mcp.add', action: 'switch_mode', targetMode: mode_1.ReplMode.Mcp },
     { intent: 'mcp.list', action: 'switch_mode', targetMode: mode_1.ReplMode.Mcp },
     { intent: 'mcp.config', action: 'switch_mode', targetMode: mode_1.ReplMode.Mcp },
     { intent: 'mcp.setup', action: 'switch_mode', targetMode: mode_1.ReplMode.Mcp },
-    // Chat 相关
+    { intent: 'mcp.remove', action: 'switch_mode', targetMode: mode_1.ReplMode.Mcp },
+    { intent: 'mcp.test', action: 'switch_mode', targetMode: mode_1.ReplMode.Mcp },
+    // === Chat 相关 ===
     { intent: 'chat', action: 'chat' },
     { intent: 'chat.with.ai', action: 'chat' },
     { intent: 'talk', action: 'chat' },
     { intent: '对话', action: 'chat' },
     { intent: '聊天', action: 'chat' },
-    // 系统命令
+    // === 系统命令 ===
     { intent: 'status', action: 'show_status' },
     { intent: 'show.status', action: 'show_status' },
     { intent: 'system.status', action: 'show_status' },
+    { intent: '服务状态', action: 'show_status' },
     { intent: 'help', action: 'show_help' },
     { intent: 'show.help', action: 'show_help' },
     { intent: '帮忙', action: 'show_help' },
-    // 通用命令执行
+    { intent: '帮助', action: 'show_help' },
+    // === 通用命令 ===
     { intent: 'command.execute', action: 'execute_command' },
+    { intent: 'clear', action: 'execute_command', targetCommand: 'clear' },
+    { intent: 'exit', action: 'execute_command', targetCommand: 'exit' },
+    { intent: 'quit', action: 'execute_command', targetCommand: 'exit' },
+    { intent: '退出', action: 'execute_command', targetCommand: 'exit' },
+    { intent: '再见', action: 'execute_command', targetCommand: 'exit' },
 ];
 /** 关键词匹配规则（降级兜底） */
 const KEYWORD_FALLBACK = [
-    { keywords: ['定时', '定时任务', 'timer', '每小时', '每分钟', 'cron', 'schedule'], action: 'switch_mode', targetMode: mode_1.ReplMode.Timer },
-    { keywords: ['知识库', 'kb', 'knowledge', '搜索', '查询', 'search'], action: 'switch_mode', targetMode: mode_1.ReplMode.Kb },
-    { keywords: ['mcp', '模型上下文', 'model context'], action: 'switch_mode', targetMode: mode_1.ReplMode.Mcp },
-    { keywords: ['状态', 'status', '服务状态'], action: 'show_status' },
-    { keywords: ['帮助', 'help', '帮忙'], action: 'show_help' },
+    { keywords: ['定时', '定时任务', 'timer', '每小时', '每分钟', 'cron', 'schedule', '创建定时', '添加定时'], action: 'switch_mode', targetMode: mode_1.ReplMode.Timer },
+    { keywords: ['知识库', 'kb', 'knowledge', '搜索', '查询', 'search', '知识', '词条', '添加知识'], action: 'switch_mode', targetMode: mode_1.ReplMode.Kb },
+    { keywords: ['mcp', '模型上下文', 'model context', 'MCP配置', '配置MCP'], action: 'switch_mode', targetMode: mode_1.ReplMode.Mcp },
+    { keywords: ['状态', 'status', '服务状态', '看看服务', '检查服务'], action: 'show_status' },
+    { keywords: ['帮助', 'help', '帮忙', '有什么命令', '能做什么', '命令列表'], action: 'show_help' },
+    { keywords: ['清除', 'clear', '清屏', '清理屏幕'], action: 'execute_command' },
+    { keywords: ['退出', 'exit', 'quit', '再见', '关闭'], action: 'execute_command' },
 ];
 /**
  * 参数标准化映射
