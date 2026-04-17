@@ -130,6 +130,33 @@ export interface ApiClientConfig {
   serverGoUrl: string;
 }
 
+// === 统一对话接口类型 ===
+
+export interface ConversationRequest {
+  query: string;
+  conversation_id?: string;
+  model?: string;
+  stream?: boolean;
+  kb_priority?: boolean;
+}
+
+export interface ConversationResponse {
+  decision: string;
+  intent: {
+    type: string;
+    sub_intent: string;
+    need_knowledge: boolean;
+    confidence: number;
+  };
+  answer: string;
+  sources?: string[];
+  retrieved_docs?: {
+    id: string;
+    content: string;
+    score: number;
+  }[];
+}
+
 /**
  * 创建 API Client
  * 注意：不使用超时限制，因为 LLM 推理时间不可预知
@@ -244,6 +271,26 @@ export function createApiClient(config: ApiClientConfig) {
     });
   }
 
+  // === 统一对话接口 ===
+
+  async function conversationChat(req: ConversationRequest): Promise<ConversationResponse> {
+    return request<ConversationResponse>('/api/v1/conversation/chat', {
+      method: 'POST',
+      body: JSON.stringify(req),
+    });
+  }
+
+  async function conversationChatStream(req: ConversationRequest): Promise<Response> {
+    return fetch(`${serverGoUrl}/api/v1/conversation/chat/stream`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'text/event-stream',
+      },
+      body: JSON.stringify(req),
+    });
+  }
+
   // === 定时任务 ===
 
   async function getTimers(): Promise<TimerListResponse> {
@@ -353,6 +400,9 @@ export function createApiClient(config: ApiClientConfig) {
     createMcp,
     testMcp,
     deleteMcp,
+    // 统一对话
+    conversationChat,
+    conversationChatStream,
   };
 }
 

@@ -44,6 +44,7 @@ func (r *Router) RegisterRoutes(
 	llmHandler *handler.LLMHandler,
 	metricsHandler *handler.MetricsHandler,
 	categoryHandler *handler.CategoryHandler,
+	conversationHandler *handler.ConversationHandler,
 ) {
 	// 健康检查
 	r.engine.GET("/health", healthHandler.HealthCheck)
@@ -55,8 +56,16 @@ func (r *Router) RegisterRoutes(
 		v1.GET("/metrics", metricsHandler.Metrics)
 
 		// LLM 代理路由
-		v1.POST("/chat", llmHandler.Chat)         // 对话
-		v1.POST("/chat/nlp", llmHandler.NLP)      // NLP 意图识别
+		v1.POST("/chat", llmHandler.Chat)                    // 对话
+		v1.POST("/chat/nlp", llmHandler.NLP)                 // NLP 意图识别
+		v1.POST("/chat/stream", conversationHandler.ChatStream)  // 流式对话
+
+		// 统一对话路由
+		conversation := v1.Group("/conversation")
+		{
+			conversation.POST("/chat", conversationHandler.Chat)       // 统一对话接口
+			conversation.POST("/chat/stream", conversationHandler.ChatStream) // 流式对话接口
+		}
 
 		// 知识库路由组
 		knowledge := v1.Group("/knowledge")

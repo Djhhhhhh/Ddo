@@ -207,127 +207,43 @@ async function handleSubModeInput(input, args, ctx) {
 }
 /**
  * 处理未知命令（默认模式）
- * 使用 NLP 进行意图识别和路由
+ * 使用统一的 conversation/chat API 进行意图识别、路由决策和对话生成
  */
 async function handleUnknownCommand(name, ctx) {
     // 在默认模式下，未知命令视为自然语言输入
     if (ctx.mode === mode_1.ReplMode.Default) {
         const fullText = [name, ...ctx.args].join(' ').trim();
         if (!fullText) {
-            console.log('请输入内容');
             return { shouldContinue: true, outputType: CommandType.Command };
         }
-        // 知识库优先模式：只显示检索中提示，不显示用户输入
-        if (ctx.modeManager.kbPriorityMode) {
-            try {
-                const { getApiClient } = await Promise.resolve().then(() => __importStar(require('../../services/api-client')));
-                const apiClient = getApiClient();
-                console.log(chalk_1.default.magenta('📚 正在检索知识库...'));
-                const kbResult = await apiClient.askKnowledge(fullText);
-                if (kbResult && kbResult.answer) {
-                    console.log(chalk_1.default.magenta('📚 知识库回复:'), kbResult.answer);
-                    console.log();
-                    return { shouldContinue: true, outputType: CommandType.Chat };
-                }
-            }
-            catch (err) {
-                // 知识库检索失败，继续正常的意图识别流程
-                console.log(chalk_1.default.gray('知识库检索失败，继续分析意图...'));
-                console.log();
-            }
-        }
-        console.log(chalk_1.default.cyan('正在分析...'));
+        // 知识库优先模式
+        const kbPriority = ctx.modeManager.kbPriorityMode;
+        // 立即显示思考状态，让用户感知到正在处理
+        process.stdout.write(`${chalk_1.default.cyan('🔍')} 分析中... \n`);
         try {
-            // 调用 NLP 服务进行意图识别
-            const nlpService = await Promise.resolve().then(() => __importStar(require('../../services/nlp'))).then(m => m.getNLPService());
-            const intentRouter = await Promise.resolve().then(() => __importStar(require('../intent-router'))).then(m => m.getIntentRouter());
-            const nlpResponse = await nlpService.analyzeText(fullText);
-            // 路由到对应动作
-            const action = intentRouter.route(nlpResponse);
-            // 执行路由动作
-            switch (action.type) {
-                case 'switch_mode':
-                    if (action.targetMode) {
-                        // 保存 NLP 参数到上下文
-                        ctx.nlpParameters = action.parameters;
-                        // Timer/Kb/Mcp 模式直接路由到对应命令，不切换显示模式
-                        if (action.targetMode === mode_1.ReplMode.Timer) {
-                            const cmd = exports.registry.get('timer-add');
-                            if (cmd) {
-                                return await cmd.handler(ctx);
-                            }
-                        }
-                        else if (action.targetMode === mode_1.ReplMode.Kb) {
-                            const cmd = exports.registry.get('kb-add');
-                            if (cmd) {
-                                return await cmd.handler(ctx);
-                            }
-                        }
-                        else if (action.targetMode === mode_1.ReplMode.Mcp) {
-                            const cmd = exports.registry.get('mcp-add');
-                            if (cmd) {
-                                return await cmd.handler(ctx);
-                            }
-                        }
-                        // Chat 和 Default 模式正常处理
-                        ctx.setMode(action.targetMode);
-                    }
-                    return { shouldContinue: true, outputType: CommandType.Command };
-                case 'execute_command':
-                    if (action.targetCommand) {
-                        // 递归执行命令
-                        const cmd = exports.registry.get(action.targetCommand);
-                        if (cmd) {
-                            return await cmd.handler(ctx);
-                        }
-                    }
-                    return { shouldContinue: true, outputType: CommandType.Command };
-                case 'chat':
-                    // chat 意图时调用 chat API 进行对话
-                    // 不显示"你: xxx"，直接显示思考中和AI回复
-                    {
-                        const fullText = [name, ...ctx.args].join(' ').trim();
-                        try {
-                            const { getApiClient } = await Promise.resolve().then(() => __importStar(require('../../services/api-client')));
-                            const apiClient = getApiClient();
-                            console.log(chalk_1.default.gray('正在思考...'));
-                            const response = await apiClient.chat([
-                                { role: 'user', content: fullText }
-                            ], false);
-                            console.log(chalk_1.default.cyan(' ◆ '), response.content);
-                        }
-                        catch (err) {
-                            console.log(chalk_1.default.red('请求失败:'), err instanceof Error ? err.message : String(err));
-                        }
-                        console.log();
-                        return { shouldContinue: true, outputType: CommandType.Chat };
-                    }
-                case 'show_status':
-                    // 执行 status 命令
-                    const statusCmd = exports.registry.get('status');
-                    if (statusCmd) {
-                        return await statusCmd.handler(ctx);
-                    }
-                    return { shouldContinue: true, outputType: CommandType.Command };
-                case 'show_help':
-                    // 执行 help 命令
-                    const helpCmd = exports.registry.get('help');
-                    if (helpCmd) {
-                        return await helpCmd.handler(ctx);
-                    }
-                    return { shouldContinue: true, outputType: CommandType.Command };
-                case 'unknown':
-                default:
-                    // 无法识别，默认进入聊天模式
-                    console.log(chalk_1.default.yellow('无法理解意图，进入聊天模式...'));
-                    ctx.setMode(mode_1.ReplMode.Chat);
-                    return { shouldContinue: true, outputType: CommandType.Chat };
+            const { getApiClient } = await Promise.resolve().then(() => __importStar(require('../../services/api-client')));
+            const apiClient = getApiClient();
+            // 调用统一的流式对话接口
+            // Go 层处理：意图识别 → 路由决策 → RAG 检索 → LLM 生成
+            const response = await apiClient.conversationChatStream({
+                query: fullText,
+                stream: true,
+                kb_priority: kbPriority,
+            });
+            if (!response.ok) {
+                throw new Error(`API错误: ${response.status}`);
             }
+            if (!response.body) {
+                throw new Error('响应体为空');
+            }
+            // 处理 SSE 流式响应
+            await processConversationStream(response.body);
+            return { shouldContinue: true, outputType: CommandType.Chat };
         }
         catch (err) {
-            // NLP 服务调用失败，降级到聊天模式
-            console.log(chalk_1.default.yellow('NLP 服务暂时不可用，进入聊天模式...'));
-            console.log(chalk_1.default.gray(`错误: ${err instanceof Error ? err.message : String(err)}`));
+            // 降级到聊天模式
+            console.log();
+            console.log(chalk_1.default.yellow('⚠️ AI 服务暂时不可用'));
             ctx.setMode(mode_1.ReplMode.Chat);
             return { shouldContinue: true, outputType: CommandType.Chat };
         }
@@ -335,5 +251,133 @@ async function handleUnknownCommand(name, ctx) {
     console.log(`未知命令: ${name}`);
     console.log('输入 /help 查看可用命令');
     return { shouldContinue: true, outputType: CommandType.Command };
+}
+/**
+ * 处理统一的对话流式响应
+ * 接收 Go 层的 SSE 事件并展示状态变化和流式输出
+ */
+async function processConversationStream(stream) {
+    const reader = stream.getReader();
+    const decoder = new TextDecoder();
+    let buffer = '';
+    // 状态跟踪
+    let isStreaming = false;
+    let currentEventType = '';
+    try {
+        while (true) {
+            const { done, value } = await reader.read();
+            if (done)
+                break;
+            buffer += decoder.decode(value, { stream: true });
+            const lines = buffer.split('\n');
+            buffer = lines.pop() || '';
+            for (const line of lines) {
+                const trimmedLine = line.trim();
+                if (!trimmedLine)
+                    continue;
+                // 解析 SSE 事件类型行: event:intent_detected
+                if (trimmedLine.startsWith('event:')) {
+                    currentEventType = trimmedLine.slice(6).trim();
+                    continue;
+                }
+                // 解析 SSE 数据行: data:{...}
+                if (!trimmedLine.startsWith('data:'))
+                    continue;
+                const data = trimmedLine.slice(5).trim();
+                if (data === '[DONE]')
+                    continue;
+                try {
+                    const eventData = JSON.parse(data);
+                    switch (currentEventType) {
+                        case 'intent_detected':
+                            // 简短显示意图类型
+                            if (eventData.need_knowledge) {
+                                process.stdout.write(`${chalk_1.default.green('✓')} ${chalk_1.default.magenta('📚 知识查询')}\n`);
+                            }
+                            else {
+                                const intentName = getIntentName(eventData.intent);
+                                process.stdout.write(`${chalk_1.default.green('✓')} ${chalk_1.default.cyan('💬 ' + intentName)}\n`);
+                            }
+                            break;
+                        case 'retrieving':
+                            process.stdout.write(`${chalk_1.default.magenta('📚')} 检索中...\n`);
+                            break;
+                        case 'docs_found':
+                            if (eventData.count > 0) {
+                                process.stdout.write(`${chalk_1.default.green('✓')} 找到 ${chalk_1.default.cyan(eventData.count)} 条文档\n`);
+                            }
+                            else {
+                                process.stdout.write(`${chalk_1.default.gray('○')} 知识库暂无相关文档\n`);
+                            }
+                            break;
+                        case 'generating':
+                            if (!isStreaming) {
+                                isStreaming = true;
+                                process.stdout.write(`${chalk_1.default.green('✨')} `);
+                            }
+                            break;
+                        case 'delta':
+                            if (!isStreaming) {
+                                isStreaming = true;
+                                process.stdout.write(`${chalk_1.default.green('✨')} `);
+                            }
+                            process.stdout.write(eventData.content || '');
+                            break;
+                        case 'completed':
+                            console.log();
+                            console.log();
+                            // 显示来源（如果有）
+                            if (eventData.sources && eventData.sources.length > 0) {
+                                console.log(chalk_1.default.gray('─'.repeat(40)));
+                                console.log(`${chalk_1.default.gray('📚 参考来源:')}`);
+                                for (const source of eventData.sources) {
+                                    console.log(`   • ${chalk_1.default.gray(source)}`);
+                                }
+                                console.log(chalk_1.default.gray('─'.repeat(40)));
+                                console.log();
+                            }
+                            break;
+                        case 'clarify':
+                            console.log(`${chalk_1.default.yellow('❓')} ${eventData.message || '需要确认...'}`);
+                            if (eventData.suggestions) {
+                                for (let i = 0; i < eventData.suggestions.length; i++) {
+                                    console.log(`   [${i + 1}] ${eventData.suggestions[i]}`);
+                                }
+                            }
+                            break;
+                        case 'tool_call':
+                            console.log(`${chalk_1.default.cyan('📋')} 执行工具: ${eventData.tool}`);
+                            break;
+                        case 'error':
+                            console.log(`${chalk_1.default.red('⚠️')} 错误: ${eventData.message}`);
+                            break;
+                    }
+                }
+                catch (e) {
+                    // 忽略解析错误
+                }
+            }
+        }
+    }
+    finally {
+        reader.releaseLock();
+    }
+}
+/**
+ * 获取意图显示名称
+ */
+function getIntentName(intent) {
+    const map = {
+        'chat': '闲聊',
+        'chat.greeting': '问候',
+        'chat.farewell': '告别',
+        'knowledge.query': '知识查询',
+        'knowledge.search': '知识搜索',
+        'knowledge.add': '添加知识',
+        'timer.add': '创建定时任务',
+        'timer.list': '查看定时任务',
+        'unknown': '闲聊',
+    };
+    return map[intent] || intent;
 }
 //# sourceMappingURL=index.js.map

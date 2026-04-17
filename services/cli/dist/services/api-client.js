@@ -91,6 +91,23 @@ function createApiClient(config) {
             body: JSON.stringify({ question }),
         });
     }
+    // === 统一对话接口 ===
+    async function conversationChat(req) {
+        return request('/api/v1/conversation/chat', {
+            method: 'POST',
+            body: JSON.stringify(req),
+        });
+    }
+    async function conversationChatStream(req) {
+        return fetch(`${serverGoUrl}/api/v1/conversation/chat/stream`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Accept': 'text/event-stream',
+            },
+            body: JSON.stringify(req),
+        });
+    }
     // === 定时任务 ===
     async function getTimers() {
         return request('/api/v1/timers');
@@ -173,6 +190,9 @@ function createApiClient(config) {
         createMcp,
         testMcp,
         deleteMcp,
+        // 统一对话
+        conversationChat,
+        conversationChatStream,
     };
 }
 /** 全局 API Client 实例 */

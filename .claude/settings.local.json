@@ -9,7 +9,9 @@
       "Bash(mv services/cli/AGENTS.md.tmp services/cli/AGENTS.md)",
       "Bash(export PATH=\"$PATH:/c/Users/11610/sdk/go1.24.0/bin\")",
       "Bash(export GOPROXY=https://goproxy.cn,direct)",
-      "Bash(go test:*)"
+      "Bash(go test:*)",
+      "Read(//d/Ddo/services/**)",
+      "Bash(go build *)"
     ]
   }
 }

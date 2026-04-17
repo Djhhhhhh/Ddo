@@ -200,21 +200,28 @@ async def chat_completions_stream(request: ChatRequest):
 
         async def event_stream():
             """Generate SSE events from LangChain stream."""
-            chunk_index = 0
-            async for chunk in factory.stream_chat(
-                messages=messages,
-                model=model,
-                temperature=request.temperature or 0.7,
-                system_prompt=request.system_prompt,
-            ):
-                chunk_index += 1
-                # Format as SSE data
-                data = f'data: {{"choices": [{{"delta": {{"content": {repr(chunk)} }}, "index": 0}}]}}\n\n'
-                yield data
+            try:
+                chunk_index = 0
+                async for chunk in factory.stream_chat(
+                    messages=messages,
+                    model=model,
+                    temperature=request.temperature or 0.7,
+                    system_prompt=request.system_prompt,
+                ):
+                    chunk_index += 1
+                    # Format as SSE data with proper JSON escaping
+                    import json
+                    sse_data = {"choices": [{"delta": {"content": chunk}, "index": 0}]}
+                    data = f"data: {json.dumps(sse_data)}\n\n"
+                    yield data
 
-            # End marker
-            logger.info(f"[chat_stream_complete] model={model} chunks={chunk_index}")
-            yield "data: [DONE]\n\n"
+                # End marker
+                logger.info(f"[chat_stream_complete] model={model} chunks={chunk_index}")
+                yield "data: [DONE]\n\n"
+            except Exception as e:
+                logger.error(f"[chat_stream_error] error={str(e)}")
+                yield 'data: {"error": "' + str(e).replace('"', '\\"') + '"}\n\n'
+                yield "data: [DONE]\n\n"
 
         return StreamingResponse(
             event_stream(),

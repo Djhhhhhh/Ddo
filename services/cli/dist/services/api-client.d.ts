@@ -112,6 +112,29 @@ export interface McpTestResponse {
 export interface ApiClientConfig {
     serverGoUrl: string;
 }
+export interface ConversationRequest {
+    query: string;
+    conversation_id?: string;
+    model?: string;
+    stream?: boolean;
+    kb_priority?: boolean;
+}
+export interface ConversationResponse {
+    decision: string;
+    intent: {
+        type: string;
+        sub_intent: string;
+        need_knowledge: boolean;
+        confidence: number;
+    };
+    answer: string;
+    sources?: string[];
+    retrieved_docs?: {
+        id: string;
+        content: string;
+        score: number;
+    }[];
+}
 /**
  * 创建 API Client
  * 注意：不使用超时限制，因为 LLM 推理时间不可预知
@@ -174,6 +197,8 @@ export declare function createApiClient(config: ApiClientConfig): {
     deleteMcp: (uuid: string) => Promise<{
         success: boolean;
     }>;
+    conversationChat: (req: ConversationRequest) => Promise<ConversationResponse>;
+    conversationChatStream: (req: ConversationRequest) => Promise<Response>;
 };
 /**
  * 获取 API Client 单例

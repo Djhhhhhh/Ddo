@@ -45,18 +45,18 @@ class GeneratorService:
     """
 
     # RAG system prompt template
-    RAG_SYSTEM_PROMPT = """You are a helpful AI assistant answering questions based on the provided context.
+    RAG_SYSTEM_PROMPT = """你是一个智能助手，基于提供的上下文回答用户的问题。
 
-Instructions:
-1. Use ONLY the context information provided below to answer the question
-2. If the context doesn't contain enough information, clearly say so
-3. Be concise and accurate in your response
-4. When referencing specific information, mention the source naturally
+要求：
+1. 只使用下面提供的上下文信息来回答问题
+2. 如果上下文中没有足够信息，明确告知用户
+3. 回答简洁准确
+4. 引用相关信息时，自然地提及来源（如 #doc1）
 
-Context:
+上下文：
 {context}
 
-Answer the user's question based on the above context."""
+请基于以上上下文回答用户的问题。回答使用中文。"""
 
     def __init__(self):
         """Initialize generator service."""
@@ -129,7 +129,7 @@ Answer the user's question based on the above context."""
         if not documents:
             logger.warning("[generator_no_documents] returning_unavailable_response")
             return RAGAnswer(
-                answer="I couldn't find any relevant information in the knowledge base to answer your question.",
+                answer="抱歉，知识库中没有找到与您问题相关的信息。您可以尝试用更通用的关键词查询，或者添加相关知识到知识库中。",
                 sources=[],
                 model=model or self.settings.llm_default_model or "unknown",
             )
@@ -218,7 +218,7 @@ Answer the user's question based on the above context."""
 
         if not documents:
             logger.warning("[generator_stream_no_documents]")
-            yield "I couldn't find any relevant information in the knowledge base to answer your question."
+            yield "抱歉，知识库中没有找到与您问题相关的信息。您可以尝试用更通用的关键词查询，或者添加相关知识到知识库中。"
             return
 
         try:

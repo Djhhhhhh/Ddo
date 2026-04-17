@@ -136,6 +136,12 @@ func InitializeApp(cfgPath string) (*bootstrap.App, func(), error) {
 	llmProxy := service.NewLLMProxy()
 	llmHandler := handler.NewLLMHandler(llmProxy)
 
+	// 初始化意图识别代理
+	intentProxy := service.NewIntentProxy()
+
+	// 初始化统一对话服务
+	conversationService := service.NewConversationService(intentProxy, ragProxy, llmProxy)
+
 	// 初始化知识库 UseCase（依赖 llmProxy）
 	createKnowledgeUseCase := knowledge.NewCreateKnowledgeUseCase(knowledgeRepo, categoryRepo, ragProxy, llmProxy)
 
@@ -190,8 +196,11 @@ func InitializeApp(cfgPath string) (*bootstrap.App, func(), error) {
 	llmPyURL := "http://localhost:8000" // 将来从配置读取
 	metricsHandler := handler.NewMetricsHandler(mySQLConn, queueQueue, llmPyURL)
 
+	// 初始化对话 Handler
+	conversationHandler := handler.NewConversationHandler(conversationService)
+
 	// 注册路由
-	router.RegisterRoutes(healthHandler, knowledgeHandler, timerHandler, mcpHandler, llmHandler, metricsHandler, categoryHandler)
+	router.RegisterRoutes(healthHandler, knowledgeHandler, timerHandler, mcpHandler, llmHandler, metricsHandler, categoryHandler, conversationHandler)
 
 	// 初始化服务器
 	ginServer := server.NewGinServer(cfg, zapLogger, engine)

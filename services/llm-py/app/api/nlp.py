@@ -6,7 +6,7 @@ FastAPI 职责：
 - 请求/响应序列化
 - 错误处理
 
-NLP 逻辑由 LangChain "大脑"层处理 (app/core/llm_factory.py)
+NLP 逻辑由 LangChain "大脑"层处理 (app/core/llm_factory.py, app/core/chains/)
 """
 
 from fastapi import APIRouter, HTTPException, status
@@ -14,6 +14,7 @@ from pydantic import BaseModel, Field
 from typing import List, Dict, Any, Optional
 
 from app.core.llm_factory import get_llm_factory, LLMFactoryError
+from app.core.chains.intent_chain import get_intent_chain, IntentResult
 from app.utils.logger import get_logger
 
 logger = get_logger(__name__)
@@ -45,6 +46,24 @@ class NLPResponse(BaseModel):
     entities: List[Entity] = Field(default_factory=list, description="Extracted entities")
     parameters: Dict[str, Any] = Field(default_factory=dict, description="Extracted parameters")
     reply: str = Field(default="", description="Suggested reply to user")
+
+
+class IntentRecognitionRequest(BaseModel):
+    """意图识别请求"""
+    text: str = Field(..., description="用户输入文本", min_length=1)
+    model: Optional[str] = Field(None, description="模型ID")
+    context: Optional[Dict[str, Any]] = Field(None, description="可选上下文")
+
+
+class IntentRecognitionResponse(BaseModel):
+    """意图识别响应"""
+    intent: str = Field(..., description="主意图类型")
+    sub_intent: str = Field(default="", description="子意图")
+    need_knowledge: bool = Field(default=False, description="是否需要知识库检索")
+    confidence: float = Field(default=0.0, description="置信度 (0-1)")
+    entities: List[Dict[str, Any]] = Field(default_factory=list, description="提取的实体")
+    parameters: Dict[str, Any] = Field(default_factory=dict, description="提取的参数")
+    suggested_reply: str = Field(default="", description="建议回复")
 
 
 @router.post(
@@ -109,6 +128,64 @@ async def nlp_process(request: NLPRequest) -> NLPResponse:
         raise HTTPException(
             status_code=status.HTTP_502_BAD_GATEWAY,
             detail=f"NLP processing error: {str(e)}",
+        )
+
+
+@router.post(
+    "/intent",
+    response_model=IntentRecognitionResponse,
+    status_code=status.HTTP_200_OK,
+    summary="意图识别",
+    description="分析用户输入意图，判断是否需要知识库检索",
+)
+async def intent_recognition(request: IntentRecognitionRequest) -> IntentRecognitionResponse:
+    """
+    意图识别API - RAG意图路由的核心组件
+
+    分析用户输入，返回：
+    - 意图类型 (intent)
+    - 是否需要知识库 (need_knowledge)
+    - 置信度 (confidence)
+    - 提取的实体和参数
+
+    Args:
+        request: 包含用户输入文本的请求
+
+    Returns:
+        IntentRecognitionResponse: 意图识别结果
+    """
+    if not request.text or not request.text.strip():
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="文本内容不能为空"
+        )
+
+    try:
+        # 使用意图识别链
+        intent_chain = get_intent_chain(model=request.model)
+        result: IntentResult = await intent_chain.recognize(request.text)
+
+        return IntentRecognitionResponse(
+            intent=result.intent,
+            sub_intent=result.sub_intent,
+            need_knowledge=result.need_knowledge,
+            confidence=result.confidence,
+            entities=result.entities,
+            parameters=result.parameters,
+            suggested_reply=result.suggested_reply,
+        )
+
+    except LLMFactoryError as e:
+        logger.error(f"[intent_recognition_config_error] error={str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"意图识别配置错误: {e}",
+        )
+    except Exception as e:
+        logger.error(f"[intent_recognition_error] error={str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail=f"意图识别失败: {str(e)}",
         )
 
 

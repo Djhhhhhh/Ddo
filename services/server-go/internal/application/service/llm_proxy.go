@@ -1,6 +1,7 @@
 package service
 
 import (
+	"bufio"
 	"bytes"
 	"context"
 	"encoding/json"
@@ -69,6 +70,12 @@ type ChatResponse struct {
 type Usage struct {
 	InputTokens  int `json:"input_tokens"`
 	OutputTokens int `json:"output_tokens"`
+}
+
+// ChatStreamResponse 流式对话响应chunk
+type ChatStreamResponse struct {
+	Content string `json:"content"`
+	Done    bool   `json:"done"`
 }
 
 // NLPRequest NLP 请求
@@ -213,42 +220,31 @@ func (r *llmProxy) ChatStream(ctx context.Context, req *ChatRequest) (<-chan str
 		defer close(streamChan)
 		defer resp.Body.Close()
 
-		// llm-py 流式响应是 SSE 格式: data: {"choices": [{"delta": {"content": "..."}}]}\n\n
-		// 逐行读取
-		reader := io.Reader(resp.Body)
-		buf := make([]byte, 0, 1024)
-		tmp := make([]byte, 1)
+		reader := bufio.NewReader(resp.Body)
 		for {
-			n, err := reader.Read(tmp)
-			if n > 0 {
-				if tmp[0] == '\n' {
-					// 处理一行
-					line := string(buf)
-					if len(line) > 0 && strings.HasPrefix(line, "data: ") {
-						// 解析 JSON
-						jsonStr := line[6:]
-						if jsonStr != "[DONE]" {
-							var chunk struct {
-								Choices []struct {
-									Delta struct {
-										Content string `json:"content"`
-									} `json:"delta"`
-								} `json:"choices"`
-							}
-							if json.Unmarshal([]byte(jsonStr), &chunk) == nil {
-								if len(chunk.Choices) > 0 && chunk.Choices[0].Delta.Content != "" {
-									streamChan <- chunk.Choices[0].Delta.Content
-								}
-							}
-						}
-					}
-					buf = buf[:0]
-				} else {
-					buf = append(buf, tmp[0])
-				}
-			}
+			line, err := reader.ReadString('\n')
 			if err != nil {
 				break
+			}
+
+			line = strings.TrimRight(line, "\r")
+
+			if len(line) > 0 && strings.HasPrefix(line, "data: ") {
+				jsonStr := line[6:]
+				if jsonStr != "[DONE]" {
+					var chunk struct {
+						Choices []struct {
+							Delta struct {
+								Content string `json:"content"`
+							} `json:"delta"`
+						} `json:"choices"`
+					}
+					if json.Unmarshal([]byte(jsonStr), &chunk) == nil {
+						if len(chunk.Choices) > 0 && chunk.Choices[0].Delta.Content != "" {
+							streamChan <- chunk.Choices[0].Delta.Content
+						}
+					}
+				}
 			}
 		}
 	}()

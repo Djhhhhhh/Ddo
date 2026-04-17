@@ -143,11 +143,12 @@ export async function startRepl(options: ReplOptions): Promise<void> {
     // Shift+Tab: 切换知识库优先模式
     if (key.name === 'tab' && key.shift) {
       modeManager.toggleKbPriority();
-      rl.write('\r\n');
+      // 不要用 rl.write('\r\n') 触发 line 事件，这会导致当前输入被提交
+      // 只清除当前行并显示状态
       const status = modeManager.kbPriorityMode ? '开启' : '关闭';
-      console.log(chalk.magenta(`📚 知识库优先模式: ${status}`));
+      console.log(chalk.magenta(`\r📚 知识库优先模式: ${status}`));
       rl.setPrompt(modeManager.getPrompt());
-      rl.prompt();
+      // 不调用 rl.prompt() 保持当前输入不被提交
       return;
     }
 
