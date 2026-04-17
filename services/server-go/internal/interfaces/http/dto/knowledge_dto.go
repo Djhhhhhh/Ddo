@@ -24,6 +24,7 @@ type CreateKnowledgeData struct {
 	UUID        string   `json:"uuid"`
 	Title       string   `json:"title"`
 	Category    string   `json:"category"`
+	Categories  []string `json:"categories"`
 	Tags        []string `json:"tags"`
 	Status      string   `json:"status"`
 	EmbeddingID string   `json:"embedding_id,omitempty"`
@@ -81,6 +82,7 @@ type KnowledgeDetailDTO struct {
 	Title       string   `json:"title"`
 	Content     string   `json:"content"`
 	Category    string   `json:"category"`
+	Categories  []string `json:"categories"`
 	Tags        []string `json:"tags"`
 	Source      string   `json:"source"`
 	EmbeddingID string   `json:"embedding_id,omitempty"`

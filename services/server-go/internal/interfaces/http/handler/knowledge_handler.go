@@ -83,6 +83,7 @@ func (h *KnowledgeHandler) CreateKnowledge(c *gin.Context) {
 			UUID:        data.UUID,
 			Title:       data.Title,
 			Category:    data.Category,
+			Categories:  data.Categories,
 			Tags:        data.Tags,
 			Status:      data.Status,
 			EmbeddingID: data.EmbeddingID,

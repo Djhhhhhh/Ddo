@@ -10,7 +10,7 @@
   - 命令解析和分发
   - 服务生命周期管理（通过子进程/API 调用）
   - 用户交互（REPL、命令输出）
-- 所有业务逻辑通过 API 调用委托给 server-go 或 llm-py
+- 所有业务逻辑通过 API 调用委托给 server-go
 - 目录结构：
   - `src/commands/` - CLI 命令实现（init、start、stop、status、logs）
   - `src/services/` - 服务管理模块（PID文件、健康检查、进程管理、NLP）

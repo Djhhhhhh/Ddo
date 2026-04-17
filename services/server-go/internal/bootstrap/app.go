@@ -186,6 +186,8 @@ func (a *App) autoMigrate() error {
 		&models.Timer{},
 		&models.TimerLog{},
 		&models.MCPConfig{},
+		&models.Category{},
+		&models.KnowledgeCategory{},
 	)
 
 	if err != nil {

@@ -159,6 +159,92 @@ class LLMFactory:
 
         return chain
 
+    def create_knowledge_analysis_chain(
+        self,
+        model: Optional[str] = None,
+        context: str = "knowledge_base",
+    ) -> RunnableSerializable:
+        """
+        Create a knowledge analysis chain for extracting tags and categories.
+
+        Chain: Text → Structured Prompt → Model → JSON Parser
+
+        Args:
+            model: Model ID
+            context: Analysis context (e.g., "knowledge_base")
+
+        Returns:
+            Runnable chain that extracts tags and categories
+        """
+        chat_model = self._create_chat_model(model, temperature=0.3)
+
+        analysis_prompt = ChatPromptTemplate.from_messages([
+            ("system", """你是一个知识库管理员。请分析以下知识内容，提取：
+
+1. tags（标签）：3~8个，简短描述性词汇，用于"精确检索"
+2. categories（分类）：1~3个，宽泛组织词汇，用于"按领域浏览"
+3. is_new_categories：每个分类是否需要新建（如果系统中还没有该分类则为 true）
+4. suggested_reply：给用户的建议回复
+
+输出 JSON 格式（不要使用 markdown 包裹）：
+{{
+    "tags": ["tag1", "tag2", ...],
+    "categories": ["分类1", "分类2", ...],
+    "is_new_categories": [false, true, ...],
+    "suggested_reply": "..."
+}}
+
+注意：
+- tags 使用英文逗号分隔的词汇
+- categories 使用中文分类名称
+- 如果内容无法归类到任何现有分类，is_new_categories 对应位置设为 true"""),
+            ("human", "{text}"),
+        ])
+
+        import json
+
+        def parse_analysis_output(output: str) -> dict:
+            """Parse JSON from model output."""
+            if isinstance(output, dict):
+                return output
+
+            text = output.strip()
+
+            # Try direct JSON parsing
+            try:
+                return json.loads(text)
+            except json.JSONDecodeError:
+                pass
+
+            # Try extracting JSON from markdown code blocks
+            if "```json" in text:
+                json_text = text.split("```json")[1].split("```")[0].strip()
+                try:
+                    return json.loads(json_text)
+                except:
+                    pass
+
+            if "```" in text:
+                json_text = text.split("```")[1].split("```")[0].strip()
+                try:
+                    return json.loads(json_text)
+                except:
+                    pass
+
+            # Fallback: return empty result
+            return {
+                "tags": [],
+                "categories": [],
+                "is_new_categories": [],
+                "suggested_reply": "分析失败，请手动添加标签和分类",
+            }
+
+        from langchain_core.output_parsers import StrOutputParser
+
+        chain = analysis_prompt | chat_model | StrOutputParser() | parse_analysis_output
+
+        return chain
+
     def create_nlp_intent_chain(self, model: Optional[str] = None) -> RunnableSerializable:
         """
         Create an NLP intent recognition chain.

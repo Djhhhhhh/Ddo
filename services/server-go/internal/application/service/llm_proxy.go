@@ -22,6 +22,7 @@ type LLMProxy interface {
 	Chat(ctx context.Context, req *ChatRequest) (*ChatResponse, error)
 	ChatStream(ctx context.Context, req *ChatRequest) (<-chan string, error)
 	NLP(ctx context.Context, req *NLPRequest) (*NLPResponse, error)
+	AnalyzeKnowledge(ctx context.Context, req *AnalyzeRequest) (*AnalyzeResponse, error)
 }
 
 // llmProxy LLM 代理服务实现
@@ -90,6 +91,21 @@ type NLPResponse struct {
 type NLPEntity struct {
 	Type  string `json:"type"`
 	Value string `json:"value"`
+}
+
+// AnalyzeRequest 知识分析请求
+type AnalyzeRequest struct {
+	Content string `json:"content"`
+	Title   string `json:"title,omitempty"`
+	Context string `json:"context,omitempty"`
+}
+
+// AnalyzeResponse 知识分析响应
+type AnalyzeResponse struct {
+	Tags             []string `json:"tags"`
+	Categories       []string `json:"categories"`
+	IsNewCategories  []bool   `json:"is_new_categories"`
+	SuggestedReply   string   `json:"suggested_reply"`
 }
 
 // Chat 对话（非流式）
@@ -238,6 +254,50 @@ func (r *llmProxy) ChatStream(ctx context.Context, req *ChatRequest) (<-chan str
 	}()
 
 	return streamChan, nil
+}
+
+// AnalyzeKnowledge 知识分析（提取标签和分类）
+func (r *llmProxy) AnalyzeKnowledge(ctx context.Context, req *AnalyzeRequest) (*AnalyzeResponse, error) {
+	payload := map[string]interface{}{
+		"content": req.Content,
+	}
+	if req.Title != "" {
+		payload["title"] = req.Title
+	}
+	if req.Context != "" {
+		payload["context"] = req.Context
+	} else {
+		payload["context"] = "knowledge_base"
+	}
+
+	body, err := json.Marshal(payload)
+	if err != nil {
+		return nil, fmt.Errorf("marshal analyze request failed: %w", err)
+	}
+
+	httpReq, err := http.NewRequestWithContext(ctx, http.MethodPost, r.baseURL+"/api/analyze/analyze", bytes.NewReader(body))
+	if err != nil {
+		return nil, fmt.Errorf("create analyze request failed: %w", err)
+	}
+	httpReq.Header.Set("Content-Type", "application/json")
+
+	resp, err := r.httpClient.Do(httpReq)
+	if err != nil {
+		return nil, fmt.Errorf("analyze request failed: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		bodyBytes, _ := io.ReadAll(resp.Body)
+		return nil, fmt.Errorf("analyze request failed with status %d: %s", resp.StatusCode, string(bodyBytes))
+	}
+
+	var result AnalyzeResponse
+	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
+		return nil, fmt.Errorf("decode analyze response failed: %w", err)
+	}
+
+	return &result, nil
 }
 
 // NLP NLP 意图识别

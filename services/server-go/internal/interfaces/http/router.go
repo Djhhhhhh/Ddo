@@ -43,6 +43,7 @@ func (r *Router) RegisterRoutes(
 	mcpHandler *handler.MCPHandler,
 	llmHandler *handler.LLMHandler,
 	metricsHandler *handler.MetricsHandler,
+	categoryHandler *handler.CategoryHandler,
 ) {
 	// 健康检查
 	r.engine.GET("/health", healthHandler.HealthCheck)
@@ -90,6 +91,15 @@ func (r *Router) RegisterRoutes(
 			mcps.GET("/:uuid", mcpHandler.GetMCP)                  // 获取 MCP 详情
 			mcps.POST("/:uuid/delete", mcpHandler.DeleteMCP)      // 删除 MCP 配置
 			mcps.POST("/:uuid/test", mcpHandler.TestMCP)          // 测试 MCP 连接
+		}
+
+		// 分类管理路由组
+		categories := v1.Group("/categories")
+		{
+			categories.POST("", categoryHandler.CreateCategory)                           // 创建分类
+			categories.GET("", categoryHandler.ListCategories)                            // 查询分类列表
+			categories.GET("/:id/knowledge", categoryHandler.GetKnowledgeByCategory)      // 获取某分类下的知识
+			categories.DELETE("/:id", categoryHandler.DeleteCategory)                     // 删除分类
 		}
 	}
 }

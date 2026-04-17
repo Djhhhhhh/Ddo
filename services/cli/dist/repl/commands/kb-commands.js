@@ -94,10 +94,10 @@ exports.kbAddCommand = {
         const { params: collected, allCollected } = await prompt.collectRequiredParams(paramDefs, initialValues);
         if (allCollected) {
             const tags = collected.tags ? collected.tags.split(',').map(t => t.trim()) : [];
+            // 确认时不显示标签（因为还没有 AI 分析结果）
             const confirmed = await prompt.confirmSummary('词条信息', {
                 标题: collected.title,
                 内容: collected.content,
-                标签: tags.join(', ') || '(无)',
             });
             if (!confirmed) {
                 console.log(chalk_1.default.yellow('\n已取消添加'));
@@ -109,9 +109,17 @@ exports.kbAddCommand = {
                     title: collected.title,
                     content: collected.content,
                     tags,
+                    source: 'cli', // 自动添加来源标识
                 });
+                // 显示添加结果和 AI 分析结果
                 console.log(chalk_1.default.green('\n✓ 知识库词条添加成功!'));
                 console.log(chalk_1.default.gray(`  UUID: ${result.uuid}`));
+                if (result.categories && result.categories.length > 0) {
+                    console.log(chalk_1.default.gray(`  分类: ${result.categories.join(', ')}`));
+                }
+                if (result.tags && result.tags.length > 0) {
+                    console.log(chalk_1.default.gray(`  标签: ${result.tags.join(', ')}`));
+                }
                 console.log();
             }
             catch (err) {

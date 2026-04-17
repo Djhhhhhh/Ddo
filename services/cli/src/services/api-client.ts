@@ -61,6 +61,7 @@ export interface Knowledge {
   title: string;
   content: string;
   category: string;
+  categories?: string[];
   tags: string[];
   created_at: string;
   updated_at: string;
@@ -209,6 +210,7 @@ export function createApiClient(config: ApiClientConfig) {
     content: string;
     category?: string;
     tags?: string[];
+    source?: string;
   }): Promise<Knowledge> {
     return request<Knowledge>('/api/v1/knowledge', {
       method: 'POST',

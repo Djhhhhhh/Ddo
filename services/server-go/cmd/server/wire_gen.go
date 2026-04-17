@@ -10,6 +10,7 @@ import (
 	"path/filepath"
 
 	"github.com/ddo/server-go/internal/application/service"
+	"github.com/ddo/server-go/internal/application/usecase/category"
 	"github.com/ddo/server-go/internal/application/usecase/health"
 	"github.com/ddo/server-go/internal/application/usecase/knowledge"
 	"github.com/ddo/server-go/internal/application/usecase/mcp"
@@ -88,12 +89,13 @@ func InitializeApp(cfgPath string) (*bootstrap.App, func(), error) {
 
 	// 初始化知识库 Repository
 	var knowledgeRepo repository.KnowledgeRepository
+	var categoryRepo repository.CategoryRepository
 	if mySQLConn != nil && mySQLConn.DB() != nil {
 		knowledgeRepo = repository.NewKnowledgeRepository(mySQLConn.DB())
+		categoryRepo = repository.NewCategoryRepository(mySQLConn.DB())
 	}
 
-	// 初始化知识库 UseCase
-	createKnowledgeUseCase := knowledge.NewCreateKnowledgeUseCase(knowledgeRepo, ragProxy)
+	// 初始化知识库 UseCase（部分依赖 llmProxy，先初始化不依赖它的）
 	listKnowledgeUseCase := knowledge.NewListKnowledgeUseCase(knowledgeRepo)
 	getKnowledgeUseCase := knowledge.NewGetKnowledgeUseCase(knowledgeRepo)
 	deleteKnowledgeUseCase := knowledge.NewDeleteKnowledgeUseCase(knowledgeRepo)
@@ -134,6 +136,24 @@ func InitializeApp(cfgPath string) (*bootstrap.App, func(), error) {
 	llmProxy := service.NewLLMProxy()
 	llmHandler := handler.NewLLMHandler(llmProxy)
 
+	// 初始化知识库 UseCase（依赖 llmProxy）
+	createKnowledgeUseCase := knowledge.NewCreateKnowledgeUseCase(knowledgeRepo, categoryRepo, ragProxy, llmProxy)
+
+	// 初始化分类 UseCase
+	listCategoryUseCase := category.NewListCategoryUseCase(categoryRepo)
+	createCategoryUseCase := category.NewCreateCategoryUseCase(categoryRepo)
+	deleteCategoryUseCase := category.NewDeleteCategoryUseCase(categoryRepo)
+	getKnowledgeByCategoryUseCase := category.NewGetKnowledgeByCategoryUseCase(categoryRepo)
+
+	// 初始化分类 Handler
+	categoryHandler := handler.NewCategoryHandler(
+		listCategoryUseCase,
+		createCategoryUseCase,
+		deleteCategoryUseCase,
+		getKnowledgeByCategoryUseCase,
+		zapLogger,
+	)
+
 	knowledgeHandler := handler.NewKnowledgeHandler(
 		createKnowledgeUseCase,
 		listKnowledgeUseCase,
@@ -171,7 +191,7 @@ func InitializeApp(cfgPath string) (*bootstrap.App, func(), error) {
 	metricsHandler := handler.NewMetricsHandler(mySQLConn, queueQueue, llmPyURL)
 
 	// 注册路由
-	router.RegisterRoutes(healthHandler, knowledgeHandler, timerHandler, mcpHandler, llmHandler, metricsHandler)
+	router.RegisterRoutes(healthHandler, knowledgeHandler, timerHandler, mcpHandler, llmHandler, metricsHandler, categoryHandler)
 
 	// 初始化服务器
 	ginServer := server.NewGinServer(cfg, zapLogger, engine)

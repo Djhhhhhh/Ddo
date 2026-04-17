@@ -30,6 +30,7 @@ services/llm-py/
 │   │   ├── chat.py              # /api/chat/* - Chat Completions ✅ LangChain 实现
 │   │   ├── models.py            # /api/models/* - 模型管理
 │   │   ├── nlp.py               # /api/nlp/* - NLP 意图识别 ✅ LangChain 实现
+│   │   ├── analyze.py           # /api/analyze/* - 知识分析（标签/分类提取）✅ 知识库增强功能
 │   │   └── rag.py               # /api/rag/* - RAG 知识库 ✅ p2-8 Retriever / p2-9 Generator 已实现
 │   ├── core/                     # 核心模块 (LangChain "大脑" 层)
 │   │   ├── __init__.py
@@ -113,5 +114,6 @@ services/llm-py/
 
 ## 🕒 最后更新时间
 
+2026-04-17：新增知识分析 API (`/api/analyze`) 和 `create_knowledge_analysis_chain` 方法
 2026-04-16：新增 NLP 参数契约规范（llm_factory.py 意图识别提示词）
 2026-04-15 23:30:00

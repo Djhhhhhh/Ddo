@@ -39,12 +39,17 @@ server-go/
 │   │       ├── health/
 │   │       │   └── check_health.go          # CheckHealth 用例实现（2026-04-15）
 │   │       └── knowledge/                   # ← 新增：知识库用例层（2026-04-15）
-│   │           ├── create_knowledge.go      # 创建知识条目
+│   │           ├── create_knowledge.go      # 创建知识条目（含 AI 分析）
 │   │           ├── list_knowledge.go        # 查询知识列表
 │   │           ├── get_knowledge.go         # 获取知识详情
 │   │           ├── delete_knowledge.go      # 删除知识条目
 │   │           ├── search_knowledge.go      # 语义搜索
 │   │           └── ask_knowledge.go         # RAG 问答
+│   │       └── category/                    # ← 新增：分类用例层（2026-04-17）
+│   │           ├── list_category.go         # 列出分类
+│   │           ├── create_category.go       # 创建分类
+│   │           ├── delete_category.go       # 删除分类
+│   │           └── get_knowledge_by_category.go  # 按分类查询知识
 │   ├── interfaces/                          # 接口层（协议适配）
 │   │   └── http/
 │   │       ├── handler/
@@ -73,9 +78,11 @@ server-go/
 │   │   │   ├── timer.go                     # 定时任务模型
 │   │   │   ├── timer_log.go                 # 定时任务日志模型
 │   │   │   └── mcp.go                       # MCP 配置模型
+│   │   │   └── category.go                  # ← 新增：分类模型（2026-04-17）
 │   │   └── repository/                      # ← 新增：数据访问层（2026-04-15）
 │   │       ├── knowledge_repo.go            # 知识库 Repository
-│   │       └── timer_repo.go                # 定时任务 Repository
+│   │       ├── timer_repo.go                # 定时任务 Repository
+│   │       └── category_repo.go             # ← 新增：分类 Repository（2026-04-17）
 │   ├── queue/                               # ← 新增：消息队列层（2026-04-15）
 │   │   ├── queue.go                         # Queue 接口定义
 │   │   └── badger_queue.go                  # BadgerDB 队列实现
