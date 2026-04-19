@@ -11,7 +11,7 @@ const http = require('http');
 const fs = require('fs');
 const path = require('path');
 
-const PORT = 3000;
+const PORT = 3003;
 const DATA_FILE = path.join(__dirname, 'ddo-tasks.json');
 
 const MIME_TYPES = {

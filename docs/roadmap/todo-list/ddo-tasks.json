@@ -272,7 +272,7 @@
           "id": "p3-1",
           "title": "Web: Vue 3 框架",
           "module": "web",
-          "status": "pending",
+          "status": "done",
           "priority": "high",
           "notes": "Vite 项目结构"
         },

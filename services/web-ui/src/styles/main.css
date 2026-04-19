@@ -1,0 +1,95 @@
+/* Ollama Design System - CSS Variables */
+:root {
+  /* Primary Colors */
+  --color-primary: #000000;
+  --color-background: #ffffff;
+  --color-surface: #fafafa;
+
+  /* Neutrals */
+  --color-border: #e5e5e5;
+  --color-muted: #737373;
+  --color-light: #a3a3a3;
+  --color-dark: #262626;
+
+  /* Border Radius - Binary System */
+  --radius-container: 12px;
+  --radius-pill: 9999px;
+
+  /* Shadows - Zero (Ollama philosophy) */
+  --shadow-none: none;
+}
+
+/* Dark theme */
+html.dark {
+  --color-primary: #ffffff;
+  --color-background: #090909;
+  --color-surface: #161616;
+  --color-border: #262626;
+  --color-muted: #a3a3a3;
+  --color-light: #737373;
+  --color-dark: #fafafa;
+}
+
+html.dark {
+  background-color: var(--color-background);
+  color: var(--color-primary);
+}
+
+/* Tailwind Base Layer */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Base component styles following Ollama Design System */
+@layer components {
+  /* Gray Pill Button - Primary */
+  .btn-gray-pill {
+    @apply bg-gray-200 text-gray-800 px-6 py-2.5 rounded-pill border border-gray-200 font-medium;
+    @apply hover:bg-gray-300 transition-colors duration-150;
+  }
+
+  /* White Pill Button - Secondary */
+  .btn-white-pill {
+    @apply bg-white text-gray-700 px-6 py-2.5 rounded-pill border border-gray-300 font-medium;
+    @apply hover:bg-gray-50 hover:border-gray-400 transition-colors duration-150;
+  }
+
+  /* Black Pill Button - CTA */
+  .btn-black-pill {
+    @apply bg-black text-white px-6 py-2.5 rounded-pill border border-black font-medium;
+    @apply hover:bg-gray-900 transition-colors duration-150;
+  }
+
+  /* Card Container - 12px radius, zero shadow */
+  .card {
+    @apply bg-white border border-gray-200 rounded-container p-6;
+  }
+
+  /* Input - Pill shaped */
+  .input-pill {
+    @apply bg-white border border-gray-200 rounded-pill px-4 py-2.5 outline-none;
+    @apply focus:ring-2 focus:ring-blue-500/50 focus:border-gray-300;
+    @apply placeholder:text-gray-400;
+  }
+
+  /* Navigation link */
+  .nav-link {
+    @apply text-gray-500 hover:text-gray-900 font-medium transition-colors duration-150;
+  }
+
+  .nav-link.active {
+    @apply text-gray-900;
+  }
+}
+
+/* Typography utilities */
+@layer utilities {
+  .text-display {
+    font-family: "SF Pro Rounded", system-ui, -apple-system, sans-serif;
+    @apply font-medium leading-tight;
+  }
+
+  .text-body {
+    @apply leading-relaxed;
+  }
+}

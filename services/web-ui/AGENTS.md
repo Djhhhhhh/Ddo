@@ -2,17 +2,53 @@
 
 ## 📌 作用
 
-一句话描述：[待填充：此服务的核心职责]
+CLI 核心主体的可视化扩展渲染层，提供 Web Dashboard 和配置表单。
 
-- 边界：只负责 xxx，不处理 xxx
-- 调用关系：被 xxx 调用，调用 xxx
+- **边界**：只负责前端界面展示和用户交互，不处理业务逻辑
+- **调用关系**：通过 CLI `/xx-web` 命令启动，调用 server-go 后端 API
+- **定位**：CLI 是核心，Web/Electron 是扩展层
 
 ## 📂 目录结构
 
 ```
 web-ui/
-├── [待填充：列出主要目录，如 src/ handlers/]
-└── AGENTS.md (本文件)
+├── index.html                      # Vue 挂载点
+├── package.json                    # 依赖配置
+├── vite.config.ts                  # Vite 配置（代理到 127.0.0.1:8080）
+├── tsconfig.json                   # TypeScript 配置
+├── tailwind.config.js              # TailwindCSS 配置（DESIGN.md 规范）
+├── postcss.config.js               # PostCSS 配置
+├── public/
+│   └── favicon.ico
+└── src/
+    ├── main.ts                     # 应用入口
+    ├── App.vue                     # 根组件
+    ├── vue-shim.d.ts               # Vue 文件类型声明
+    ├── api/
+    │   └── client.ts               # Axios 封装（baseURL: 127.0.0.1:8080）
+    ├── components/
+    │   └── Layout/
+    │       └── Layout.vue          # 布局容器（顶部导航栏 + RouterView）
+    │       ├── Button.vue          # 按钮组件（Gray/White/Black Pill）
+    │       ├── Card.vue             # 卡片组件（12px 圆角）
+    │       └── Input.vue           # 输入框组件（Pill 形状）
+    ├── views/
+    │   ├── Help/
+    │   │   └── HelpView.vue        # Help 首页（项目介绍）
+    │   ├── Dashboard/
+    │   │   └── DashboardView.vue   # Dashboard 页面（开发中）
+    │   ├── MCP/
+    │   │   └── MCPView.vue          # MCP 配置页面（开发中）
+    │   ├── Timer/
+    │   │   └── TimerView.vue       # 定时任务页面（开发中）
+    │   └── Config/
+    │       └── ConfigView.vue       # 系统配置页面（开发中）
+    ├── router/
+    │   └── index.ts               # 路由配置（Hash 模式）
+    ├── stores/
+    │   └── theme.ts               # 主题状态管理（Pinia）
+    └── styles/
+        └── main.css               # 全局样式（DESIGN.md 规范）
 ```
 
 ## 🧠 Rules 自维护
@@ -21,6 +57,10 @@ web-ui/
 
 ### Rules 文件位置
 - 本服务规则：[.claude/rules/rules.md](.claude/rules/rules.md)
+
+### 设计规范
+- 必须遵循 `DESIGN.md` 中的 Ollama 风格规范
+- 灰度色系（无彩色）、Pill 按钮、零阴影、12px/9999px 二元 border-radius
 
 ### 何时更新 Rules
 开发完成后，如果满足以下条件之一，**必须**更新 Rules：
@@ -41,15 +81,17 @@ web-ui/
 提交前检查：
 - [ ] 本次修改只在当前 service 目录内
 - [ ] 新加文件已更新上面的目录结构
-- [ ] 如涉及新架构/规范，已更新 .claude/rules/<service>.md
+- [ ] 如涉及新架构/规范，已更新 .claude/rules/rules.md
+- [ ] UI 组件遵循 DESIGN.md 规范（灰度色系、Pill 按钮）
 
 ## 🚫 禁止
 
 硬性红线（违反会导致架构混乱）：
 - ❌ 跨 service import（只能调 API，不能 import 包）
 - ❌ 直接修改其他 service 的代码
-- ❌ [待补充：具体的禁止行为，由开发过程中发现]
+- ❌ 在 web-ui 中实现业务逻辑（只做展示）
+- ❌ 使用彩色（遵循 Ollama 纯灰度设计）
 
 ## 🕒 最后更新时间
 
-2026-04-13 20:25:59
+2026-04-19 12:00:00
