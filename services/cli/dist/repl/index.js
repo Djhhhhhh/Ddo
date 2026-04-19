@@ -92,6 +92,9 @@ commands_1.registry.register(mcp_commands_1.mcpAddCommand);
 commands_1.registry.register(mcp_commands_1.mcpTestCommand);
 commands_1.registry.register(mcp_commands_1.mcpRemoveCommand);
 commands_1.registry.register(mcp_commands_1.mcpHelpCommand);
+// 注册工具（用于 NLP/意图识别触发的工具调用）
+const registry_1 = require("./tools/registry");
+(0, registry_1.registerAllTools)();
 // ASCII 艺术字
 const ASCII_ART = `
  /$$$$$$$        /$$

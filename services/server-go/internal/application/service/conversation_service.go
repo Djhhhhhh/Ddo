@@ -67,6 +67,7 @@ type IntentDetail struct {
 // RetrievedDoc 检索到的文档
 type RetrievedDoc struct {
 	ID      string  `json:"id"`
+	Title   string  `json:"title"`
 	Content string  `json:"content"`
 	Score   float64 `json:"score"`
 }
@@ -224,7 +225,7 @@ func (s *conversationService) ProcessQueryStream(ctx context.Context, req *Conve
 		case DecisionRAG:
 			s.handleRAGStream(ctx, req, intentResult, eventChan)
 		case DecisionChat:
-			s.handleChatStream(ctx, req, intentResult, eventChan)
+			s.handleChatStream(ctx, req, intentResult, eventChan, false)
 		case DecisionTool:
 			s.handleToolStream(intentResult, eventChan)
 		case DecisionClarify:
@@ -296,7 +297,7 @@ func (s *conversationService) makeDecision(intent *IntentResult, kbPriority bool
 // handleRAG 处理RAG查询（非流式）
 func (s *conversationService) handleRAG(ctx context.Context, req *ConversationRequest, intent IntentDetail) *result.Result[ConversationResponse] {
 	// 步骤1：检索文档
-	searchResults, err := s.ragProxy.SearchVector(ctx, req.Query, 5, 0.7)
+	searchResults, err := s.ragProxy.SearchVector(ctx, req.Query, 5, 0.5)
 	if err != nil {
 		// 检索失败，降级到直接聊天
 		return s.handleChat(ctx, req, intent)
@@ -312,7 +313,7 @@ func (s *conversationService) handleRAG(ctx context.Context, req *ConversationRe
 		Question:     req.Query,
 		Collection:   "default",
 		TopK:         5,
-		MinScore:     0.7,
+		MinScore:     0.5,
 		Stream:       false,
 		Model:        req.Model,
 	}
@@ -341,10 +342,10 @@ func (s *conversationService) handleRAGStream(ctx context.Context, req *Conversa
 	}
 
 	// 步骤1：检索文档
-	searchResults, err := s.ragProxy.SearchVector(ctx, req.Query, 5, 0.7)
+	searchResults, err := s.ragProxy.SearchVector(ctx, req.Query, 5, 0.5)
 	if err != nil {
 		// 检索失败，降级到聊天
-		s.handleChatStream(ctx, req, intent, eventChan)
+		s.handleChatStream(ctx, req, intent, eventChan, false)
 		return
 	}
 
@@ -356,7 +357,7 @@ func (s *conversationService) handleRAGStream(ctx context.Context, req *Conversa
 			Data: DocsFoundData{Count: 0, Docs: nil},
 		}
 		// 降级到直接 chat，让 AI 用通用知识回答
-		s.handleChatStream(ctx, req, intent, eventChan)
+		s.handleChatStream(ctx, req, intent, eventChan, true)
 		return
 	}
 
@@ -366,6 +367,7 @@ func (s *conversationService) handleRAGStream(ctx context.Context, req *Conversa
 	for _, sr := range searchResults {
 		docs = append(docs, RetrievedDoc{
 			ID:      sr.EmbeddingID,
+			Title:   sr.Title,
 			Content: sr.Content,
 			Score:   sr.Score,
 		})
@@ -381,7 +383,7 @@ func (s *conversationService) handleRAGStream(ctx context.Context, req *Conversa
 		Question:     req.Query,
 		Collection:   "default",
 		TopK:         5,
-		MinScore:     0.7,
+		MinScore:     0.5,
 		Stream:       true,
 		Model:        req.Model,
 	}
@@ -471,7 +473,7 @@ func (s *conversationService) handleChat(ctx context.Context, req *ConversationR
 }
 
 // handleChatStream 处理流式聊天
-func (s *conversationService) handleChatStream(ctx context.Context, req *ConversationRequest, intentResult *IntentResult, eventChan chan<- StreamEvent) {
+func (s *conversationService) handleChatStream(ctx context.Context, req *ConversationRequest, intentResult *IntentResult, eventChan chan<- StreamEvent, noDocsFound bool) {
 	// 如果意图识别已经提供了建议回复且不需要知识库，通过流式返回
 	// 注意：need_knowledge=true 时 SuggestedReply 只是中途提示，不能作为最终回答
 	if intentResult != nil && intentResult.SuggestedReply != "" && !intentResult.NeedKnowledge {
@@ -479,14 +481,23 @@ func (s *conversationService) handleChatStream(ctx context.Context, req *Convers
 		return
 	}
 
-	messages := []Message{
-		{Role: "user", Content: req.Query},
+	// 根据是否检索到文档决定回复风格
+	var systemPrompt string
+	if noDocsFound {
+		systemPrompt = "请用简洁的方式回答用户的问题，不要过于冗长。如果用户问的是具体知识类问题，直接告知\"知识库暂无相关文档\"即可。"
 	}
 
+	messages := []Message{}
+	if systemPrompt != "" {
+		messages = append(messages, Message{Role: "system", Content: systemPrompt})
+	}
+	messages = append(messages, Message{Role: "user", Content: req.Query})
+
 	chatReq := &ChatRequest{
-		Messages: messages,
-		Model:    req.Model,
-		Stream:   true,
+		Messages:     messages,
+		Model:        req.Model,
+		Stream:       true,
+		SystemPrompt: systemPrompt,
 	}
 
 	streamChan, err := s.llmProxy.ChatStream(ctx, chatReq)

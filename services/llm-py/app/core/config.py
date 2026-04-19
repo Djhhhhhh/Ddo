@@ -83,7 +83,7 @@ class Settings(BaseSettings):
         description="Number of documents to retrieve"
     )
     rag_min_score: float = Field(
-        default=0.3,
+        default=0.5,
         description="Minimum similarity score for retrieval (0.0-1.0)"
     )
     rag_max_context_length: int = Field(

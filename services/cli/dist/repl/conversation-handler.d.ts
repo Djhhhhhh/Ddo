@@ -92,6 +92,14 @@ export declare class ConversationHandler {
      */
     private handleToolCall;
     /**
+     * 外部设置的工具调用回调
+     */
+    private onToolCall?;
+    /**
+     * 设置工具调用回调
+     */
+    setToolCallHandler(handler: (tool: string, parameters?: Record<string, unknown>) => void): void;
+    /**
      * 处理错误
      */
     private handleError;

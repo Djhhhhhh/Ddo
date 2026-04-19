@@ -62,13 +62,13 @@ class RetrieverService:
             query: Search query text.
             collection: Collection name to search in.
             top_k: Maximum number of results. Defaults to settings.rag_top_k.
-            min_score: Minimum similarity score (0-1). Defaults to 0.7.
+            min_score: Minimum similarity score (0-1). Defaults to 0.5.
 
         Returns:
             List of retrieved documents sorted by relevance.
         """
         top_k = top_k or self.settings.rag_top_k
-        min_score = min_score if min_score is not None else 0.7
+        min_score = min_score if min_score is not None else 0.5
 
         start_time = time.time()
         logger.info(

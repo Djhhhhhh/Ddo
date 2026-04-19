@@ -59,6 +59,10 @@ registry.register(mcpTestCommand);
 registry.register(mcpRemoveCommand);
 registry.register(mcpHelpCommand);
 
+// 注册工具（用于 NLP/意图识别触发的工具调用）
+import { registerAllTools } from './tools/registry';
+registerAllTools();
+
 /**
  * REPL 选项
  */

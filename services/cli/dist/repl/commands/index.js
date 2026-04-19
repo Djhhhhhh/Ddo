@@ -44,6 +44,7 @@ exports.registry = exports.CommandType = void 0;
 exports.executeCommand = executeCommand;
 const chalk_1 = __importDefault(require("chalk"));
 const mode_1 = require("../mode");
+const registry_1 = require("../tools/registry");
 /**
  * 命令输出类型
  * 用于区分 AI 对话和普通命令，控制提示符换行行为
@@ -236,8 +237,8 @@ async function handleUnknownCommand(name, ctx) {
             if (!response.body) {
                 throw new Error('响应体为空');
             }
-            // 处理 SSE 流式响应
-            await processConversationStream(response.body);
+            // 处理 SSE 流式响应，传递 modeManager 和 ctx 用于工具调用处理
+            await processConversationStream(response.body, ctx.modeManager, ctx);
             return { shouldContinue: true, outputType: CommandType.Chat };
         }
         catch (err) {
@@ -256,7 +257,7 @@ async function handleUnknownCommand(name, ctx) {
  * 处理统一的对话流式响应
  * 接收 Go 层的 SSE 事件并展示状态变化和流式输出
  */
-async function processConversationStream(stream) {
+async function processConversationStream(stream, modeManager, ctx) {
     const reader = stream.getReader();
     const decoder = new TextDecoder();
     let buffer = '';
@@ -326,12 +327,22 @@ async function processConversationStream(stream) {
                         case 'completed':
                             console.log();
                             console.log();
-                            // 显示来源（如果有）
-                            if (eventData.sources && eventData.sources.length > 0) {
+                            // 显示来源（如果有）- 支持 sources 或 retrieved_docs
+                            const sources = eventData.sources || eventData.retrieved_docs || [];
+                            if (sources.length > 0) {
                                 console.log(chalk_1.default.gray('─'.repeat(40)));
                                 console.log(`${chalk_1.default.gray('📚 参考来源:')}`);
-                                for (const source of eventData.sources) {
-                                    console.log(`   • ${chalk_1.default.gray(source)}`);
+                                for (const source of sources) {
+                                    // 支持两种格式：字符串（仅UUID）或对象{id, title}
+                                    if (typeof source === 'string') {
+                                        console.log(`   • ${chalk_1.default.gray(source)}`);
+                                    }
+                                    else if (source.id && source.title) {
+                                        console.log(`   • ${chalk_1.default.gray(source.id)} - ${source.title}`);
+                                    }
+                                    else if (source.id) {
+                                        console.log(`   • ${chalk_1.default.gray(source.id)}`);
+                                    }
                                 }
                                 console.log(chalk_1.default.gray('─'.repeat(40)));
                                 console.log();
@@ -347,6 +358,10 @@ async function processConversationStream(stream) {
                             break;
                         case 'tool_call':
                             console.log(`${chalk_1.default.cyan('📋')} 执行工具: ${eventData.tool}`);
+                            // 处理工具调用，执行对应的工具逻辑
+                            if (modeManager && ctx) {
+                                await handleToolCallEvent(eventData, modeManager, ctx);
+                            }
                             break;
                         case 'error':
                             console.log(`${chalk_1.default.red('⚠️')} 错误: ${eventData.message}`);
@@ -362,6 +377,15 @@ async function processConversationStream(stream) {
     finally {
         reader.releaseLock();
     }
+}
+/**
+ * 处理工具调用事件 - 执行对应的工具逻辑
+ */
+async function handleToolCallEvent(eventData, modeManager, ctx) {
+    const tool = eventData.tool;
+    const parameters = eventData.parameters || {};
+    // 执行工具
+    await (0, registry_1.executeToolByName)(tool, parameters, ctx);
 }
 /**
  * 获取意图显示名称

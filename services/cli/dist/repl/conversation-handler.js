@@ -232,12 +232,22 @@ class ConversationHandler {
         this.state.status = 'completed';
         this.state.isStreaming = false;
         console.log(); // 结束流式输出后换行
-        // 显示来源（如果有）
-        if (data.sources && data.sources.length > 0) {
+        // 显示来源（如果有）- 支持 sources 或 retrieved_docs
+        const sources = data.sources || (data.retrieved_docs || []);
+        if (sources.length > 0) {
             console.log(chalk_1.default.gray('─'.repeat(40)));
             console.log(`${chalk_1.default.gray('📚 参考来源:')}`);
-            for (const source of data.sources) {
-                console.log(`   • ${chalk_1.default.gray(source)}`);
+            for (const source of sources) {
+                // 支持两种格式：字符串（仅UUID）或对象{id, title}
+                if (typeof source === 'string') {
+                    console.log(`   • ${chalk_1.default.gray(source)}`);
+                }
+                else if (source.id && source.title) {
+                    console.log(`   • ${chalk_1.default.gray(source.id)} - ${source.title}`);
+                }
+                else if (source.id) {
+                    console.log(`   • ${chalk_1.default.gray(source.id)}`);
+                }
             }
             console.log(chalk_1.default.gray('─'.repeat(40)));
         }
@@ -274,6 +284,16 @@ class ConversationHandler {
             console.log(`   参数: ${chalk_1.default.gray(JSON.stringify(data.parameters))}`);
         }
         console.log();
+        // 尝试获取 REPL 实例并切换模式
+        // 注意：这里触发模式切换后，用户将进入相应模式继续操作
+        // 由于 handleToolCall 是 private 方法，需要通过事件通知外部
+        this.onToolCall?.(data.tool, data.parameters);
+    }
+    /**
+     * 设置工具调用回调
+     */
+    setToolCallHandler(handler) {
+        this.onToolCall = handler;
     }
     /**
      * 处理错误

@@ -34,7 +34,7 @@ class SearchRequest(BaseModel):
     query: str = Field(..., description="Search query text")
     collection: str = Field("default", description="Collection name to search in")
     top_k: int = Field(5, ge=1, le=50, description="Number of results to return")
-    min_score: float = Field(0.7, ge=0.0, le=1.0, description="Minimum similarity score")
+    min_score: float = Field(0.5, ge=0.0, le=1.0, description="Minimum similarity score")
 
 
 class SearchResult(BaseModel):
@@ -62,7 +62,7 @@ class RAGAskRequest(BaseModel):
     question: str = Field(..., description="Question to ask")
     collection: str = Field("default", description="Collection to search")
     top_k: int = Field(5, ge=1, le=20, description="Number of documents to retrieve")
-    min_score: float = Field(0.7, ge=0.0, le=1.0, description="Minimum similarity score for retrieval")
+    min_score: float = Field(0.5, ge=0.0, le=1.0, description="Minimum similarity score for retrieval")
     model: Optional[str] = Field(None, description="Model to use for generation")
     stream: bool = Field(False, description="Enable streaming response")
 

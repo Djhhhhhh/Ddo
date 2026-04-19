@@ -60,10 +60,11 @@ func (e *EmbedResponse) GetEmbeddingID() string {
 
 // SearchResult 搜索结果
 type SearchResult struct {
-	EmbeddingID string  `json:"embedding_id"`
-	Score       float64 `json:"score"`
-	Content     string  `json:"content"`
-	Metadata    map[string]interface{} `json:"metadata"`
+	EmbeddingID string                  `json:"embedding_id"`
+	Score       float64                 `json:"score"`
+	Content     string                  `json:"content"`
+	Metadata    map[string]interface{}  `json:"metadata"`
+	Title       string                  `json:"title"`
 }
 
 // AskResponse 问答响应
@@ -115,9 +116,9 @@ func (r *ragProxy) SearchVector(ctx context.Context, query string, limit int, mi
 	if limit < 1 || limit > 20 {
 		limit = 5
 	}
-	// 默认最小相似度 0.3
+	// 默认最小相似度 0.5
 	if minScore <= 0 || minScore > 1 {
-		minScore = 0.3
+		minScore = 0.5
 	}
 
 	// 构建 POST 请求体
@@ -170,11 +171,19 @@ func (r *ragProxy) SearchVector(ctx context.Context, query string, limit int, mi
 	// 转换为 SearchResult 列表
 	results := make([]SearchResult, 0, len(searchResp.Documents))
 	for _, doc := range searchResp.Documents {
+		// 从 metadata 中提取 title
+		title := ""
+		if doc.Metadata != nil {
+			if t, ok := doc.Metadata["title"].(string); ok {
+				title = t
+			}
+		}
 		results = append(results, SearchResult{
 			EmbeddingID: doc.DocumentID,
 			Score:       doc.Score,
 			Content:     doc.Content,
 			Metadata:    doc.Metadata,
+			Title:       title,
 		})
 	}
 

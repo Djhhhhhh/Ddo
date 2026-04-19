@@ -108,7 +108,7 @@ type DeleteKnowledgeData struct {
 type SearchKnowledgeRequest struct {
 	Query    string  `json:"query" form:"q,required"`
 	Limit    int     `json:"limit" form:"limit,default=5"`
-	MinScore float64 `json:"min_score" form:"min_score,default=0.3"`
+	MinScore float64 `json:"min_score" form:"min_score,default=0.5"`
 }
 
 // SearchKnowledgeResponse 语义搜索响应

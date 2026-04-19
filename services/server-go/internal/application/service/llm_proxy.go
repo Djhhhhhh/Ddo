@@ -49,9 +49,10 @@ func NewLLMProxy() LLMProxy {
 
 // ChatRequest 对话请求
 type ChatRequest struct {
-	Messages []Message `json:"messages"`
-	Model    string    `json:"model,omitempty"`
-	Stream   bool      `json:"stream,omitempty"`
+	Messages     []Message `json:"messages"`
+	Model        string    `json:"model,omitempty"`
+	Stream       bool      `json:"stream,omitempty"`
+	SystemPrompt string    `json:"system_prompt,omitempty"`
 }
 
 // Message 消息
@@ -121,6 +122,9 @@ func (r *llmProxy) Chat(ctx context.Context, req *ChatRequest) (*ChatResponse, e
 		"messages": req.Messages,
 		"stream":   false,
 	}
+	if req.SystemPrompt != "" {
+		payload["system_prompt"] = req.SystemPrompt
+	}
 	if req.Model != "" {
 		payload["model"] = req.Model
 	}
@@ -187,6 +191,9 @@ func (r *llmProxy) ChatStream(ctx context.Context, req *ChatRequest) (<-chan str
 	payload := map[string]interface{}{
 		"messages": req.Messages,
 		"stream":   true,
+	}
+	if req.SystemPrompt != "" {
+		payload["system_prompt"] = req.SystemPrompt
 	}
 	if req.Model != "" {
 		payload["model"] = req.Model

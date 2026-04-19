@@ -201,7 +201,7 @@ documents = await retriever.search(
     query="What is RAG?",
     collection="default",
     top_k=5,
-    min_score=0.7,
+    min_score=0.5,
 )
 # documents: List[RetrievedDocument] with score metadata
 ```
@@ -248,7 +248,7 @@ results = await store.search(
     query_embedding=[...],
     top_k=5,
     collection="default",
-    min_score=0.7,
+    min_score=0.5,
 )
 # results: List[(StoredDocument, score)]
 ```
