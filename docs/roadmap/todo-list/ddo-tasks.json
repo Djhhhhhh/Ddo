@@ -280,7 +280,7 @@
           "id": "p3-2",
           "title": "Web: Dashboard 页面",
           "module": "web",
-          "status": "pending",
+          "status": "done",
           "priority": "high",
           "notes": "主界面布局"
         },
@@ -288,7 +288,7 @@
           "id": "p3-3",
           "title": "Web: API 对接",
           "module": "web",
-          "status": "pending",
+          "status": "done",
           "priority": "high",
           "notes": "Axios 配置"
         },

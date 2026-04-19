@@ -25,13 +25,27 @@ web-ui/
     ├── App.vue                     # 根组件
     ├── vue-shim.d.ts               # Vue 文件类型声明
     ├── api/
-    │   └── client.ts               # Axios 封装（baseURL: 127.0.0.1:8080）
+    │   ├── client.ts               # Axios 封装（baseURL: 127.0.0.1:8080）
+    │   ├── index.ts               # ← 新增：API 模块统一导出
+    │   ├── types.ts               # ← 新增：API 类型定义
+    │   ├── health.ts              # ← 新增：健康检查 API
+    │   ├── metrics.ts             # ← 新增：综合指标 API
+    │   ├── timer.ts               # ← 新增：定时任务 API
+    │   ├── mcp.ts                 # ← 新增：MCP 配置 API
+    │   └── knowledge.ts           # ← 新增：知识库 API
     ├── components/
-    │   └── Layout/
-    │       └── Layout.vue          # 布局容器（顶部导航栏 + RouterView）
-    │       ├── Button.vue          # 按钮组件（Gray/White/Black Pill）
-    │       ├── Card.vue             # 卡片组件（12px 圆角）
-    │       └── Input.vue           # 输入框组件（Pill 形状）
+    │   ├── ui/                    # UI 基础组件
+    │   │   ├── Button.vue         # 按钮组件（Gray/White/Black Pill）
+    │   │   ├── Card.vue           # 卡片组件（12px 圆角）
+    │   │   └── Input.vue          # 输入框组件（Pill 形状）
+    │   ├── ServiceCard.vue        # ← 新增：服务状态卡片
+    │   ├── StatCard.vue           # ← 新增：统计卡片
+    │   └── Charts/               # ← 新增：图表组件
+    │       ├── BarChart.vue       # 柱状图
+    │       └── LineChart.vue       # 折线图
+    ├── stores/
+    │   ├── theme.ts               # 主题状态管理（Pinia）
+    │   └── dashboard.ts           # ← 新增：Dashboard 数据状态
     ├── views/
     │   ├── Help/
     │   │   └── HelpView.vue        # Help 首页（项目介绍）
@@ -94,4 +108,4 @@ web-ui/
 
 ## 🕒 最后更新时间
 
-2026-04-19 12:00:00
+2026-04-19 22:35:00
