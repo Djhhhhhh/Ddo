@@ -6,7 +6,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.SUPPORTED_SERVICES = exports.SERVICE_DISPLAY_NAMES = exports.readMultipleLogs = exports.getMySQLLogs = exports.followLogFile = exports.highlightLogLevel = exports.readLastLines = exports.matchLogLevel = exports.parseLogLine = exports.parseSinceTime = exports.getLogFilePath = exports.isValidService = exports.MYSQL_CONTAINER_NAME = exports.verifyDataMount = exports.waitForHealthy = exports.stopMySQL = exports.startMySQL = exports.getContainerStatus = exports.checkDockerCompose = exports.checkDocker = exports.isSafePath = exports.prettyPath = exports.normalizePath = exports.getDefaultDataDir = exports.getPaths = exports.resolveDataDir = exports.defaultLogger = exports.logger = void 0;
+exports.buildWebUiUrl = exports.openWebPage = exports.resolveWebUiBaseUrl = exports.SUPPORTED_SERVICES = exports.SERVICE_DISPLAY_NAMES = exports.readMultipleLogs = exports.getMySQLLogs = exports.followLogFile = exports.highlightLogLevel = exports.readLastLines = exports.matchLogLevel = exports.parseLogLine = exports.parseSinceTime = exports.getLogFilePath = exports.isValidService = exports.MYSQL_CONTAINER_NAME = exports.verifyDataMount = exports.waitForHealthy = exports.stopMySQL = exports.startMySQL = exports.getContainerStatus = exports.checkDockerCompose = exports.checkDocker = exports.isSafePath = exports.prettyPath = exports.normalizePath = exports.getDefaultDataDir = exports.getPaths = exports.resolveDataDir = exports.defaultLogger = exports.logger = void 0;
 var logger_1 = require("./logger");
 Object.defineProperty(exports, "logger", { enumerable: true, get: function () { return logger_1.logger; } });
 Object.defineProperty(exports, "defaultLogger", { enumerable: true, get: function () { return __importDefault(logger_1).default; } });
@@ -39,4 +39,8 @@ Object.defineProperty(exports, "getMySQLLogs", { enumerable: true, get: function
 Object.defineProperty(exports, "readMultipleLogs", { enumerable: true, get: function () { return log_reader_1.readMultipleLogs; } });
 Object.defineProperty(exports, "SERVICE_DISPLAY_NAMES", { enumerable: true, get: function () { return log_reader_1.SERVICE_DISPLAY_NAMES; } });
 Object.defineProperty(exports, "SUPPORTED_SERVICES", { enumerable: true, get: function () { return log_reader_1.SUPPORTED_SERVICES; } });
+var open_url_1 = require("./open-url");
+Object.defineProperty(exports, "resolveWebUiBaseUrl", { enumerable: true, get: function () { return open_url_1.resolveWebUiBaseUrl; } });
+Object.defineProperty(exports, "openWebPage", { enumerable: true, get: function () { return open_url_1.openWebPage; } });
+Object.defineProperty(exports, "buildWebUiUrl", { enumerable: true, get: function () { return open_url_1.buildWebUiUrl; } });
 //# sourceMappingURL=index.js.map

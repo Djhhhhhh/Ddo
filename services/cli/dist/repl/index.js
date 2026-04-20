@@ -57,6 +57,7 @@ const chat_1 = require("./commands/chat");
 const clear_1 = require("./commands/clear");
 const status_1 = require("./commands/status");
 const mode_switch_1 = require("./commands/mode-switch");
+const web_shortcuts_1 = require("./commands/web-shortcuts");
 // KB 子命令
 const kb_commands_1 = require("./commands/kb-commands");
 // Timer 子命令
@@ -73,6 +74,11 @@ commands_1.registry.register(status_1.statusCommand);
 commands_1.registry.register(mode_switch_1.kbCommand);
 commands_1.registry.register(mode_switch_1.timerCommand);
 commands_1.registry.register(mode_switch_1.mcpCommand);
+commands_1.registry.register(web_shortcuts_1.webCommand);
+commands_1.registry.register(web_shortcuts_1.statusWebCommand);
+commands_1.registry.register(web_shortcuts_1.timerWebCommand);
+commands_1.registry.register(web_shortcuts_1.mcpWebCommand);
+commands_1.registry.register(web_shortcuts_1.kbWebCommand);
 // 注册 KB 子命令
 commands_1.registry.register(kb_commands_1.kbListCommand);
 commands_1.registry.register(kb_commands_1.kbAddCommand);
@@ -82,6 +88,8 @@ commands_1.registry.register(kb_commands_1.kbHelpCommand);
 // 注册 Timer 子命令
 commands_1.registry.register(timer_commands_1.timerListCommand);
 commands_1.registry.register(timer_commands_1.timerAddCommand);
+commands_1.registry.register(timer_commands_1.timerAddIntervalCommand);
+commands_1.registry.register(timer_commands_1.timerAddDelayCommand);
 commands_1.registry.register(timer_commands_1.timerPauseCommand);
 commands_1.registry.register(timer_commands_1.timerResumeCommand);
 commands_1.registry.register(timer_commands_1.timerRemoveCommand);

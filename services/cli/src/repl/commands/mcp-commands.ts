@@ -81,9 +81,9 @@ export const mcpAddCommand: ReplCommand = {
       },
       {
         name: 'config',
-        label: '配置',
+        label: '连接配置',
         required: true,
-        help: '命令(stdio)或 URL(http/sse)',
+        help: 'stdio 填启动命令，http/sse 填服务 URL',
       },
     ];
 
@@ -106,7 +106,7 @@ export const mcpAddCommand: ReplCommand = {
       const confirmed = await prompt.confirmSummary('MCP 配置信息', {
         名称: collected.name,
         类型: collected.type,
-        配置: collected.config,
+        连接配置: collected.config,
       });
 
       if (!confirmed) {

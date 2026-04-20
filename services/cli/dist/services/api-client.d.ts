@@ -168,11 +168,16 @@ export declare function createApiClient(config: ApiClientConfig): {
     getTimer: (uuid: string) => Promise<Timer>;
     createTimer: (data: {
         name: string;
-        cron: string;
-        url: string;
-        method?: string;
-        headers?: Record<string, string>;
-        body?: string;
+        description?: string;
+        trigger_type?: "cron" | "periodic" | "delayed";
+        cron_expr?: string;
+        interval_seconds?: number;
+        delay_seconds?: number;
+        timezone?: string;
+        callback_url: string;
+        callback_method?: string;
+        callback_headers?: Record<string, string>;
+        callback_body?: string;
     }) => Promise<Timer>;
     pauseTimer: (uuid: string) => Promise<{
         success: boolean;

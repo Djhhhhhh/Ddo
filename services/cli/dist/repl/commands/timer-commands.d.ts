@@ -8,6 +8,8 @@ export declare const timerListCommand: ReplCommand;
  * 支持渐进式参数收集：参数充足时直接执行，否则引导用户输入
  */
 export declare const timerAddCommand: ReplCommand;
+export declare const timerAddIntervalCommand: ReplCommand;
+export declare const timerAddDelayCommand: ReplCommand;
 /**
  * Timer Pause 命令 - 暂停定时任务
  */

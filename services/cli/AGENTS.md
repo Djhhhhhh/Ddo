@@ -44,7 +44,8 @@ services/cli/
 │   │       ├── exit.ts       # /exit、/back 命令
 │   │       ├── help.ts       # /help 命令 - 帮助系统
 │   │       ├── clear.ts      # /clear 命令
-│   │       └── mode-switch.ts # /kb、/timer、/mcp 模式切换命令
+│   │       ├── mode-switch.ts # /kb、/timer、/mcp 模式切换命令
+│   │       └── web-shortcuts.ts # /web、/status-web、/timer-web、/mcp-web、/kb-web 快捷入口（2026-04-20）
 │   ├── templates/
 │   │   ├── config.yaml.ts    # 配置文件模板
 │   │   └── docker-compose.yml.ts  # Docker Compose 模板
@@ -53,7 +54,8 @@ services/cli/
 │   │   ├── logger.ts         # 终端日志输出工具
 │   │   ├── paths.ts          # 路径解析工具
 │   │   ├── docker.ts         # Docker 操作封装
-│   │   └── log-reader.ts     # 日志读取、过滤、跟踪工具（2026-04-14）
+│   │   ├── log-reader.ts     # 日志读取、过滤、跟踪工具（2026-04-14）
+│   │   └── open-url.ts       # Web UI 地址解析与浏览器打开工具（2026-04-20）
 │   └── types/
 │       └── index.ts          # TypeScript 类型定义
 ├── dist/                     # 编译输出（自动构建）
@@ -63,8 +65,11 @@ services/cli/
 │   └── feature/              # 技术方案目录
 │       ├── 2026-04-14-ddo-init/
 │       │   └── 技术方案.md
-│       └── 2026-04-16-nlp-integration/  # NLP 集成（2026-04-16）
-│           └── 技术方案.md
+│       ├── 2026-04-16-nlp-integration/  # NLP 集成（2026-04-16）
+│       │   └── 技术方案.md
+│       └── 2026-04-20-cli-web-shortcuts/
+│           ├── 技术方案.md
+│           └── review-list.md
 ├── .claude/
 │   └── rules/
 │       └── rules.md          # 服务规则文件
@@ -111,6 +116,8 @@ services/cli/
 
 ## 🕒 最后更新时间
 
+2026-04-20：新增 Web 快捷命令（/web、/status-web、/timer-web、/mcp-web、/kb-web）和浏览器打开工具
+2026-04-20：新增间隔重复任务命令（/timer-add-interval）与一次性延迟任务入口（/timer-add-delay）
 2026-04-17：REPL 交互模式增强（Shift+Tab 切换知识库优先、输入去重、AI 对话换行）
 2026-04-17：知识库增强功能（kb-add 命令自动添加 source: "cli"）
 2026-04-16：新增 NLP 参数标准化（intent-router.ts 标准化函数、validators.ts 验证工具）

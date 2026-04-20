@@ -73,7 +73,7 @@ export const helpCommand: ReplCommand = {
         groups['系统'].push(cmd);
       } else if (['back', 'kb', 'timer', 'mcp', 'chat'].includes(cmd.name)) {
         groups['模式'].push(cmd);
-      } else if (['status', 'web'].includes(cmd.name)) {
+      } else if (['status', 'web', 'status-web', 'timer-web', 'mcp-web', 'kb-web'].includes(cmd.name)) {
         groups['交互'].push(cmd);
       } else {
         groups['其他'].push(cmd);

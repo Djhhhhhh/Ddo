@@ -44,7 +44,7 @@ async function createMainWindow(): Promise<BrowserWindow> {
       nodeIntegration: false
     },
     show: false, // 启动时隐藏，通过托盘或快捷键控制显示
-    title: 'Ddo Ding',
+    title: 'Ddo',
     icon: APP_ICON_PATH,
     autoHideMenuBar: true // 自动隐藏菜单栏
   })

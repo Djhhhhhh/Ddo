@@ -37,6 +37,10 @@ const TOOL_ALIASES = {
     // 定时任务
     'timer.create': 'timer-add',
     'timer.add': 'timer-add',
+    'timer.create.interval': 'timer-add-interval',
+    'timer.add.interval': 'timer-add-interval',
+    'timer.create.delay': 'timer-add-delay',
+    'timer.add.delay': 'timer-add-delay',
     'timer.list': 'timer-list',
     // MCP
     'mcp.setup': 'mcp-add',
@@ -61,6 +65,8 @@ function registerAllTools() {
     (0, index_1.registerTool)((0, index_1.commandToToolHandler)(kb_commands_1.kbRemoveCommand, '删除知识库'));
     // === 定时任务工具 ===
     (0, index_1.registerTool)((0, index_1.commandToToolHandler)(timer_commands_1.timerAddCommand, '创建定时任务'));
+    (0, index_1.registerTool)((0, index_1.commandToToolHandler)(timer_commands_1.timerAddIntervalCommand, '创建间隔重复任务'));
+    (0, index_1.registerTool)((0, index_1.commandToToolHandler)(timer_commands_1.timerAddDelayCommand, '创建一次性延迟任务'));
     (0, index_1.registerTool)((0, index_1.commandToToolHandler)(timer_commands_1.timerListCommand, '列出定时任务'));
     // === MCP 工具 ===
     (0, index_1.registerTool)((0, index_1.commandToToolHandler)(mcp_commands_1.mcpAddCommand, '添加 MCP 配置'));

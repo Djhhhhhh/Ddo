@@ -2,7 +2,7 @@
 
 > 由 AI 在开发过程中自动维护的规则文件。
 > 发现时间：2026-04-14
-> 更新时间：2026-04-16
+> 更新时间：2026-04-20
 
 ## 架构规则
 
@@ -28,6 +28,11 @@
   - 命令定义实现 `ReplCommand` 接口，包含 name、description、aliases、handler
   - 支持子命令模式（/kb、/timer、/mcp），模式内直接输入子命令
   - 解析器支持 `-a`、`-abc` 组合选项、`--long`、`--key=value` 格式
+- Web 快捷命令架构（发现日期：2026-04-20）：
+  - `/web`、`/status-web`、`/timer-web`、`/mcp-web`、`/kb-web` 统一放在 `src/repl/commands/web-shortcuts.ts`
+  - Web 页面地址优先读取本地 `config.yaml` 中的 `endpoints.webUi`，缺失时回退到 `http://localhost:3000`
+  - 跨平台打开浏览器逻辑统一封装在 `src/utils/open-url.ts`，不要在命令文件内重复实现
+  - Vue Hash Router 场景下，页面地址应拼成 `/#/path` 形式，不能直接拼接为 `/path`
 
 ### NLP 集成架构（新增 2026-04-16）
 
@@ -76,6 +81,8 @@
 - Docker 操作统一封装在 `docker.ts`，错误处理要友好
 - 服务管理统一使用 `services/manager.ts`，包含 PID 文件管理、健康检查、进程启停
 - REPL 命令通过 `registry.register()` 注册，支持 name + aliases 多名称映射
+- 面向用户的 Timer/MCP 交互文案应优先使用页面表单语义，例如“目标 URL”“请求方法”“连接配置”（发现日期：2026-04-20）
+- 间隔重复任务可在 CLI 内转换为 cron 表达式后创建；一次性延迟任务若后端未提供专用字段，则必须明确提示能力边界，不能伪装成已创建成功（发现日期：2026-04-20）
 
 ## 常见陷阱
 
@@ -89,6 +96,7 @@
 - Windows 进程使用 `tasklist`/`taskkill` 管理，Unix 使用 `kill` 信号
 - NLP 调用使用动态 import 避免循环依赖
 - NLP 服务不可用时必须降级到 chat 模式，不能直接报错退出
+- Web 快捷命令的页面路由属于 CLI 侧约定，若 Dashboard 路由未确认，至少保证输出可手工访问的完整 URL（发现日期：2026-04-20）
 
 ## 示例参考
 

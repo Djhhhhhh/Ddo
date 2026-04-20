@@ -10,7 +10,7 @@
 import chalk from 'chalk';
 import { registerTool, getTool, commandToToolHandler } from './index';
 import { kbAddCommand, kbSearchCommand, kbListCommand, kbRemoveCommand } from '../commands/kb-commands';
-import { timerAddCommand, timerListCommand } from '../commands/timer-commands';
+import { timerAddCommand, timerAddIntervalCommand, timerAddDelayCommand, timerListCommand } from '../commands/timer-commands';
 import { mcpAddCommand, mcpListCommand } from '../commands/mcp-commands';
 import { CommandType } from '../commands';
 import type { CommandContext } from '../commands';
@@ -33,6 +33,10 @@ const TOOL_ALIASES: Record<string, string> = {
   // 定时任务
   'timer.create': 'timer-add',
   'timer.add': 'timer-add',
+  'timer.create.interval': 'timer-add-interval',
+  'timer.add.interval': 'timer-add-interval',
+  'timer.create.delay': 'timer-add-delay',
+  'timer.add.delay': 'timer-add-delay',
   'timer.list': 'timer-list',
 
   // MCP
@@ -62,6 +66,8 @@ export function registerAllTools(): void {
 
   // === 定时任务工具 ===
   registerTool(commandToToolHandler(timerAddCommand, '创建定时任务'));
+  registerTool(commandToToolHandler(timerAddIntervalCommand, '创建间隔重复任务'));
+  registerTool(commandToToolHandler(timerAddDelayCommand, '创建一次性延迟任务'));
   registerTool(commandToToolHandler(timerListCommand, '列出定时任务'));
 
   // === MCP 工具 ===

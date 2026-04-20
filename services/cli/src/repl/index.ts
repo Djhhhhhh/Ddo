@@ -18,11 +18,12 @@ import { chatCommand } from './commands/chat';
 import { clearCommand } from './commands/clear';
 import { statusCommand } from './commands/status';
 import { kbCommand, timerCommand, mcpCommand } from './commands/mode-switch';
+import { webCommand, statusWebCommand, timerWebCommand, mcpWebCommand, kbWebCommand } from './commands/web-shortcuts';
 
 // KB 子命令
 import { kbListCommand, kbAddCommand, kbSearchCommand, kbRemoveCommand, kbHelpCommand } from './commands/kb-commands';
 // Timer 子命令
-import { timerListCommand, timerAddCommand, timerPauseCommand, timerResumeCommand, timerRemoveCommand, timerHelpCommand } from './commands/timer-commands';
+import { timerListCommand, timerAddCommand, timerAddIntervalCommand, timerAddDelayCommand, timerPauseCommand, timerResumeCommand, timerRemoveCommand, timerHelpCommand } from './commands/timer-commands';
 // MCP 子命令
 import { mcpListCommand, mcpAddCommand, mcpTestCommand, mcpRemoveCommand, mcpHelpCommand } from './commands/mcp-commands';
 
@@ -36,6 +37,11 @@ registry.register(statusCommand);
 registry.register(kbCommand);
 registry.register(timerCommand);
 registry.register(mcpCommand);
+registry.register(webCommand);
+registry.register(statusWebCommand);
+registry.register(timerWebCommand);
+registry.register(mcpWebCommand);
+registry.register(kbWebCommand);
 
 // 注册 KB 子命令
 registry.register(kbListCommand);
@@ -47,6 +53,8 @@ registry.register(kbHelpCommand);
 // 注册 Timer 子命令
 registry.register(timerListCommand);
 registry.register(timerAddCommand);
+registry.register(timerAddIntervalCommand);
+registry.register(timerAddDelayCommand);
 registry.register(timerPauseCommand);
 registry.register(timerResumeCommand);
 registry.register(timerRemoveCommand);

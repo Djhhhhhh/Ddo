@@ -35,3 +35,8 @@ export {
   SERVICE_DISPLAY_NAMES,
   SUPPORTED_SERVICES,
 } from './log-reader';
+export {
+  resolveWebUiBaseUrl,
+  openWebPage,
+  buildWebUiUrl,
+} from './open-url';

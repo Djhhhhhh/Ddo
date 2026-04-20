@@ -303,23 +303,20 @@ export function createApiClient(config: ApiClientConfig) {
 
   async function createTimer(data: {
     name: string;
-    cron: string;
-    url: string;
-    method?: string;
-    headers?: Record<string, string>;
-    body?: string;
+    description?: string;
+    trigger_type?: 'cron' | 'periodic' | 'delayed';
+    cron_expr?: string;
+    interval_seconds?: number;
+    delay_seconds?: number;
+    timezone?: string;
+    callback_url: string;
+    callback_method?: string;
+    callback_headers?: Record<string, string>;
+    callback_body?: string;
   }): Promise<Timer> {
-    // 后端使用 cron_expr 和 callback_url，需要字段映射
     return request<Timer>('/api/v1/timers', {
       method: 'POST',
-      body: JSON.stringify({
-        name: data.name,
-        cron_expr: data.cron,
-        callback_url: data.url,
-        callback_method: data.method || 'GET',
-        callback_headers: data.headers,
-        callback_body: data.body,
-      }),
+      body: JSON.stringify(data),
     });
   }
 

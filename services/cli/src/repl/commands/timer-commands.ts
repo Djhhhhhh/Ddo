@@ -3,6 +3,76 @@ import { ReplCommand, CommandContext, CommandResult, CommandType } from './index
 import { getApiClient } from '../../services/api-client';
 import { InteractivePrompt, ParameterDef, validateCron, validateUrl } from './prompt-helper';
 
+type TimerRequestMethod = 'GET' | 'POST' | 'PUT' | 'DELETE';
+
+/**
+ * 通用创建定时任务结果处理
+ */
+function handleCreateResult(result: { uuid: string; name: string; status?: string; next_run_at?: string }, typeLabel: string): void {
+  console.log(chalk.green(`\n✓ ${typeLabel}创建成功!`));
+  console.log(chalk.gray(`  UUID: ${result.uuid}`));
+  console.log(chalk.gray(`  名称: ${result.name}`));
+  if (result.status) {
+    console.log(chalk.gray(`  状态: ${result.status}`));
+  }
+  if (result.next_run_at) {
+    console.log(chalk.gray(`  下次执行: ${result.next_run_at}`));
+  }
+  console.log();
+}
+
+/**
+ * 验证间隔数值（大于0的整数）
+ */
+function validateIntervalValue(value: string): string | null {
+  const amount = Number(value);
+  if (!Number.isInteger(amount) || amount <= 0) {
+    return '请输入大于 0 的整数';
+  }
+  return null;
+}
+
+/**
+ * 验证时间单位
+ */
+function validateTimeUnit(value: string): string | null {
+  const unit = value.trim().toLowerCase();
+  if (!['second', 'seconds', 'minute', 'minutes', 'hour', 'hours', 'day', 'days'].includes(unit)) {
+    return '请输入 seconds、minutes、hours 或 days';
+  }
+  return null;
+}
+
+/**
+ * 将单位字符串转换为秒数
+ */
+function unitToSeconds(value: number, unit: string): number {
+  const normalizedUnit = unit.trim().toLowerCase();
+  if (['second', 'seconds'].includes(normalizedUnit)) {
+    return value;
+  }
+  if (['minute', 'minutes'].includes(normalizedUnit)) {
+    return value * 60;
+  }
+  if (['hour', 'hours'].includes(normalizedUnit)) {
+    return value * 3600;
+  }
+  if (['day', 'days'].includes(normalizedUnit)) {
+    return value * 86400;
+  }
+  return value;
+}
+
+/**
+ * 格式化秒数为可读字符串
+ */
+function formatDuration(seconds: number): string {
+  if (seconds < 60) return `${seconds}秒`;
+  if (seconds < 3600) return `${Math.floor(seconds / 60)}分钟`;
+  if (seconds < 86400) return `${Math.floor(seconds / 3600)}小时`;
+  return `${Math.floor(seconds / 86400)}天`;
+}
+
 /**
  * Timer List 命令 - 列出定时任务
  */
@@ -27,12 +97,18 @@ export const timerListCommand: ReplCommand = {
         console.log(chalk.gray('  暂无定时任务'));
       } else {
         for (const task of items) {
-          // server-go 使用 status 字段，CLI 用 enabled 表示
           const isRunning = task.status === 'active' || task.status === 'running';
           const status = isRunning ? chalk.green('●') : chalk.gray('○');
           const statusText = isRunning ? chalk.green('运行中') : chalk.gray('已暂停');
-          console.log(`  ${status} ${chalk.cyan(task.uuid.slice(0, 8))}  ${task.name}`);
-          console.log(chalk.gray(`    Cron: ${task.cron_expr || task.cron}  状态: ${statusText}`));
+          const triggerType = task.trigger_type || 'cron';
+          console.log(`  ${status} ${chalk.cyan(task.uuid.slice(0, 8))}  ${task.name} ${chalk.gray(`(${triggerType})`)}`);
+          if (triggerType === 'cron') {
+            console.log(chalk.gray(`    Cron: ${task.cron_expr || task.cron}  状态: ${statusText}`));
+          } else if (triggerType === 'periodic') {
+            console.log(chalk.gray(`    间隔: ${formatDuration(task.interval_seconds || 3600)}  状态: ${statusText}`));
+          } else if (triggerType === 'delayed') {
+            console.log(chalk.gray(`    延迟: ${formatDuration(task.delay_seconds || 60)}  状态: ${statusText}`));
+          }
           if (task.next_run_at || task.next_run) {
             console.log(chalk.gray(`    下次执行: ${task.next_run_at || task.next_run}`));
           }
@@ -81,14 +157,14 @@ export const timerAddCommand: ReplCommand = {
       },
       {
         name: 'url',
-        label: '回调 URL',
+        label: '目标 URL',
         required: true,
         validate: validateUrl,
-        help: '定时任务触发时访问的 URL',
+        help: '定时任务触发时访问的目标地址',
       },
       {
         name: 'method',
-        label: 'HTTP 方法',
+        label: '请求方法',
         required: false,
         defaultHint: 'GET',
         help: 'GET/POST/PUT/DELETE',
@@ -117,14 +193,13 @@ export const timerAddCommand: ReplCommand = {
 
     const { params: collected, allCollected } = await prompt.collectRequiredParams(paramDefs, initialValues);
 
-    // 如果所有必填参数都已收集，执行创建
     if (allCollected) {
-      const name = collected.name || `Timer ${new Date().toISOString()}`;
+      const displayName = collected.name || `Timer ${new Date().toISOString()}`;
       const confirmed = await prompt.confirmSummary('定时任务信息', {
-        名称: name,
-        Cron: collected.cron!,
-        回调URL: collected.url!,
-        方法: collected.method || 'GET',
+        名称: displayName,
+        调度表达式: collected.cron!,
+        目标URL: collected.url!,
+        请求方法: collected.method || 'GET',
       });
 
       if (!confirmed) {
@@ -133,21 +208,223 @@ export const timerAddCommand: ReplCommand = {
       }
 
       const apiClient = getApiClient();
-
       try {
         const result = await apiClient.createTimer({
-          name,
-          cron: collected.cron!,
-          url: collected.url!,
-          method: (collected.method as 'GET' | 'POST' | 'PUT' | 'DELETE') || 'GET',
+          name: displayName,
+          trigger_type: 'cron',
+          cron_expr: collected.cron!,
+          callback_url: collected.url!,
+          callback_method: (collected.method as TimerRequestMethod) || 'GET',
         });
-
-        console.log(chalk.green('\n✓ 定时任务创建成功!'));
-        console.log(chalk.gray(`  UUID: ${result.uuid}`));
-        console.log(chalk.gray(`  Cron: ${result.cron}`));
-        console.log();
+        handleCreateResult(result, '定时任务');
       } catch (err) {
         console.log(chalk.red('\n✗ 创建定时任务失败:'), err instanceof Error ? err.message : String(err));
+      }
+    }
+
+    return { shouldContinue: true, outputType: CommandType.Command };
+  },
+};
+
+export const timerAddIntervalCommand: ReplCommand = {
+  name: 'timer-add-interval',
+  aliases: ['tai', 'timer:create-interval'],
+  description: '按固定间隔创建重复任务',
+  usage: '/timer-add-interval [every] [unit] [url] [method]',
+  handler: async (ctx): Promise<CommandResult> => {
+    const { args, nlpParameters, rl } = ctx;
+    const prompt = new InteractivePrompt(rl);
+
+    const paramDefs: ParameterDef[] = [
+      {
+        name: 'name',
+        label: '任务名称',
+        required: false,
+        help: '给任务起个名字',
+      },
+      {
+        name: 'every',
+        label: '间隔数值',
+        required: true,
+        defaultHint: '5',
+        validate: validateIntervalValue,
+        help: '输入大于 0 的整数',
+      },
+      {
+        name: 'unit',
+        label: '间隔单位',
+        required: true,
+        defaultHint: 'minutes',
+        validate: validateTimeUnit,
+        help: 'seconds | minutes | hours | days',
+      },
+      {
+        name: 'url',
+        label: '目标 URL',
+        required: true,
+        validate: validateUrl,
+        help: '定时任务触发时访问的目标地址',
+      },
+      {
+        name: 'method',
+        label: '请求方法',
+        required: false,
+        defaultHint: 'GET',
+        help: 'GET/POST/PUT/DELETE',
+      },
+    ];
+
+    const initialValues: Record<string, string> = {};
+    if (args.length >= 1) initialValues.every = args[0];
+    if (args.length >= 2) initialValues.unit = args[1];
+    if (args.length >= 3) initialValues.url = args[2];
+    if (args.length >= 4) initialValues.method = args[3];
+
+    if (nlpParameters) {
+      if (!initialValues.every && nlpParameters.every) initialValues.every = String(nlpParameters.every);
+      if (!initialValues.every && nlpParameters.interval) initialValues.every = String(nlpParameters.interval);
+      if (!initialValues.unit && nlpParameters.unit) initialValues.unit = String(nlpParameters.unit);
+      if (!initialValues.url && nlpParameters.url) initialValues.url = String(nlpParameters.url);
+      if (!initialValues.url && nlpParameters.callback_url) initialValues.url = String(nlpParameters.callback_url);
+      if (!initialValues.method && nlpParameters.method) initialValues.method = String(nlpParameters.method);
+      if (!initialValues.name && nlpParameters.name) initialValues.name = String(nlpParameters.name);
+    }
+
+    console.log(chalk.cyan('\n📋 创建间隔重复任务'));
+    console.log(chalk.gray('─'.repeat(40)));
+
+    const { params: collected, allCollected } = await prompt.collectRequiredParams(paramDefs, initialValues);
+
+    if (allCollected) {
+      const displayName = collected.name || `Periodic ${new Date().toISOString()}`;
+      const intervalSeconds = unitToSeconds(Number(collected.every!), collected.unit!);
+      const confirmed = await prompt.confirmSummary('间隔重复任务信息', {
+        名称: displayName,
+        间隔: `每 ${formatDuration(intervalSeconds)}`,
+        目标URL: collected.url!,
+        请求方法: collected.method || 'GET',
+      });
+
+      if (!confirmed) {
+        console.log(chalk.yellow('\n已取消创建'));
+        return { shouldContinue: true, outputType: CommandType.Command };
+      }
+
+      const apiClient = getApiClient();
+      try {
+        const result = await apiClient.createTimer({
+          name: displayName,
+          trigger_type: 'periodic',
+          interval_seconds: intervalSeconds,
+          callback_url: collected.url!,
+          callback_method: (collected.method as TimerRequestMethod) || 'GET',
+        });
+        handleCreateResult(result, '间隔重复任务');
+      } catch (err) {
+        console.log(chalk.red('\n✗ 创建间隔重复任务失败:'), err instanceof Error ? err.message : String(err));
+      }
+    }
+
+    return { shouldContinue: true, outputType: CommandType.Command };
+  },
+};
+
+export const timerAddDelayCommand: ReplCommand = {
+  name: 'timer-add-delay',
+  aliases: ['tad', 'timer:create-delay'],
+  description: '创建一次性延迟任务',
+  usage: '/timer-add-delay [delay] [unit] [url] [method]',
+  handler: async (ctx): Promise<CommandResult> => {
+    const { args, nlpParameters, rl } = ctx;
+    const prompt = new InteractivePrompt(rl);
+
+    const paramDefs: ParameterDef[] = [
+      {
+        name: 'name',
+        label: '任务名称',
+        required: false,
+        help: '给任务起个名字',
+      },
+      {
+        name: 'delay',
+        label: '延迟数值',
+        required: true,
+        defaultHint: '10',
+        validate: validateIntervalValue,
+        help: '输入大于 0 的整数',
+      },
+      {
+        name: 'unit',
+        label: '延迟单位',
+        required: true,
+        defaultHint: 'minutes',
+        validate: validateTimeUnit,
+        help: 'seconds | minutes | hours | days',
+      },
+      {
+        name: 'url',
+        label: '目标 URL',
+        required: true,
+        validate: validateUrl,
+        help: '任务触发时访问的目标地址',
+      },
+      {
+        name: 'method',
+        label: '请求方法',
+        required: false,
+        defaultHint: 'GET',
+        help: 'GET/POST/PUT/DELETE',
+      },
+    ];
+
+    const initialValues: Record<string, string> = {};
+    if (args.length >= 1) initialValues.delay = args[0];
+    if (args.length >= 2) initialValues.unit = args[1];
+    if (args.length >= 3) initialValues.url = args[2];
+    if (args.length >= 4) initialValues.method = args[3];
+
+    if (nlpParameters) {
+      if (!initialValues.delay && nlpParameters.delay) initialValues.delay = String(nlpParameters.delay);
+      if (!initialValues.delay && nlpParameters.interval) initialValues.delay = String(nlpParameters.interval);
+      if (!initialValues.unit && nlpParameters.unit) initialValues.unit = String(nlpParameters.unit);
+      if (!initialValues.url && nlpParameters.url) initialValues.url = String(nlpParameters.url);
+      if (!initialValues.url && nlpParameters.callback_url) initialValues.url = String(nlpParameters.callback_url);
+      if (!initialValues.method && nlpParameters.method) initialValues.method = String(nlpParameters.method);
+      if (!initialValues.name && nlpParameters.name) initialValues.name = String(nlpParameters.name);
+    }
+
+    console.log(chalk.cyan('\n📋 创建一次性延迟任务'));
+    console.log(chalk.gray('─'.repeat(40)));
+
+    const { params: collected, allCollected } = await prompt.collectRequiredParams(paramDefs, initialValues);
+
+    if (allCollected) {
+      const displayName = collected.name || `Delayed ${new Date().toISOString()}`;
+      const delaySeconds = unitToSeconds(Number(collected.delay!), collected.unit!);
+      const confirmed = await prompt.confirmSummary('一次性延迟任务信息', {
+        名称: displayName,
+        延迟: `${formatDuration(delaySeconds)}后执行`,
+        目标URL: collected.url!,
+        请求方法: collected.method || 'GET',
+      });
+
+      if (!confirmed) {
+        console.log(chalk.yellow('\n已取消创建'));
+        return { shouldContinue: true, outputType: CommandType.Command };
+      }
+
+      const apiClient = getApiClient();
+      try {
+        const result = await apiClient.createTimer({
+          name: displayName,
+          trigger_type: 'delayed',
+          delay_seconds: delaySeconds,
+          callback_url: collected.url!,
+          callback_method: (collected.method as TimerRequestMethod) || 'GET',
+        });
+        handleCreateResult(result, '一次性延迟任务');
+      } catch (err) {
+        console.log(chalk.red('\n✗ 创建一次性延迟任务失败:'), err instanceof Error ? err.message : String(err));
       }
     }
 
@@ -255,6 +532,8 @@ export const timerHelpCommand: ReplCommand = {
     console.log(chalk.gray('─'.repeat(40)));
     console.log(`  ${chalk.yellow('timer-list')}      - 列出所有定时任务`);
     console.log(`  ${chalk.yellow('timer-add')}       - 创建定时任务（支持自然语言）`);
+    console.log(`  ${chalk.yellow('timer-add-interval')} - 创建间隔重复任务`);
+    console.log(`  ${chalk.yellow('timer-add-delay')} - 创建一次性延迟任务`);
     console.log(`  ${chalk.yellow('timer-pause')}     - 暂停定时任务`);
     console.log(`  ${chalk.yellow('timer-resume')}     - 恢复定时任务`);
     console.log(`  ${chalk.yellow('timer-remove')}     - 删除定时任务`);
@@ -262,6 +541,8 @@ export const timerHelpCommand: ReplCommand = {
     console.log();
     console.log(chalk.gray('示例:'));
     console.log(`  ${chalk.gray('/timer-add "0 9 * * *" "http://localhost:8080/callback" POST')}`);
+    console.log(`  ${chalk.gray('/timer-add-interval 15 minutes "http://localhost:8080/callback" GET')}`);
+    console.log(`  ${chalk.gray('/timer-add-delay 30 minutes "http://localhost:8080/callback" GET')}`);
     console.log(`  ${chalk.gray('帮我创建一个每小时执行的任务')}`);
     console.log();
     return { shouldContinue: true, outputType: CommandType.Command };
