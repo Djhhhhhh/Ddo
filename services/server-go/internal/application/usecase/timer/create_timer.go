@@ -14,11 +14,21 @@ import (
 	"github.com/ddo/server-go/internal/scheduler"
 )
 
+// TriggerType 触发类型常量
+const (
+	TriggerTypeCron     = "cron"     // Cron 表达式调度
+	TriggerTypePeriodic = "periodic" // 固定间隔重复触发
+	TriggerTypeDelayed  = "delayed"  // 延迟一次性触发
+)
+
 // CreateTimerInput 创建定时任务输入
 type CreateTimerInput struct {
 	Name            string
 	Description     string
+	TriggerType     string
 	CronExpr        string
+	IntervalSeconds int64
+	DelaySeconds    int64
 	Timezone        string
 	CallbackURL     string
 	CallbackMethod  string
@@ -62,17 +72,86 @@ func (uc *createTimerUseCase) Execute(ctx context.Context, input CreateTimerInpu
 	if input.Name == "" {
 		return result.NewFailure[CreateTimerOutput](fmt.Errorf("name is required"))
 	}
-	if input.CronExpr == "" {
-		return result.NewFailure[CreateTimerOutput](fmt.Errorf("cron_expr is required"))
+	if input.TriggerType == "" {
+		return result.NewFailure[CreateTimerOutput](fmt.Errorf("trigger_type is required"))
 	}
 	if input.CallbackURL == "" {
 		return result.NewFailure[CreateTimerOutput](fmt.Errorf("callback_url is required"))
 	}
 
-	// 2. 验证 Cron 表达式
-	schedule, err := cron.ParseStandard(input.CronExpr)
-	if err != nil {
-		return result.NewFailure[CreateTimerOutput](fmt.Errorf("invalid cron expression: %w", err))
+	// 2. 根据 TriggerType 验证特定参数
+	var timer *models.Timer
+	var nextRun *time.Time
+
+	switch input.TriggerType {
+	case TriggerTypeCron:
+		if input.CronExpr == "" {
+			return result.NewFailure[CreateTimerOutput](fmt.Errorf("cron_expr is required for cron trigger"))
+		}
+		schedule, err := cron.ParseStandard(input.CronExpr)
+		if err != nil {
+			return result.NewFailure[CreateTimerOutput](fmt.Errorf("invalid cron expression: %w", err))
+		}
+		loc := time.Local
+		if input.Timezone != "" && input.Timezone != "Local" {
+			if parsedLoc, err := time.LoadLocation(input.Timezone); err == nil {
+				loc = parsedLoc
+			}
+		}
+		nextRunVal := schedule.Next(time.Now().In(loc))
+		nextRun = &nextRunVal
+
+		timer = &models.Timer{
+			Name:            input.Name,
+			Description:     input.Description,
+			TriggerType:     input.TriggerType,
+			CronExpr:        input.CronExpr,
+			Timezone:        input.Timezone,
+			CallbackURL:     input.CallbackURL,
+			CallbackMethod:  input.CallbackMethod,
+			Status:          models.TimerStatusActive,
+		}
+
+	case TriggerTypePeriodic:
+		if input.IntervalSeconds <= 0 {
+			return result.NewFailure[CreateTimerOutput](fmt.Errorf("interval_seconds must be greater than 0"))
+		}
+		// 计算下次执行时间：当前时间 + 间隔
+		nextRunVal := time.Now().Add(time.Duration(input.IntervalSeconds) * time.Second)
+		nextRun = &nextRunVal
+
+		timer = &models.Timer{
+			Name:            input.Name,
+			Description:     input.Description,
+			TriggerType:     input.TriggerType,
+			IntervalSeconds: input.IntervalSeconds,
+			Timezone:        input.Timezone,
+			CallbackURL:     input.CallbackURL,
+			CallbackMethod:  input.CallbackMethod,
+			Status:          models.TimerStatusActive,
+		}
+
+	case TriggerTypeDelayed:
+		if input.DelaySeconds <= 0 {
+			return result.NewFailure[CreateTimerOutput](fmt.Errorf("delay_seconds must be greater than 0"))
+		}
+		// 计算延迟触发时间
+		triggerAt := time.Now().Add(time.Duration(input.DelaySeconds) * time.Second)
+		nextRun = &triggerAt
+
+		timer = &models.Timer{
+			Name:            input.Name,
+			Description:     input.Description,
+			TriggerType:     input.TriggerType,
+			DelaySeconds:    input.DelaySeconds,
+			Timezone:        input.Timezone,
+			CallbackURL:     input.CallbackURL,
+			CallbackMethod:  input.CallbackMethod,
+			Status:          models.TimerStatusActive,
+		}
+
+	default:
+		return result.NewFailure[CreateTimerOutput](fmt.Errorf("invalid trigger_type: %s", input.TriggerType))
 	}
 
 	// 3. 序列化 Headers
@@ -80,20 +159,10 @@ func (uc *createTimerUseCase) Execute(ctx context.Context, input CreateTimerInpu
 	if err != nil {
 		return result.NewFailure[CreateTimerOutput](fmt.Errorf("marshal headers failed: %w", err))
 	}
+	timer.CallbackHeaders = string(headersJSON)
+	timer.CallbackBody = input.CallbackBody
 
 	// 4. 创建定时任务
-	timer := &models.Timer{
-		Name:            input.Name,
-		Description:     input.Description,
-		CronExpr:        input.CronExpr,
-		Timezone:        input.Timezone,
-		CallbackURL:     input.CallbackURL,
-		CallbackMethod:  input.CallbackMethod,
-		CallbackHeaders: string(headersJSON),
-		CallbackBody:    input.CallbackBody,
-		Status:          models.TimerStatusActive,
-	}
-
 	if err := uc.timerRepo.Create(ctx, timer); err != nil {
 		return result.NewFailure[CreateTimerOutput](fmt.Errorf("create timer failed: %w", err))
 	}
@@ -101,25 +170,15 @@ func (uc *createTimerUseCase) Execute(ctx context.Context, input CreateTimerInpu
 	// 5. 添加到调度器
 	if uc.scheduler != nil {
 		if err := uc.scheduler.AddJob(timer); err != nil {
-			// 调度失败不阻止任务创建，只记录错误
 			fmt.Printf("Failed to add timer to scheduler: %v\n", err)
 		}
 	}
 
-	// 6. 计算下次执行时间
-	loc := time.Local
-	if timer.Timezone != "" && timer.Timezone != "Local" {
-		if parsedLoc, err := time.LoadLocation(timer.Timezone); err == nil {
-			loc = parsedLoc
-		}
-	}
-	nextRun := schedule.Next(time.Now().In(loc))
-
-	// 7. 返回结果
+	// 6. 返回结果
 	return result.NewSuccess(CreateTimerOutput{
 		UUID:      timer.UUID,
 		Name:      timer.Name,
 		Status:    timer.Status,
-		NextRunAt: &nextRun,
+		NextRunAt: nextRun,
 	})
 }

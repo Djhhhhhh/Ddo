@@ -1,5 +1,5 @@
 {
-  "exportTime": "2026-04-20T06:40:09.760Z",
+  "exportTime": "2026-04-20T09:53:48.928Z",
   "phases": {
     "p1": {
       "title": "Phase 1: 基础设施",
@@ -296,7 +296,7 @@
           "id": "p3-4",
           "title": "Web: MCP/Timer 配置表单",
           "module": "web",
-          "status": "pending",
+          "status": "in-progress",
           "priority": "medium",
           "notes": "配置管理界面"
         },
@@ -304,7 +304,7 @@
           "id": "p3-5",
           "title": "Web: 图表组件",
           "module": "web",
-          "status": "pending",
+          "status": "in-progress",
           "priority": "medium",
           "notes": "数据可视化"
         },
@@ -383,5 +383,14 @@
       ]
     }
   },
-  "customTasks": []
+  "customTasks": [
+    {
+      "id": "custom-1776670280004",
+      "title": "Web:Knowedge 信息页面",
+      "module": "web",
+      "status": "done",
+      "priority": "medium",
+      "notes": "展示目前已经被录入的知识库信息"
+    }
+  ]
 }

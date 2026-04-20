@@ -28,7 +28,10 @@ type GetTimerOutput struct {
 	UUID            string           `json:"uuid"`
 	Name            string           `json:"name"`
 	Description     string           `json:"description,omitempty"`
-	CronExpr        string           `json:"cron_expr"`
+	TriggerType     string           `json:"trigger_type"`
+	CronExpr        string           `json:"cron_expr,omitempty"`
+	IntervalSeconds int64            `json:"interval_seconds,omitempty"`
+	DelaySeconds    int64            `json:"delay_seconds,omitempty"`
 	Timezone        string           `json:"timezone"`
 	CallbackURL     string           `json:"callback_url"`
 	CallbackMethod  string           `json:"callback_method"`
@@ -85,7 +88,10 @@ func (uc *getTimerUseCase) Execute(ctx context.Context, input GetTimerInput) *re
 		UUID:            timer.UUID,
 		Name:            timer.Name,
 		Description:     timer.Description,
+		TriggerType:     timer.TriggerType,
 		CronExpr:        timer.CronExpr,
+		IntervalSeconds: timer.IntervalSeconds,
+		DelaySeconds:    timer.DelaySeconds,
 		Timezone:        timer.Timezone,
 		CallbackURL:     timer.CallbackURL,
 		CallbackMethod:  timer.CallbackMethod,

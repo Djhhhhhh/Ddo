@@ -23,6 +23,11 @@ const routes: RouteRecordRaw[] = [
     component: () => import('@/views/Timer/TimerView.vue')
   },
   {
+    path: '/knowledge',
+    name: 'knowledge',
+    component: () => import('@/views/Knowledge/KnowledgePage.vue')
+  },
+  {
     path: '/config',
     name: 'config',
     component: () => import('@/views/Config/ConfigView.vue')

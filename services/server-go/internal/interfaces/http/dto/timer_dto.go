@@ -4,33 +4,40 @@ import "time"
 
 // TimerItemDTO 定时任务项 DTO
 type TimerItemDTO struct {
-	UUID        string `json:"uuid"`
-	Name        string `json:"name"`
-	Description string `json:"description,omitempty"`
-	CronExpr    string `json:"cron_expr"`
-	Timezone    string `json:"timezone"`
-	Status      string `json:"status"`
-	LastRunAt   string `json:"last_run_at,omitempty"`
-	NextRunAt   string `json:"next_run_at,omitempty"`
+	UUID            string `json:"uuid"`
+	Name            string `json:"name"`
+	Description     string `json:"description,omitempty"`
+	TriggerType     string `json:"trigger_type"` // "cron" | "periodic" | "delayed"
+	CronExpr        string `json:"cron_expr,omitempty"`
+	IntervalSeconds int64  `json:"interval_seconds,omitempty"`
+	DelaySeconds    int64  `json:"delay_seconds,omitempty"`
+	Timezone        string `json:"timezone"`
+	Status          string `json:"status"`
+	LastRunAt       string `json:"last_run_at,omitempty"`
+	NextRunAt       string `json:"next_run_at,omitempty"`
 }
 
 // TimerDetailDTO 定时任务详情 DTO
 type TimerDetailDTO struct {
-	UUID            string         `json:"uuid"`
-	Name            string         `json:"name"`
-	Description     string         `json:"description,omitempty"`
-	CronExpr        string         `json:"cron_expr"`
-	Timezone        string         `json:"timezone"`
-	CallbackURL     string         `json:"callback_url"`
-	CallbackMethod  string         `json:"callback_method"`
-	CallbackHeaders string         `json:"callback_headers,omitempty"`
-	CallbackBody    string         `json:"callback_body,omitempty"`
-	Status          string         `json:"status"`
-	LastRunAt       string         `json:"last_run_at,omitempty"`
-	NextRunAt       string         `json:"next_run_at,omitempty"`
-	Stats           TimerStatsDTO  `json:"stats"`
-	CreatedAt       string         `json:"created_at"`
-	UpdatedAt       string         `json:"updated_at"`
+	UUID            string        `json:"uuid"`
+	Name            string        `json:"name"`
+	Description     string        `json:"description,omitempty"`
+	TriggerType     string        `json:"trigger_type"` // "cron" | "periodic" | "delayed"
+	CronExpr        string        `json:"cron_expr,omitempty"`
+	IntervalSeconds int64         `json:"interval_seconds,omitempty"`
+	DelaySeconds    int64         `json:"delay_seconds,omitempty"`
+	Timezone        string        `json:"timezone"`
+	// Callback
+	CallbackURL     string        `json:"callback_url"`
+	CallbackMethod  string        `json:"callback_method"`
+	CallbackHeaders string        `json:"callback_headers,omitempty"`
+	CallbackBody    string        `json:"callback_body,omitempty"`
+	Status          string        `json:"status"`
+	LastRunAt       string        `json:"last_run_at,omitempty"`
+	NextRunAt       string        `json:"next_run_at,omitempty"`
+	Stats           TimerStatsDTO `json:"stats"`
+	CreatedAt       string        `json:"created_at"`
+	UpdatedAt       string        `json:"updated_at"`
 }
 
 // TimerStatsDTO 定时任务统计 DTO
@@ -55,8 +62,15 @@ type TimerLogItemDTO struct {
 type CreateTimerRequest struct {
 	Name            string            `json:"name" binding:"required"`
 	Description     string            `json:"description"`
-	CronExpr        string            `json:"cron_expr" binding:"required"`
+	// TriggerType: "cron" | "periodic" | "delayed"
+	// - cron: 按 Cron 表达式调度
+	// - periodic: 每隔指定时长触发一次
+	// - delayed: 延迟指定时长后触发一次（仅触发一次）
+	TriggerType     string            `json:"trigger_type" binding:"required"`
+	CronExpr        string            `json:"cron_expr"`        // trigger_type=cron 时必填
 	Timezone        string            `json:"timezone"`
+	IntervalSeconds int64             `json:"interval_seconds"` // trigger_type=periodic 时必填
+	DelaySeconds    int64             `json:"delay_seconds"`    // trigger_type=delayed 时必填
 	CallbackURL     string            `json:"callback_url" binding:"required"`
 	CallbackMethod  string            `json:"callback_method"`
 	CallbackHeaders map[string]string `json:"callback_headers"`
@@ -117,8 +131,11 @@ type GetTimerData struct {
 type UpdateTimerRequest struct {
 	Name            string            `json:"name"`
 	Description     string            `json:"description"`
+	TriggerType     string            `json:"trigger_type"`
 	CronExpr        string            `json:"cron_expr"`
 	Timezone        string            `json:"timezone"`
+	IntervalSeconds int64             `json:"interval_seconds"`
+	DelaySeconds    int64             `json:"delay_seconds"`
 	CallbackURL     string            `json:"callback_url"`
 	CallbackMethod  string            `json:"callback_method"`
 	CallbackHeaders map[string]string `json:"callback_headers"`

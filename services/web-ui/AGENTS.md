@@ -37,12 +37,21 @@ web-ui/
     │   ├── ui/                    # UI 基础组件
     │   │   ├── Button.vue         # 按钮组件（Gray/White/Black Pill）
     │   │   ├── Card.vue           # 卡片组件（12px 圆角）
-    │   │   └── Input.vue          # 输入框组件（Pill 形状）
-    │   ├── ServiceCard.vue        # ← 新增：服务状态卡片
-    │   ├── StatCard.vue           # ← 新增：统计卡片
-    │   └── Charts/               # ← 新增：图表组件
+    │   │   ├── Input.vue          # 输入框组件（Pill 形状）
+    │   │   ├── Modal.vue          # 弹窗组件
+    │   │   ├── Select.vue         # 下拉选择组件
+    │   │   └── Badge.vue          # 状态徽章组件
+    │   ├── Form/                  # 表单组件
+    │   │   ├── McpForm.vue        # MCP 配置表单
+    │   │   └── TimerForm.vue      # 定时任务表单
+    │   ├── Knowledge/            # ← 新增：知识库组件
+    │   │   └── RagChat.vue        # RAG 对话测试组件
+    │   ├── ServiceCard.vue        # 服务状态卡片
+    │   ├── StatCard.vue           # 统计卡片
+    │   └── Charts/               # 图表组件
     │       ├── BarChart.vue       # 柱状图
-    │       └── LineChart.vue       # 折线图
+    │       ├── LineChart.vue      # 折线图
+    │       └── PieChart.vue       # 饼图组件
     ├── stores/
     │   ├── theme.ts               # 主题状态管理（Pinia）
     │   └── dashboard.ts           # ← 新增：Dashboard 数据状态
@@ -50,13 +59,15 @@ web-ui/
     │   ├── Help/
     │   │   └── HelpView.vue        # Help 首页（项目介绍）
     │   ├── Dashboard/
-    │   │   └── DashboardView.vue   # Dashboard 页面（开发中）
+    │   │   └── DashboardView.vue   # Dashboard 页面
     │   ├── MCP/
-    │   │   └── MCPView.vue          # MCP 配置页面（开发中）
+    │   │   └── MCPView.vue         # MCP 配置页面 ✅ 已完成
     │   ├── Timer/
-    │   │   └── TimerView.vue       # 定时任务页面（开发中）
+    │   │   └── TimerView.vue       # 定时任务页面 ✅ 已完成
+    │   ├── Knowledge/             # ← 新增：知识库页面
+    │   │   └── KnowledgePage.vue   # 知识库页面（左右分割布局）
     │   └── Config/
-    │       └── ConfigView.vue       # 系统配置页面（开发中）
+    │       └── ConfigView.vue      # 系统配置页面
     ├── router/
     │   └── index.ts               # 路由配置（Hash 模式）
     ├── stores/
@@ -108,4 +119,4 @@ web-ui/
 
 ## 🕒 最后更新时间
 
-2026-04-19 22:35:00
+2026-04-20

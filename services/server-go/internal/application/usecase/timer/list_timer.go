@@ -16,14 +16,17 @@ type ListTimerInput struct {
 
 // TimerItemOutput 定时任务项输出
 type TimerItemOutput struct {
-	UUID       string `json:"uuid"`
-	Name       string `json:"name"`
-	Description string `json:"description,omitempty"`
-	CronExpr   string `json:"cron_expr"`
-	Timezone   string `json:"timezone"`
-	Status     string `json:"status"`
-	LastRunAt  string `json:"last_run_at,omitempty"`
-	NextRunAt  string `json:"next_run_at,omitempty"`
+	UUID            string `json:"uuid"`
+	Name            string `json:"name"`
+	Description     string `json:"description,omitempty"`
+	TriggerType     string `json:"trigger_type"`
+	CronExpr        string `json:"cron_expr,omitempty"`
+	IntervalSeconds int64  `json:"interval_seconds,omitempty"`
+	DelaySeconds    int64  `json:"delay_seconds,omitempty"`
+	Timezone        string `json:"timezone"`
+	Status          string `json:"status"`
+	LastRunAt       string `json:"last_run_at,omitempty"`
+	NextRunAt       string `json:"next_run_at,omitempty"`
 }
 
 // ListTimerOutput 查询定时任务列表输出
@@ -65,12 +68,15 @@ func (uc *listTimerUseCase) Execute(ctx context.Context, input ListTimerInput) *
 	items := make([]TimerItemOutput, 0, len(result_iface.Items))
 	for _, timer := range result_iface.Items {
 		item := TimerItemOutput{
-			UUID:        timer.UUID,
-			Name:        timer.Name,
-			Description: timer.Description,
-			CronExpr:    timer.CronExpr,
-			Timezone:    timer.Timezone,
-			Status:      timer.Status,
+			UUID:            timer.UUID,
+			Name:            timer.Name,
+			Description:     timer.Description,
+			TriggerType:     timer.TriggerType,
+			CronExpr:        timer.CronExpr,
+			IntervalSeconds: timer.IntervalSeconds,
+			DelaySeconds:    timer.DelaySeconds,
+			Timezone:        timer.Timezone,
+			Status:          timer.Status,
 		}
 
 		if timer.LastRunAt != nil {

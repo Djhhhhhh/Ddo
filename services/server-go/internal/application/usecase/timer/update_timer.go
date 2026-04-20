@@ -4,6 +4,9 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"time"
+
+	"github.com/robfig/cron/v3"
 
 	"github.com/ddo/server-go/internal/application/result"
 	"github.com/ddo/server-go/internal/db/models"
@@ -16,7 +19,10 @@ type UpdateTimerInput struct {
 	UUID            string
 	Name            string
 	Description     string
+	TriggerType     string
 	CronExpr        string
+	IntervalSeconds int64
+	DelaySeconds    int64
 	Timezone        string
 	CallbackURL     string
 	CallbackMethod  string
@@ -80,12 +86,24 @@ func (uc *updateTimerUseCase) Execute(ctx context.Context, input UpdateTimerInpu
 	if input.Description != "" || input.Description != timer.Description {
 		timer.Description = input.Description
 	}
+	if input.TriggerType != "" && input.TriggerType != timer.TriggerType {
+		timer.TriggerType = input.TriggerType
+		needReschedule = true
+	}
 	if input.CronExpr != "" && input.CronExpr != timer.CronExpr {
 		// 验证新的 Cron 表达式
 		if err := scheduler.ValidateCron(input.CronExpr); err != nil {
 			return result.NewFailure[UpdateTimerOutput](fmt.Errorf("invalid cron expression: %w", err))
 		}
 		timer.CronExpr = input.CronExpr
+		needReschedule = true
+	}
+	if input.IntervalSeconds > 0 && input.IntervalSeconds != timer.IntervalSeconds {
+		timer.IntervalSeconds = input.IntervalSeconds
+		needReschedule = true
+	}
+	if input.DelaySeconds > 0 && input.DelaySeconds != timer.DelaySeconds {
+		timer.DelaySeconds = input.DelaySeconds
 		needReschedule = true
 	}
 	if input.Timezone != "" && input.Timezone != timer.Timezone {
@@ -109,22 +127,44 @@ func (uc *updateTimerUseCase) Execute(ctx context.Context, input UpdateTimerInpu
 		timer.CallbackBody = input.CallbackBody
 	}
 
-	// 5. 保存更新
+	// 5. 如果需要重新调度，先计算下次执行时间
+	if needReschedule && timer.Status == models.TimerStatusActive {
+		loc := time.Local
+		if timer.Timezone != "" && timer.Timezone != "Local" {
+			if parsedLoc, err := time.LoadLocation(timer.Timezone); err == nil {
+				loc = parsedLoc
+			}
+		}
+
+		var nextRun time.Time
+		switch timer.TriggerType {
+		case TriggerTypeCron:
+			if timer.CronExpr != "" {
+				schedule, _ := cron.ParseStandard(timer.CronExpr)
+				nextRun = schedule.Next(time.Now().In(loc))
+			}
+		case TriggerTypePeriodic:
+			nextRun = time.Now().Add(time.Duration(timer.IntervalSeconds) * time.Second)
+		case TriggerTypeDelayed:
+			nextRun = time.Now().Add(time.Duration(timer.DelaySeconds) * time.Second)
+		}
+		timer.NextRunAt = &nextRun
+	}
+
+	// 6. 保存更新
 	if err := uc.timerRepo.Update(ctx, timer); err != nil {
 		return result.NewFailure[UpdateTimerOutput](fmt.Errorf("update timer failed: %w", err))
 	}
 
-	// 6. 如果需要重新调度
+	// 7. 如果需要重新调度
 	if needReschedule && timer.Status == models.TimerStatusActive && uc.scheduler != nil {
-		// 先移除旧的任务
 		uc.scheduler.RemoveJob(timer.UUID)
-		// 重新添加
 		if err := uc.scheduler.AddJob(timer); err != nil {
 			fmt.Printf("Failed to reschedule timer: %v\n", err)
 		}
 	}
 
-	// 7. 返回结果
+	// 8. 返回结果
 	return result.NewSuccess(UpdateTimerOutput{
 		UUID:   timer.UUID,
 		Name:   timer.Name,

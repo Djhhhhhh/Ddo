@@ -10,7 +10,7 @@ const navItems = [
   { path: '/dashboard', label: 'Dashboard' },
   { path: '/mcp', label: 'MCP' },
   { path: '/timer', label: 'Timer' },
-  { path: '/config', label: 'Config' }
+  { path: '/knowledge', label: 'Knowledge' }
 ]
 
 function toggleTheme() {

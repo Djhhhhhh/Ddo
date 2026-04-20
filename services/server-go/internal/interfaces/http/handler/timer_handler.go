@@ -69,7 +69,10 @@ func (h *TimerHandler) CreateTimer(c *gin.Context) {
 	result := h.createUseCase.Execute(ctx, timer.CreateTimerInput{
 		Name:            req.Name,
 		Description:     req.Description,
+		TriggerType:     req.TriggerType,
 		CronExpr:        req.CronExpr,
+		IntervalSeconds: req.IntervalSeconds,
+		DelaySeconds:    req.DelaySeconds,
 		Timezone:        req.Timezone,
 		CallbackURL:     req.CallbackURL,
 		CallbackMethod:  req.CallbackMethod,
@@ -140,14 +143,17 @@ func (h *TimerHandler) ListTimers(c *gin.Context) {
 	items := make([]dto.TimerItemDTO, 0, len(data.Items))
 	for _, item := range data.Items {
 		items = append(items, dto.TimerItemDTO{
-			UUID:        item.UUID,
-			Name:        item.Name,
-			Description: item.Description,
-			CronExpr:    item.CronExpr,
-			Timezone:    item.Timezone,
-			Status:      item.Status,
-			LastRunAt:   item.LastRunAt,
-			NextRunAt:   item.NextRunAt,
+			UUID:            item.UUID,
+			Name:            item.Name,
+			Description:     item.Description,
+			TriggerType:     item.TriggerType,
+			CronExpr:        item.CronExpr,
+			IntervalSeconds: item.IntervalSeconds,
+			DelaySeconds:    item.DelaySeconds,
+			Timezone:        item.Timezone,
+			Status:          item.Status,
+			LastRunAt:       item.LastRunAt,
+			NextRunAt:       item.NextRunAt,
 		})
 	}
 
@@ -200,7 +206,10 @@ func (h *TimerHandler) GetTimer(c *gin.Context) {
 				UUID:            t.UUID,
 				Name:            t.Name,
 				Description:     t.Description,
+				TriggerType:     t.TriggerType,
 				CronExpr:        t.CronExpr,
+				IntervalSeconds: t.IntervalSeconds,
+				DelaySeconds:    t.DelaySeconds,
 				Timezone:        t.Timezone,
 				CallbackURL:     t.CallbackURL,
 				CallbackMethod:  t.CallbackMethod,
@@ -251,7 +260,10 @@ func (h *TimerHandler) UpdateTimer(c *gin.Context) {
 		UUID:            uuid,
 		Name:            req.Name,
 		Description:     req.Description,
+		TriggerType:     req.TriggerType,
 		CronExpr:        req.CronExpr,
+		IntervalSeconds: req.IntervalSeconds,
+		DelaySeconds:    req.DelaySeconds,
 		Timezone:        req.Timezone,
 		CallbackURL:     req.CallbackURL,
 		CallbackMethod:  req.CallbackMethod,
