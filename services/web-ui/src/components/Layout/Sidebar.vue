@@ -2,7 +2,7 @@
 import { useRoute } from 'vue-router'
 import { useThemeStore } from '@/stores/theme'
 
-const props = defineProps<{
+defineProps<{
   isOpen: boolean
 }>()
 

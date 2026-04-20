@@ -4,7 +4,6 @@ import { useDashboardStore } from '@/stores/dashboard'
 import ServiceCard from '@/components/ServiceCard.vue'
 import StatCard from '@/components/StatCard.vue'
 import BarChart from '@/components/Charts/BarChart.vue'
-import LineChart from '@/components/Charts/LineChart.vue'
 import PieChart from '@/components/Charts/PieChart.vue'
 import Button from '@/components/ui/Button.vue'
 import Card from '@/components/ui/Card.vue'
@@ -34,15 +33,6 @@ const timerStatsData = computed(() => {
     { name: '运行中', value: t.active || 0 },
     { name: '已暂停', value: (t.total || 0) - (t.active || 0) }
   ].filter(d => d.value > 0)
-})
-
-// Knowledge stats for pie chart
-const knowledgeStatsData = computed(() => {
-  const k = store.metrics?.knowledge
-  if (!k) return []
-  return [
-    { name: '知识库条目', value: k.total || 0 }
-  ]
 })
 
 onMounted(async () => {

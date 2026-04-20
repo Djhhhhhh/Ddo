@@ -4,7 +4,7 @@ import Button from '@/components/ui/Button.vue'
 import Input from '@/components/ui/Input.vue'
 import Select from '@/components/ui/Select.vue'
 
-const props = defineProps<{
+defineProps<{
   loading?: boolean
 }>()
 

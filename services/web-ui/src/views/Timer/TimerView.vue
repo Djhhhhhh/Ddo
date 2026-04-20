@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted, computed } from 'vue'
+import { ref, onMounted } from 'vue'
 import Card from '@/components/ui/Card.vue'
 import Button from '@/components/ui/Button.vue'
 import Badge from '@/components/ui/Badge.vue'
@@ -7,7 +7,7 @@ import Input from '@/components/ui/Input.vue'
 import Select from '@/components/ui/Select.vue'
 import Modal from '@/components/ui/Modal.vue'
 import * as timerApi from '@/api/timer'
-import type { Timer, TimerLog, CreateTimerRequest, UpdateTimerRequest } from '@/api/types'
+import type { Timer, TimerLog } from '@/api/types'
 
 const timers = ref<Timer[]>([])
 const loading = ref(false)
@@ -49,17 +49,17 @@ const timezoneOptions = [
 ]
 
 // Create/Edit form
-const formData = ref<CreateTimerRequest>({
+const formData = ref({
   name: '',
   description: '',
-  trigger_type: 'cron',
+  trigger_type: 'cron' as 'cron' | 'periodic' | 'delayed',
   cron_expr: '',
   interval_seconds: 3600,
   delay_seconds: 60,
   timezone: 'Asia/Shanghai',
   callback_url: '',
   callback_method: 'POST',
-  callback_headers: {},
+  callback_headers: {} as Record<string, string>,
   callback_body: ''
 })
 

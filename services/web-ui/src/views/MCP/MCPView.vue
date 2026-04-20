@@ -22,7 +22,7 @@ const showDeleteModal = ref(false)
 const showTestModal = ref(false)
 const submitLoading = ref(false)
 const testLoading = ref(false)
-const testResult = ref<{ status: string; tools: string[]; elapsed_ms: number; error?: string } | null>(null)
+const testResult = ref<{ status: string; tools: string[]; elapsed_ms?: number; error?: string } | null>(null)
 
 // Create mode: 'form' or 'json'
 const createMode = ref<'form' | 'json'>('form')
@@ -174,13 +174,16 @@ async function testMcp() {
   showTestModal.value = true
   try {
     const res = await mcpApi.testMCP(selectedMcpUuid.value)
-    testResult.value = res.data
+    testResult.value = {
+      status: res.data.success ? 'success' : 'error',
+      tools: res.data.tools || [],
+      error: res.data.error
+    }
     await loadMcpDetail(selectedMcpUuid.value)
   } catch (e: any) {
     testResult.value = {
       status: 'error',
       tools: [],
-      elapsed_ms: 0,
       error: e.response?.data?.message || e.message || '测试失败'
     }
   } finally {

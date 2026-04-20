@@ -1,5 +1,12 @@
 // API Types for DDO Web UI
 
+// API Response wrapper type
+export interface ApiResponse<T = unknown> {
+  code: number
+  msg: string
+  data: T
+}
+
 // MCP Types
 export interface MCPItem {
   uuid: string
@@ -250,34 +257,10 @@ export interface MetricsData {
 
 export interface MetricsResponse extends ApiResponse<MetricsData> {}
 
-// Timer API
-export interface Timer {
-  uuid: string
-  name: string
-  cron_expr: string  // 后端字段
-  timezone?: string
-  status: string
-  next_run_at?: string  // 后端字段
-  last_run_at?: string
-  created_at?: string
-  updated_at?: string
-}
+// Timer API - 移除重复定义，使用前面的 Timer 接口
+// 删除这里重复的 Timer、TimerListData、TimerListResponse 定义
 
-export interface TimerListData {
-  total: number
-  items: Timer[]
-}
-
-export interface TimerListResponse extends ApiResponse<TimerListData> {}
-
-export interface MCPTestData {
-  success: boolean
-  tools: string[]
-  error?: string
-}
-
-export interface MCPListResponse extends ApiResponse<MCPListData> {}
-
+// MCP Test Data
 export interface MCPTestData {
   success: boolean
   tools: string[]

@@ -1,0 +1,1 @@
+import{d as e,h as a,c as s,k as n,o,D as t,_ as c}from"./index-Cx42vRov.js";const d={class:"island-container"},_=e({__name:"IslandView",setup(r){return a(()=>{console.log("[IslandView] mounted")}),(l,i)=>(o(),s("div",d,[n(t)]))}}),m=c(_,[["__scopeId","data-v-020ca90c"]]);export{m as default};

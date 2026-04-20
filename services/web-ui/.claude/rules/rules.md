@@ -7,6 +7,7 @@
 - **CLI 为核心，Web 为扩展**：Web 通过 CLI 命令启动，非必须组件（2026-04-19）
 - **代理转发**：Vite dev server 代理 `/api` 和 `/health` 到 `127.0.0.1:8080`（2026-04-19）
 - **简洁单页布局**：使用顶部导航栏，而非侧边栏（2026-04-19）
+- **Electron 三层架构**：主进程（main.ts）+ 预加载（preload.ts）+ 渲染进程（Vue）模式（2026-04-20）
 
 ## 代码规范
 
@@ -19,6 +20,8 @@
 
 - **API 模块待开发**：Axios 封装好了，但具体 API 函数（health.ts 等）需根据 server-go 实际路由定义创建（2026-04-19）
 - **Dark 主题切换**：需在 HTML 元素上切换 `dark` class，并设置 backgroundColor 防止 FOUC（2026-04-19）
+- **Electron 代码分离**：Electron 代码在 `electron/` 目录，需要单独的 tsconfig.json 和构建步骤（2026-04-20）
+- **托盘图标**：需要准备 PNG 图标文件，生产模式下从 `process.resourcesPath` 加载（2026-04-20）
 
 ## 示例参考
 

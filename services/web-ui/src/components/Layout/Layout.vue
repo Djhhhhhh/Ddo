@@ -1,8 +1,6 @@
 <script setup lang="ts">
-import { useRouter } from 'vue-router'
 import { useThemeStore } from '@/stores/theme'
 
-const router = useRouter()
 const themeStore = useThemeStore()
 
 const navItems = [

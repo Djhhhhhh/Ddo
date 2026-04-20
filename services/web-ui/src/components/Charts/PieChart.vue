@@ -55,7 +55,7 @@ function renderChart() {
             pointStyle: 'circle',
             font: {
               size: 13,
-              weight: '500'
+              weight: 500
             }
           }
         },

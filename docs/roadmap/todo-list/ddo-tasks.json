@@ -310,11 +310,11 @@
         },
         {
           "id": "p3-6",
-          "title": "Electron: 主进程",
+          "title": "Electron: 通知客户端（合并 p3-6~p3-10）",
           "module": "web",
-          "status": "pending",
+          "status": "in-progress",
           "priority": "high",
-          "notes": "Electron 基础"
+          "notes": "主进程+灵动岛+系统通知+托盘+定时任务弹窗"
         },
         {
           "id": "p3-7",
@@ -328,7 +328,7 @@
           "id": "p3-8",
           "title": "Electron: 系统通知",
           "module": "web",
-          "status": "pending",
+          "status": "merged",
           "priority": "medium",
           "notes": "native notification"
         },
@@ -336,7 +336,7 @@
           "id": "p3-9",
           "title": "Electron: 常驻托盘",
           "module": "web",
-          "status": "pending",
+          "status": "merged",
           "priority": "medium",
           "notes": "系统托盘图标"
         },
@@ -344,7 +344,7 @@
           "id": "p3-10",
           "title": "Electron: 定时任务弹窗",
           "module": "web",
-          "status": "pending",
+          "status": "merged",
           "priority": "high",
           "notes": "Ding 通知"
         },

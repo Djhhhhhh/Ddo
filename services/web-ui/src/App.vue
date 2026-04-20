@@ -1,9 +1,15 @@
 <script setup lang="ts">
-import { onMounted } from 'vue'
+import { onMounted, computed } from 'vue'
+import { useRoute } from 'vue-router'
 import { useThemeStore } from '@/stores/theme'
 import Layout from '@/components/Layout/Layout.vue'
+import DingIslandCard from '@/components/DingIsland/DingIslandCard.vue'
 
 const themeStore = useThemeStore()
+const route = useRoute()
+
+// 判断是否为灵动岛独立窗口模式
+const isIslandMode = computed(() => route.path === '/island')
 
 onMounted(() => {
   // Apply theme class to document
@@ -12,7 +18,12 @@ onMounted(() => {
 </script>
 
 <template>
-  <Layout />
+  <!-- 灵动岛独立窗口模式 -->
+  <div v-if="isIslandMode" class="p-0">
+    <DingIslandCard />
+  </div>
+  <!-- 普通 Web UI 模式 -->
+  <Layout v-else />
 </template>
 
 <style>

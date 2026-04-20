@@ -18,8 +18,22 @@ web-ui/
 ├── tsconfig.json                   # TypeScript 配置
 ├── tailwind.config.js              # TailwindCSS 配置（DESIGN.md 规范）
 ├── postcss.config.js               # PostCSS 配置
+├── electron.mjs                    # Electron 启动脚本
 ├── public/
-│   └── favicon.ico
+│   ├── favicon.ico
+│   ├── icon.svg                    # 托盘图标
+│   └── icon-notify.svg             # 托盘通知图标
+├── electron/                       # ← 新增：Electron 主进程
+│   ├── tsconfig.json               # Electron TypeScript 配置
+│   ├── main.ts                     # 主进程入口
+│   ├── preload.ts                   # 预加载脚本（IPC 桥接）
+│   ├── ipc.ts                      # IPC 通信定义
+│   ├── store.ts                    # 本地配置存储（electron-store）
+│   ├── tray.ts                     # 系统托盘管理
+│   ├── notification.ts             # 通知管理（灵动岛 + 系统通知）
+│   └── windows/
+│       ├── mainWindow.ts           # 主窗口
+│       └── islandWindow.ts         # 灵动岛悬浮窗口
 └── src/
     ├── main.ts                     # 应用入口
     ├── App.vue                     # 根组件
@@ -46,6 +60,9 @@ web-ui/
     │   │   └── TimerForm.vue      # 定时任务表单
     │   ├── Knowledge/            # ← 新增：知识库组件
     │   │   └── RagChat.vue        # RAG 对话测试组件
+    │   ├── DingIsland/           # ← 新增：灵动岛组件
+    │   │   ├── DingIslandCard.vue # 灵动岛卡片（悬浮通知）
+    │   │   └── DingIslandStore.ts # Pinia 通知状态管理
     │   ├── ServiceCard.vue        # 服务状态卡片
     │   ├── StatCard.vue           # 统计卡片
     │   └── Charts/               # 图表组件
@@ -66,10 +83,14 @@ web-ui/
     │   │   └── TimerView.vue       # 定时任务页面 ✅ 已完成
     │   ├── Knowledge/             # ← 新增：知识库页面
     │   │   └── KnowledgePage.vue   # 知识库页面（左右分割布局）
-    │   └── Config/
-    │       └── ConfigView.vue      # 系统配置页面
+    │   ├── Config/
+    │   │   └── ConfigView.vue      # 系统配置页面
+    │   └── Island/               # ← 新增：灵动岛视图
+    │       └── IslandView.vue     # 灵动岛独立窗口视图
     ├── router/
-    │   └── index.ts               # 路由配置（Hash 模式）
+    │   └── index.ts               # 路由配置（Hash 模式，含 /island）
+    ├── types/
+    │   └── electron.d.ts          # ← 新增：Electron API 类型声明
     ├── stores/
     │   └── theme.ts               # 主题状态管理（Pinia）
     └── styles/
@@ -119,4 +140,4 @@ web-ui/
 
 ## 🕒 最后更新时间
 
-2026-04-20
+2026-04-20 11:30

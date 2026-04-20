@@ -61,7 +61,7 @@ async function loadKnowledge() {
   try {
     const res = await knowledgeApi.listKnowledge({
       page: currentPage.value,
-      pageSize: pageSize.value,
+      page_size: pageSize.value,
       keyword: searchKeyword.value,
       category: selectedCategory.value,
       tag: selectedTag.value
@@ -176,21 +176,6 @@ function formatDate(date?: string) {
   if (!date) return '-'
   return new Date(date).toLocaleString('zh-CN')
 }
-
-// Get word cloud item style based on value
-function getWordCloudStyle(item: WordCloudItem, maxValue: number) {
-  const scale = maxValue > 0 ? item.value / maxValue : 0
-  const fontSize = 12 + scale * 16 // 12px to 28px
-  const opacity = 0.4 + scale * 0.6 // 0.4 to 1.0
-  return {
-    fontSize: `${fontSize}px`,
-    opacity: opacity,
-    fontWeight: scale > 0.5 ? '500' : '400'
-  }
-}
-
-const maxCategoryValue = computed(() => Math.max(...categoryCloud.value.map(c => c.value), 1))
-const maxTagValue = computed(() => Math.max(...tagCloud.value.map(t => t.value), 1))
 </script>
 
 <template>
