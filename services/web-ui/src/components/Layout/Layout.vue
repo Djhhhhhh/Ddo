@@ -52,7 +52,7 @@ function toggleTheme() {
     </header>
 
     <!-- Main Content -->
-    <main class="px-6 py-10">
+    <main class="px-6 py-10 overflow-auto" style="height: calc(100vh - 56px);">
       <router-view />
     </main>
   </div>

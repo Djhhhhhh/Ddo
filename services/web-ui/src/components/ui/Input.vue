@@ -18,7 +18,7 @@ defineEmits<{
     :placeholder="placeholder"
     :disabled="disabled"
     class="w-full bg-white border border-gray-200 outline-none transition-colors duration-150"
-    style="border-radius: 9999px; padding: 10px 20px;"
+    style="border-radius: 8px; padding: 10px 16px;"
     :class="{
       'focus:ring-2 focus:ring-blue-500/50 focus:border-gray-300': !disabled,
       'placeholder:text-gray-400': !disabled,

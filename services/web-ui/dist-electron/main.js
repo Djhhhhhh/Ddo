@@ -467,14 +467,18 @@ async function createMainWindow() {
   return mainWindow2;
 }
 function registerGlobalShortcuts() {
-  const toggleWindowRegistered = globalShortcut.register("CommandOrControl+Shift+D", () => {
-    if (mainWindow2) {
+  const toggleWindowRegistered = globalShortcut.register("CommandOrControl+Shift+D", async () => {
+    if (mainWindow2 && !mainWindow2.isDestroyed()) {
       if (mainWindow2.isVisible()) {
         mainWindow2.hide();
       } else {
         mainWindow2.show();
         mainWindow2.focus();
       }
+    } else {
+      mainWindow2 = await createMainWindow();
+      mainWindow2.show();
+      mainWindow2.focus();
     }
   });
   console.log(`[Ddo Ding] Shortcut CommandOrControl+Shift+D ${toggleWindowRegistered ? "registered" : "failed to register"}`);

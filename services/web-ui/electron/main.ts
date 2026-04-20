@@ -69,14 +69,19 @@ async function createMainWindow(): Promise<BrowserWindow> {
 
 function registerGlobalShortcuts() {
   // Ctrl+Shift+D: 显示/隐藏窗口
-  const toggleWindowRegistered = globalShortcut.register('CommandOrControl+Shift+D', () => {
-    if (mainWindow) {
+  const toggleWindowRegistered = globalShortcut.register('CommandOrControl+Shift+D', async () => {
+    if (mainWindow && !mainWindow.isDestroyed()) {
       if (mainWindow.isVisible()) {
         mainWindow.hide()
       } else {
         mainWindow.show()
         mainWindow.focus()
       }
+    } else {
+      // 窗口已关闭，重新创建
+      mainWindow = await createMainWindow()
+      mainWindow.show()
+      mainWindow.focus()
     }
   })
   console.log(`[Ddo Ding] Shortcut CommandOrControl+Shift+D ${toggleWindowRegistered ? 'registered' : 'failed to register'}`)
