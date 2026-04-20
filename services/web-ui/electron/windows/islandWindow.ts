@@ -37,14 +37,18 @@ export function createIslandWindow(): BrowserWindow {
 
   const primaryDisplay = screen.getPrimaryDisplay()
   const { width: screenWidth } = primaryDisplay.workAreaSize
+  const windowWidth = 520
+  const windowHeight = 340
+  const preloadPath = getPreloadPath()
 
   console.log('[IslandWindow] Creating new BrowserWindow')
+  console.log('[IslandWindow] Using preload path:', preloadPath)
 
   islandWindow = new BrowserWindow({
-    width: 360,
-    height: 160,
-    x: screenWidth - 380,
-    y: 20,
+    width: windowWidth,
+    height: windowHeight,
+    x: Math.round((screenWidth - windowWidth) / 2),
+    y: 10,
     frame: false,
     transparent: true,
     alwaysOnTop: true,
@@ -53,8 +57,9 @@ export function createIslandWindow(): BrowserWindow {
     movable: false,
     focusable: true,
     show: false,
+    backgroundColor: '#00000000',
     webPreferences: {
-      preload: getPreloadPath(),
+      preload: preloadPath,
       contextIsolation: true,
       nodeIntegration: false
     }
@@ -77,29 +82,35 @@ export function createIslandWindow(): BrowserWindow {
     })
   }
 
+  function flushPendingNotification(): void {
+    if (!pendingNotification || !islandWindow || islandWindow.isDestroyed()) {
+      return
+    }
+
+    console.log('[IslandWindow] Sending pending notification to renderer')
+    islandWindow.webContents.send('island:show', pendingNotification)
+    console.log('[IslandWindow] notification sent')
+    pendingNotification = null
+  }
+
   // When ready, show and send pending notification
   islandWindow.once('ready-to-show', () => {
     console.log('[IslandWindow] ready-to-show event')
     if (islandWindow && !islandWindow.isDestroyed()) {
       islandWindow.show()
       console.log('[IslandWindow] window shown')
-
-      // Send pending notification after a small delay to ensure Vue is mounted
-      if (pendingNotification) {
-        console.log('[IslandWindow] Sending pending notification to renderer')
-        setTimeout(() => {
-          if (islandWindow && !islandWindow.isDestroyed()) {
-            islandWindow.webContents.send('island:show', pendingNotification)
-            console.log('[IslandWindow] notification sent')
-            pendingNotification = null
-          }
-        }, 500) // 500ms delay to ensure Vue is mounted
-      }
     }
   })
 
   islandWindow.webContents.on('did-finish-load', () => {
     console.log('[IslandWindow] did-finish-load')
+    setTimeout(() => {
+      flushPendingNotification()
+    }, 200)
+  })
+
+  islandWindow.webContents.on('console-message', (_event, level, message) => {
+    console.log(`[IslandWindow:renderer:${level}] ${message}`)
   })
 
   islandWindow.webContents.on('did-fail-load', (_event, errorCode, errorDescription) => {
@@ -135,10 +146,6 @@ export function showIslandWindow(notification: NotificationData): void {
     if (!islandWindow.isVisible()) {
       islandWindow.show()
     }
-
-    setTimeout(() => {
-      hideIslandWindow()
-    }, 5000)
   }
 }
 

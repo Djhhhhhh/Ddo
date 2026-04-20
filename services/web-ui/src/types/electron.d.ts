@@ -23,6 +23,7 @@ export interface AppConfig {
 export interface DdoElectronAPI {
   // 通知事件监听
   onNotification: (callback: (data: NotificationData) => void) => void
+  onIslandShow: (callback: (data: NotificationData) => void) => void
   removeNotificationListener: () => void
 
   // 通知操作

@@ -1,7 +1,7 @@
-import { app, BrowserWindow, globalShortcut, Menu, Tray, nativeImage } from 'electron'
+import { app, BrowserWindow, globalShortcut, Tray } from 'electron'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { createTray } from './tray'
+import { createTray, destroyTray, getAppIconPath } from './tray'
 import { createIslandWindow, showIslandWindow, NotificationData } from './windows/islandWindow'
 import { initIpcHandlers } from './ipc'
 import { connectNotify } from './notification'
@@ -13,6 +13,24 @@ let tray: Tray | null = null
 
 const VITE_DEV_SERVER_URL = process.env.VITE_DEV_SERVER_URL || 'http://localhost:3000'
 const IS_DEV = !app.isPackaged
+const APP_ICON_PATH = getAppIconPath()
+const gotSingleInstanceLock = app.requestSingleInstanceLock()
+
+if (!gotSingleInstanceLock) {
+  app.quit()
+}
+
+function triggerTestIsland(): void {
+  const testNotification: NotificationData = {
+    id: `test-${Date.now()}`,
+    title: 'Test Notification',
+    body: 'This is a test notification from Ddo Ding',
+    level: 'important',
+    timestamp: Date.now()
+  }
+  showIslandWindow(testNotification)
+  console.log('[Ddo Ding] Test notification triggered')
+}
 
 async function createMainWindow(): Promise<BrowserWindow> {
   mainWindow = new BrowserWindow({
@@ -27,6 +45,7 @@ async function createMainWindow(): Promise<BrowserWindow> {
     },
     show: false, // 启动时隐藏，通过托盘或快捷键控制显示
     title: 'Ddo Ding',
+    icon: APP_ICON_PATH,
     autoHideMenuBar: true // 自动隐藏菜单栏
   })
 
@@ -50,7 +69,7 @@ async function createMainWindow(): Promise<BrowserWindow> {
 
 function registerGlobalShortcuts() {
   // Ctrl+Shift+D: 显示/隐藏窗口
-  globalShortcut.register('CommandOrControl+Shift+D', () => {
+  const toggleWindowRegistered = globalShortcut.register('CommandOrControl+Shift+D', () => {
     if (mainWindow) {
       if (mainWindow.isVisible()) {
         mainWindow.hide()
@@ -60,20 +79,30 @@ function registerGlobalShortcuts() {
       }
     }
   })
+  console.log(`[Ddo Ding] Shortcut CommandOrControl+Shift+D ${toggleWindowRegistered ? 'registered' : 'failed to register'}`)
 
   // Ctrl+Shift+T: 测试触发灵动岛（开发模式）
   if (IS_DEV) {
-    globalShortcut.register('CommandOrControl+Shift+T', () => {
-      const testNotification: NotificationData = {
-        id: `test-${Date.now()}`,
-        title: 'Test Notification',
-        body: 'This is a test notification from Ddo Ding',
-        level: 'important',
-        timestamp: Date.now()
+    const testIslandRegistered = globalShortcut.register('CommandOrControl+Shift+T', triggerTestIsland)
+    console.log(`[Ddo Ding] Shortcut CommandOrControl+Shift+T ${testIslandRegistered ? 'registered' : 'failed to register'}`)
+
+    if (!testIslandRegistered) {
+      const fallbackIslandRegistered = globalShortcut.register('CommandOrControl+Alt+T', triggerTestIsland)
+      console.log(`[Ddo Ding] Shortcut CommandOrControl+Alt+T ${fallbackIslandRegistered ? 'registered as fallback' : 'failed to register as fallback'}`)
+
+      if (mainWindow) {
+        mainWindow.webContents.on('before-input-event', (_event, input) => {
+          const isFocusedTestShortcut = input.type === 'keyDown'
+            && input.control
+            && input.shift
+            && input.key.toUpperCase() === 'T'
+
+          if (isFocusedTestShortcut) {
+            triggerTestIsland()
+          }
+        })
       }
-      showIslandWindow(testNotification)
-      console.log('[Ddo Ding] Test notification triggered')
-    })
+    }
   }
 }
 
@@ -82,6 +111,11 @@ export function getMainWindow(): BrowserWindow | null {
 }
 
 export async function initElectron(): Promise<void> {
+  if (tray) {
+    destroyTray()
+    tray = null
+  }
+
   // 初始化 IPC 处理器
   initIpcHandlers()
 
@@ -98,13 +132,27 @@ export async function initElectron(): Promise<void> {
   connectNotify()
 
   console.log('[Ddo Ding] Electron initialized successfully')
-  console.log('[Ddo Ding] Shortcuts: Ctrl+Shift+D (toggle window), Ctrl+Shift+T (test island, dev only)')
+  console.log('[Ddo Ding] Shortcuts: Ctrl+Shift+D (toggle window), Ctrl+Shift+T (test island, dev only), Ctrl+Alt+T (fallback when registration conflicts)')
 }
 
 // 应用准备就绪
-app.whenReady().then(() => {
-  initElectron().catch(console.error)
-})
+if (gotSingleInstanceLock) {
+  app.on('second-instance', () => {
+    if (mainWindow) {
+      if (!mainWindow.isVisible()) {
+        mainWindow.show()
+      }
+      if (mainWindow.isMinimized()) {
+        mainWindow.restore()
+      }
+      mainWindow.focus()
+    }
+  })
+
+  app.whenReady().then(() => {
+    initElectron().catch(console.error)
+  })
+}
 
 // 所有窗口关闭时，只隐藏不退出（保持托盘运行）
 app.on('window-all-closed', () => {
@@ -120,4 +168,5 @@ app.on('activate', () => {
 app.on('will-quit', () => {
   // 退出时取消所有全局快捷键
   globalShortcut.unregisterAll()
+  destroyTray()
 })

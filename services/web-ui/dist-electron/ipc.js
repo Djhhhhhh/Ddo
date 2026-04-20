@@ -16000,12 +16000,16 @@ function createIslandWindow() {
   }
   const primaryDisplay = screen.getPrimaryDisplay();
   const { width: screenWidth } = primaryDisplay.workAreaSize;
+  const windowWidth = 520;
+  const windowHeight = 340;
+  const preloadPath = getPreloadPath();
   console.log("[IslandWindow] Creating new BrowserWindow");
+  console.log("[IslandWindow] Using preload path:", preloadPath);
   islandWindow = new BrowserWindow({
-    width: 360,
-    height: 160,
-    x: screenWidth - 380,
-    y: 20,
+    width: windowWidth,
+    height: windowHeight,
+    x: Math.round((screenWidth - windowWidth) / 2),
+    y: 10,
     frame: false,
     transparent: true,
     alwaysOnTop: true,
@@ -16014,8 +16018,9 @@ function createIslandWindow() {
     movable: false,
     focusable: true,
     show: false,
+    backgroundColor: "#00000000",
     webPreferences: {
-      preload: getPreloadPath(),
+      preload: preloadPath,
       contextIsolation: true,
       nodeIntegration: false
     }
@@ -16034,25 +16039,30 @@ function createIslandWindow() {
       hash: "/island"
     });
   }
+  function flushPendingNotification() {
+    if (!pendingNotification || !islandWindow || islandWindow.isDestroyed()) {
+      return;
+    }
+    console.log("[IslandWindow] Sending pending notification to renderer");
+    islandWindow.webContents.send("island:show", pendingNotification);
+    console.log("[IslandWindow] notification sent");
+    pendingNotification = null;
+  }
   islandWindow.once("ready-to-show", () => {
     console.log("[IslandWindow] ready-to-show event");
     if (islandWindow && !islandWindow.isDestroyed()) {
       islandWindow.show();
       console.log("[IslandWindow] window shown");
-      if (pendingNotification) {
-        console.log("[IslandWindow] Sending pending notification to renderer");
-        setTimeout(() => {
-          if (islandWindow && !islandWindow.isDestroyed()) {
-            islandWindow.webContents.send("island:show", pendingNotification);
-            console.log("[IslandWindow] notification sent");
-            pendingNotification = null;
-          }
-        }, 500);
-      }
     }
   });
   islandWindow.webContents.on("did-finish-load", () => {
     console.log("[IslandWindow] did-finish-load");
+    setTimeout(() => {
+      flushPendingNotification();
+    }, 200);
+  });
+  islandWindow.webContents.on("console-message", (_event, level, message) => {
+    console.log(`[IslandWindow:renderer:${level}] ${message}`);
   });
   islandWindow.webContents.on("did-fail-load", (_event, errorCode, errorDescription) => {
     console.error("[IslandWindow] did-fail-load:", errorCode, errorDescription);
@@ -16062,11 +16072,6 @@ function createIslandWindow() {
     islandWindow = null;
   });
   return islandWindow;
-}
-function hideIslandWindow() {
-  if (islandWindow && !islandWindow.isDestroyed()) {
-    islandWindow.hide();
-  }
 }
 function showIslandWindow(notification) {
   console.log("[IslandWindow] showIslandWindow called:", notification.title);
@@ -16080,18 +16085,12 @@ function showIslandWindow(notification) {
     if (!islandWindow.isVisible()) {
       islandWindow.show();
     }
-    setTimeout(() => {
-      hideIslandWindow();
-    }, 5e3);
   }
 }
 
 // electron/tray.ts
 import { Tray, Menu, nativeImage, app as app2 } from "electron";
 import path2 from "node:path";
-import { fileURLToPath as fileURLToPath2 } from "node:url";
-var __filename3 = fileURLToPath2(import.meta.url);
-var __dirname2 = path2.dirname(__filename3);
 var tray = null;
 var hasNotification = false;
 function getProjectRoot2() {
@@ -16100,11 +16099,13 @@ function getProjectRoot2() {
   }
   return process.cwd();
 }
-function getTrayIcon(notify = false) {
+function getAppIconPath(notify = false) {
   const iconsDir = path2.join(getProjectRoot2(), "public", "icons");
-  const iconFile = notify ? "icon-active.png" : "icon.png";
+  return path2.join(iconsDir, notify ? "icon-active.svg" : "icon.svg");
+}
+function getTrayIcon(notify = false) {
   try {
-    const iconPath = path2.join(iconsDir, iconFile);
+    const iconPath = getAppIconPath(notify);
     console.log("[Tray] Loading icon:", iconPath);
     const img = nativeImage.createFromPath(iconPath);
     if (!img.isEmpty()) {
@@ -16228,9 +16229,9 @@ function getNotificationHistory() {
 // electron/windows/mainWindow.ts
 import { BrowserWindow as BrowserWindow3, app as app3 } from "electron";
 import path3 from "node:path";
-import { fileURLToPath as fileURLToPath3 } from "node:url";
-var __filename4 = fileURLToPath3(import.meta.url);
-var __dirname3 = path3.dirname(__filename4);
+import { fileURLToPath as fileURLToPath2 } from "node:url";
+var __filename3 = fileURLToPath2(import.meta.url);
+var __dirname2 = path3.dirname(__filename3);
 var mainWindow = null;
 function toggleMainWindow() {
   if (mainWindow && !mainWindow.isDestroyed()) {

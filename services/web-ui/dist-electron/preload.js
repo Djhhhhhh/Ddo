@@ -1,30 +1,47 @@
+"use strict";
+var __defProp = Object.defineProperty;
+var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
+var __getOwnPropNames = Object.getOwnPropertyNames;
+var __hasOwnProp = Object.prototype.hasOwnProperty;
+var __copyProps = (to, from, except, desc) => {
+  if (from && typeof from === "object" || typeof from === "function") {
+    for (let key of __getOwnPropNames(from))
+      if (!__hasOwnProp.call(to, key) && key !== except)
+        __defProp(to, key, { get: () => from[key], enumerable: !(desc = __getOwnPropDesc(from, key)) || desc.enumerable });
+  }
+  return to;
+};
+var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: true }), mod);
+
 // electron/preload.ts
-import { contextBridge, ipcRenderer } from "electron";
+var preload_exports = {};
+module.exports = __toCommonJS(preload_exports);
+var import_electron = require("electron");
 var api = {
   // Notification event (from main process)
   onNotification: (callback) => {
-    ipcRenderer.on("notification:show", (_event, data) => callback(data));
+    import_electron.ipcRenderer.on("notification:show", (_event, data) => callback(data));
   },
   // Island notification event
   onIslandShow: (callback) => {
-    ipcRenderer.on("island:show", (_event, data) => callback(data));
+    import_electron.ipcRenderer.on("island:show", (_event, data) => callback(data));
   },
   // Notification action (to main process)
   sendNotificationAction: (action) => {
-    ipcRenderer.send("notification:action", action);
+    import_electron.ipcRenderer.send("notification:action", action);
   },
   // Window control
   toggleWindow: () => {
-    ipcRenderer.send("window:toggle");
+    import_electron.ipcRenderer.send("window:toggle");
   },
   // Get config
-  getConfig: () => ipcRenderer.invoke("config:get"),
+  getConfig: () => import_electron.ipcRenderer.invoke("config:get"),
   // Update config
-  setConfig: (key, value) => ipcRenderer.invoke("config:set", key, value),
+  setConfig: (key, value) => import_electron.ipcRenderer.invoke("config:set", key, value),
   // Remove notification listeners
   removeNotificationListener: () => {
-    ipcRenderer.removeAllListeners("notification:show");
-    ipcRenderer.removeAllListeners("island:show");
+    import_electron.ipcRenderer.removeAllListeners("notification:show");
+    import_electron.ipcRenderer.removeAllListeners("island:show");
   }
 };
-contextBridge.exposeInMainWorld("ddoElectron", api);
+import_electron.contextBridge.exposeInMainWorld("ddoElectron", api);

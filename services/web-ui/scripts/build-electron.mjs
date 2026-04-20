@@ -24,7 +24,7 @@ const builds = [
     outfile: join(electronOutDir, 'preload.js'),
     platform: 'node',
     target: 'node18',
-    format: 'esm',
+    format: 'cjs',
     bundle: true,
     external: ['electron']
   },

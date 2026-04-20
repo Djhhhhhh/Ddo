@@ -1,9 +1,5 @@
-import { Tray, Menu, nativeImage, app } from 'electron'
+import { Tray, Menu, nativeImage, app, NativeImage } from 'electron'
 import path from 'node:path'
-import { fileURLToPath } from 'node:url'
-
-const __filename = fileURLToPath(import.meta.url)
-const __dirname = path.dirname(__filename)
 
 let tray: Tray | null = null
 let hasNotification = false
@@ -13,16 +9,17 @@ function getProjectRoot(): string {
   if (app.isPackaged) {
     return app.getAppPath()
   }
-  // 开发模式使用 process.cwd()
   return process.cwd()
 }
 
-function getTrayIcon(notify = false): nativeImage {
+export function getAppIconPath(notify = false): string {
   const iconsDir = path.join(getProjectRoot(), 'public', 'icons')
-  const iconFile = notify ? 'icon-active.png' : 'icon.png'
+  return path.join(iconsDir, notify ? 'icon-active.svg' : 'icon.svg')
+}
 
+function getTrayIcon(notify = false): NativeImage {
   try {
-    const iconPath = path.join(iconsDir, iconFile)
+    const iconPath = getAppIconPath(notify)
     console.log('[Tray] Loading icon:', iconPath)
     const img = nativeImage.createFromPath(iconPath)
     if (!img.isEmpty()) {
@@ -36,7 +33,7 @@ function getTrayIcon(notify = false): nativeImage {
   return createFallbackIcon(notify)
 }
 
-function createFallbackIcon(active: boolean): nativeImage {
+function createFallbackIcon(active: boolean): NativeImage {
   const size = 16
   const color = active ? '#dc2626' : '#374151'
 
@@ -108,7 +105,8 @@ function createTrayMenu(getMainWindow: () => Electron.BrowserWindow | null): Men
 
 export function createTray(getMainWindow: () => Electron.BrowserWindow | null): Tray {
   if (tray) {
-    return tray
+    tray.destroy()
+    tray = null
   }
 
   console.log('[Tray] Creating tray, project root:', getProjectRoot())
@@ -136,6 +134,15 @@ export function createTray(getMainWindow: () => Electron.BrowserWindow | null): 
   })
 
   return tray
+}
+
+export function destroyTray(): void {
+  if (!tray) {
+    return
+  }
+
+  tray.destroy()
+  tray = null
 }
 
 export function updateTrayIcon(notify: boolean): void {

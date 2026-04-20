@@ -24,12 +24,16 @@ function createIslandWindow() {
   }
   const primaryDisplay = screen.getPrimaryDisplay();
   const { width: screenWidth } = primaryDisplay.workAreaSize;
+  const windowWidth = 520;
+  const windowHeight = 340;
+  const preloadPath = getPreloadPath();
   console.log("[IslandWindow] Creating new BrowserWindow");
+  console.log("[IslandWindow] Using preload path:", preloadPath);
   islandWindow = new BrowserWindow({
-    width: 360,
-    height: 160,
-    x: screenWidth - 380,
-    y: 20,
+    width: windowWidth,
+    height: windowHeight,
+    x: Math.round((screenWidth - windowWidth) / 2),
+    y: 10,
     frame: false,
     transparent: true,
     alwaysOnTop: true,
@@ -38,8 +42,9 @@ function createIslandWindow() {
     movable: false,
     focusable: true,
     show: false,
+    backgroundColor: "#00000000",
     webPreferences: {
-      preload: getPreloadPath(),
+      preload: preloadPath,
       contextIsolation: true,
       nodeIntegration: false
     }
@@ -58,25 +63,30 @@ function createIslandWindow() {
       hash: "/island"
     });
   }
+  function flushPendingNotification() {
+    if (!pendingNotification || !islandWindow || islandWindow.isDestroyed()) {
+      return;
+    }
+    console.log("[IslandWindow] Sending pending notification to renderer");
+    islandWindow.webContents.send("island:show", pendingNotification);
+    console.log("[IslandWindow] notification sent");
+    pendingNotification = null;
+  }
   islandWindow.once("ready-to-show", () => {
     console.log("[IslandWindow] ready-to-show event");
     if (islandWindow && !islandWindow.isDestroyed()) {
       islandWindow.show();
       console.log("[IslandWindow] window shown");
-      if (pendingNotification) {
-        console.log("[IslandWindow] Sending pending notification to renderer");
-        setTimeout(() => {
-          if (islandWindow && !islandWindow.isDestroyed()) {
-            islandWindow.webContents.send("island:show", pendingNotification);
-            console.log("[IslandWindow] notification sent");
-            pendingNotification = null;
-          }
-        }, 500);
-      }
     }
   });
   islandWindow.webContents.on("did-finish-load", () => {
     console.log("[IslandWindow] did-finish-load");
+    setTimeout(() => {
+      flushPendingNotification();
+    }, 200);
+  });
+  islandWindow.webContents.on("console-message", (_event, level, message) => {
+    console.log(`[IslandWindow:renderer:${level}] ${message}`);
   });
   islandWindow.webContents.on("did-fail-load", (_event, errorCode, errorDescription) => {
     console.error("[IslandWindow] did-fail-load:", errorCode, errorDescription);
@@ -104,9 +114,6 @@ function showIslandWindow(notification) {
     if (!islandWindow.isVisible()) {
       islandWindow.show();
     }
-    setTimeout(() => {
-      hideIslandWindow();
-    }, 5e3);
   }
 }
 function getIslandWindow() {

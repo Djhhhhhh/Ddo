@@ -1,9 +1,6 @@
 // electron/tray.ts
 import { Tray, Menu, nativeImage, app } from "electron";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
-var __filename = fileURLToPath(import.meta.url);
-var __dirname = path.dirname(__filename);
 var tray = null;
 var hasNotification = false;
 function getProjectRoot() {
@@ -12,11 +9,13 @@ function getProjectRoot() {
   }
   return process.cwd();
 }
-function getTrayIcon(notify = false) {
+function getAppIconPath(notify = false) {
   const iconsDir = path.join(getProjectRoot(), "public", "icons");
-  const iconFile = notify ? "icon-active.png" : "icon.png";
+  return path.join(iconsDir, notify ? "icon-active.svg" : "icon.svg");
+}
+function getTrayIcon(notify = false) {
   try {
-    const iconPath = path.join(iconsDir, iconFile);
+    const iconPath = getAppIconPath(notify);
     console.log("[Tray] Loading icon:", iconPath);
     const img = nativeImage.createFromPath(iconPath);
     if (!img.isEmpty()) {
@@ -92,7 +91,8 @@ function createTrayMenu(getMainWindow) {
 }
 function createTray(getMainWindow) {
   if (tray) {
-    return tray;
+    tray.destroy();
+    tray = null;
   }
   console.log("[Tray] Creating tray, project root:", getProjectRoot());
   const icon = getTrayIcon(hasNotification);
@@ -116,6 +116,13 @@ function createTray(getMainWindow) {
   });
   return tray;
 }
+function destroyTray() {
+  if (!tray) {
+    return;
+  }
+  tray.destroy();
+  tray = null;
+}
 function updateTrayIcon(notify) {
   if (tray && notify !== hasNotification) {
     hasNotification = notify;
@@ -127,6 +134,8 @@ function getTray() {
 }
 export {
   createTray,
+  destroyTray,
+  getAppIconPath,
   getTray,
   updateTrayIcon
 };

@@ -16,6 +16,6 @@
     "sourceMap": true,
     "noEmitOnError": true
   },
-  "include": ["electron/**/*.ts"],
+  "include": ["**/*.ts"],
   "exclude": ["node_modules", "dist", "dist-electron"]
 }

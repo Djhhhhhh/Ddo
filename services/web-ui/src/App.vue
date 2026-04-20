@@ -3,7 +3,7 @@ import { onMounted, computed } from 'vue'
 import { useRoute } from 'vue-router'
 import { useThemeStore } from '@/stores/theme'
 import Layout from '@/components/Layout/Layout.vue'
-import DingIslandCard from '@/components/DingIsland/DingIslandCard.vue'
+import IslandView from '@/views/Island/IslandView.vue'
 
 const themeStore = useThemeStore()
 const route = useRoute()
@@ -20,7 +20,7 @@ onMounted(() => {
 <template>
   <!-- 灵动岛独立窗口模式 -->
   <div v-if="isIslandMode" class="p-0">
-    <DingIslandCard />
+    <IslandView />
   </div>
   <!-- 普通 Web UI 模式 -->
   <Layout v-else />
