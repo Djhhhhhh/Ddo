@@ -4,7 +4,7 @@
  *
  * 使用方法:
  *   node server.js
- * 然后访问 http://localhost:3000
+ * 然后访问 http://localhost:3003
  */
 
 const http = require('http');

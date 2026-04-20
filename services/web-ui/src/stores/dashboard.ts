@@ -1,14 +1,11 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
-import { getMetrics, listTimers, listMCPs, listKnowledge } from '@/api'
-import type { MetricsData, Timer, MCP, Knowledge } from '@/api/types'
+import { getMetrics } from '@/api'
+import type { MetricsData } from '@/api/types'
 
 export const useDashboardStore = defineStore('dashboard', () => {
   // State
   const metrics = ref<MetricsData | null>(null)
-  const timers = ref<Timer[]>([])
-  const mcps = ref<MCP[]>([])
-  const knowledge = ref<Knowledge[]>([])
   const lastUpdate = ref<Date | null>(null)
   const loading = ref(false)
   const error = ref<string | null>(null)
@@ -23,13 +20,6 @@ export const useDashboardStore = defineStore('dashboard', () => {
     return s.server_go === 'running' && s.llm_py === 'running'
   })
 
-  const timerStats = computed(() => {
-    return {
-      total: timers.value.length,
-      active: timers.value.filter(t => t.status === 'active').length
-    }
-  })
-
   // 生成近7天的 mock 数据（实际应由后端提供）
   const llmCallTrend = computed(() => {
     const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
@@ -37,47 +27,21 @@ export const useDashboardStore = defineStore('dashboard', () => {
     return { labels: days, data: baseValues }
   })
 
-  const mcpStats = computed(() => {
-    return {
-      total: mcps.value.length,
-      active: mcps.value.filter(m => m.status === 'connected').length
-    }
-  })
-
-  const knowledgeTotal = computed(() => knowledge.value.length)
-
   // Actions
-  async function fetchDashboardData() {
+  async function fetchMetrics() {
     loading.value = true
     error.value = null
 
     try {
-      const [metricsRes, timersRes, mcpsRes, knowledgeRes] = await Promise.all([
-        getMetrics(),
-        listTimers(),
-        listMCPs(),
-        listKnowledge()
-      ])
+      const res = await getMetrics()
 
-      if (metricsRes.code === 0) {
-        metrics.value = metricsRes.data
-      }
-
-      if (timersRes.code === 0) {
-        timers.value = timersRes.data.items || []
-      }
-
-      if (mcpsRes.code === 0) {
-        mcps.value = mcpsRes.data.items || []
-      }
-
-      if (knowledgeRes.code === 0) {
-        knowledge.value = knowledgeRes.data.items || []
+      if (res.code === 0) {
+        metrics.value = res.data
       }
 
       lastUpdate.value = new Date()
     } catch (e) {
-      error.value = e instanceof Error ? e.message : 'Failed to fetch dashboard data'
+      error.value = e instanceof Error ? e.message : 'Failed to fetch metrics data'
     } finally {
       loading.value = false
     }
@@ -85,7 +49,7 @@ export const useDashboardStore = defineStore('dashboard', () => {
 
   function startAutoRefresh(intervalMs = 30000) {
     stopAutoRefresh()
-    refreshInterval = setInterval(fetchDashboardData, intervalMs)
+    refreshInterval = setInterval(fetchMetrics, intervalMs)
   }
 
   function stopAutoRefresh() {
@@ -97,18 +61,12 @@ export const useDashboardStore = defineStore('dashboard', () => {
 
   return {
     metrics,
-    timers,
-    mcps,
-    knowledge,
     lastUpdate,
     loading,
     error,
     isServicesHealthy,
-    timerStats,
-    mcpStats,
-    knowledgeTotal,
     llmCallTrend,
-    fetchDashboardData,
+    fetchMetrics,
     startAutoRefresh,
     stopAutoRefresh
   }

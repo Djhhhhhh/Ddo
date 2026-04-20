@@ -1,5 +1,5 @@
 {
-  "exportTime": "2026-04-16T10:26:35.527Z",
+  "exportTime": "2026-04-20T06:40:09.760Z",
   "phases": {
     "p1": {
       "title": "Phase 1: 基础设施",
@@ -266,7 +266,7 @@
     "p3": {
       "title": "Phase 3: 扩展层",
       "subtitle": "最后完善",
-      "status": "pending",
+      "status": "active",
       "tasks": [
         {
           "id": "p3-1",

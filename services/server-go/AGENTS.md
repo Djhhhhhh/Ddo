@@ -54,7 +54,13 @@ server-go/
 │   │   └── http/
 │   │       ├── handler/
 │   │       │   ├── health_handler.go        # 健康检查 Handler（2026-04-15）
-│   │       │   └── knowledge_handler.go     # ← 新增：知识库 Handler（2026-04-15）
+│   │       │   ├── knowledge_handler.go     # 知识库 Handler（2026-04-15）
+│   │       │   ├── timer_handler.go          # 定时任务 Handler（2026-04-15）
+│   │       │   ├── mcp_handler.go           # MCP Handler（2026-04-15）
+│   │       │   ├── llm_handler.go           # LLM Handler（2026-04-15）
+│   │       │   ├── metrics_handler.go       # Metrics Handler（2026-04-20）
+│   │       │   ├── category_handler.go     # 分类 Handler（2026-04-17）
+│   │       │   └── conversation_handler.go  # 对话 Handler（2026-04-17）
 │   │       ├── middleware/
 │   │       │   ├── recovery.go              # 异常恢复（2026-04-14）
 │   │       │   ├── logger.go                # 请求日志（2026-04-14）
@@ -82,6 +88,8 @@ server-go/
 │   │   └── repository/                      # ← 新增：数据访问层（2026-04-15）
 │   │       ├── knowledge_repo.go            # 知识库 Repository
 │   │       ├── timer_repo.go                # 定时任务 Repository
+│   │       ├── timer_log_repo.go            # 定时任务日志 Repository
+│   │       ├── mcp_repo.go                  # MCP Repository
 │   │       └── category_repo.go             # ← 新增：分类 Repository（2026-04-17）
 │   ├── queue/                               # ← 新增：消息队列层（2026-04-15）
 │   │   ├── queue.go                         # Queue 接口定义
@@ -145,4 +153,4 @@ server-go/
 
 ## 🕒 最后更新时间
 
-2026-04-15 19:30:00
+2026-04-20 10:00:00

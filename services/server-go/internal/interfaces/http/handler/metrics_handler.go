@@ -7,22 +7,36 @@ import (
 	"github.com/gin-gonic/gin"
 
 	"github.com/ddo/server-go/internal/db"
+	"github.com/ddo/server-go/internal/db/repository"
 	"github.com/ddo/server-go/internal/queue"
 )
 
 // MetricsHandler metrics 请求处理
 type MetricsHandler struct {
-	dbConn    *db.MySQLConn
-	queue     queue.Queue
-	llmPyURL  string
+	dbConn       *db.MySQLConn
+	queue        queue.Queue
+	llmPyURL     string
+	timerRepo    repository.TimerRepository
+	knowledgeRepo repository.KnowledgeRepository
+	mcpRepo      repository.MCPRepository
 }
 
 // NewMetricsHandler 创建 metrics 处理器
-func NewMetricsHandler(dbConn *db.MySQLConn, queue queue.Queue, llmPyURL string) *MetricsHandler {
+func NewMetricsHandler(
+	dbConn *db.MySQLConn,
+	queue queue.Queue,
+	llmPyURL string,
+	timerRepo repository.TimerRepository,
+	knowledgeRepo repository.KnowledgeRepository,
+	mcpRepo repository.MCPRepository,
+) *MetricsHandler {
 	return &MetricsHandler{
-		dbConn:   dbConn,
-		queue:    queue,
-		llmPyURL: llmPyURL,
+		dbConn:        dbConn,
+		queue:         queue,
+		llmPyURL:      llmPyURL,
+		timerRepo:     timerRepo,
+		knowledgeRepo: knowledgeRepo,
+		mcpRepo:       mcpRepo,
 	}
 }
 
@@ -46,9 +60,12 @@ type MetricsData struct {
 
 // ServicesMetrics 服务状态指标
 type ServicesMetrics struct {
-	ServerGo string `json:"server_go"`
-	LlmPy    string `json:"llm_py"`
-	MySQL    string `json:"mysql"`
+	ServerGo string            `json:"server_go"`
+	LlmPy    string            `json:"llm_py"`
+	MySQL    string            `json:"mysql"`
+	CLI      string            `json:"cli"`
+	Web      string            `json:"web"`
+	Extra    map[string]string `json:"extra,omitempty"`
 }
 
 // TimerMetrics 定时任务指标
@@ -70,6 +87,8 @@ type McpMetrics struct {
 // Metrics 获取综合指标
 // GET /api/v1/metrics
 func (h *MetricsHandler) Metrics(c *gin.Context) {
+	ctx := c.Request.Context()
+
 	// 检查 llm-py 健康状态（真正发起 HTTP 请求）
 	llmPyStatus := "stopped"
 	if h.llmPyURL != "" {
@@ -102,6 +121,33 @@ func (h *MetricsHandler) Metrics(c *gin.Context) {
 	}
 	_ = badgerdbStatus // 已验证队列启动成功
 
+	// 统计指标
+	var timersTotal int64
+	var timersActive int64
+	var knowledgeTotal int64
+	var mcpTotal int64
+
+	if h.timerRepo != nil {
+		if res, err := h.timerRepo.List(ctx, repository.TimerFilter{Page: 1, PageSize: 1}); err == nil && res != nil {
+			timersTotal = res.Total
+		}
+		if active, err := h.timerRepo.ListActive(ctx); err == nil {
+			timersActive = int64(len(active))
+		}
+	}
+
+	if h.knowledgeRepo != nil {
+		if res, err := h.knowledgeRepo.List(ctx, repository.KnowledgeFilter{}); err == nil && res != nil {
+			knowledgeTotal = res.Total
+		}
+	}
+
+	if h.mcpRepo != nil {
+		if res, err := h.mcpRepo.List(ctx, repository.MCPFilter{}); err == nil && res != nil {
+			mcpTotal = res.Total
+		}
+	}
+
 	response := MetricsResponse{
 		Code:    0,
 		Message: "ok",
@@ -112,19 +158,21 @@ func (h *MetricsHandler) Metrics(c *gin.Context) {
 				ServerGo: "running",
 				LlmPy:    llmPyStatus,
 				MySQL:    mysqlStatus,
+				CLI:      "running", // 前端组件，默认运行状态
+				Web:      "running", // 前端 SPA，默认运行状态
 			},
 			Timers: TimerMetrics{
-				Total:  0,
-				Active: 0,
+				Total:  int(timersTotal),
+				Active: int(timersActive),
 			},
 			Knowledge: KnowledgeMetrics{
-				Total: 0,
+				Total: int(knowledgeTotal),
 			},
 			Mcps: McpMetrics{
-				Total: 0,
+				Total: int(mcpTotal),
 			},
 		},
-		Timestamp: "",
+		Timestamp: time.Now().Format(time.RFC3339),
 	}
 
 	c.JSON(http.StatusOK, response)

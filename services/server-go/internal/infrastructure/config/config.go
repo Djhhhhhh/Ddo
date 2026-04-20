@@ -16,6 +16,7 @@ type Config struct {
 	Server   ServerConfig   `mapstructure:"server"`
 	Database DatabaseConfig `mapstructure:"database"`
 	Log      LogConfig      `mapstructure:"log"`
+	LLMPyURL string         `mapstructure:"llm_py_url"` // LLM-Py 服务地址
 }
 
 // ServerConfig 服务配置
@@ -135,4 +136,7 @@ func (l *ViperLoader) setDefaults(v *viper.Viper) {
 	v.SetDefault("log.level", "info")
 	v.SetDefault("log.format", "json")
 	v.SetDefault("log.output", "stdout")
+
+	// LLM-Py 服务地址
+	v.SetDefault("llm_py_url", "http://localhost:8000")
 }

@@ -23,6 +23,8 @@ export interface ServicesMetrics {
   server_go: string
   llm_py: string
   mysql: string
+  cli: string
+  web: string
 }
 
 export interface TimerMetrics {

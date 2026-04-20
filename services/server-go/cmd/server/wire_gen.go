@@ -21,13 +21,13 @@ import (
 	"github.com/ddo/server-go/internal/infrastructure/config"
 	"github.com/ddo/server-go/internal/infrastructure/logger"
 	"github.com/ddo/server-go/internal/infrastructure/server"
-	"github.com/ddo/server-go/internal/queue"
-	"github.com/ddo/server-go/internal/scheduler"
 	httpinterface "github.com/ddo/server-go/internal/interfaces/http"
 	"github.com/ddo/server-go/internal/interfaces/http/handler"
+	mcpclient "github.com/ddo/server-go/internal/mcp"
+	"github.com/ddo/server-go/internal/queue"
+	"github.com/ddo/server-go/internal/scheduler"
 	"github.com/gin-gonic/gin"
 	"go.uber.org/zap"
-	mcpclient "github.com/ddo/server-go/internal/mcp"
 )
 
 // Injectors from wire.go:
@@ -193,8 +193,8 @@ func InitializeApp(cfgPath string) (*bootstrap.App, func(), error) {
 	)
 
 	// 初始化 Metrics Handler
-	llmPyURL := "http://localhost:8000" // 将来从配置读取
-	metricsHandler := handler.NewMetricsHandler(mySQLConn, queueQueue, llmPyURL)
+	llmPyURL := cfg.LLMPyURL // 从配置读取 llm-py 地址
+	metricsHandler := handler.NewMetricsHandler(mySQLConn, queueQueue, llmPyURL, timerRepo, knowledgeRepo, mcpRepo)
 
 	// 初始化对话 Handler
 	conversationHandler := handler.NewConversationHandler(conversationService)
