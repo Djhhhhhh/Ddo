@@ -28,9 +28,9 @@ const actionLoading = ref<string | null>(null)
 
 // Trigger type options
 const triggerTypeOptions = [
-  { label: 'Cron Expression', value: 'cron' },
-  { label: 'Periodic Interval', value: 'periodic' },
-  { label: 'Delayed One-shot', value: 'delayed' }
+  { label: 'Cron - 定时调度', value: 'cron' },
+  { label: 'Periodic - 间隔重复', value: 'periodic' },
+  { label: 'Delayed - 一次性延迟', value: 'delayed' }
 ]
 
 // HTTP method options
@@ -64,22 +64,35 @@ const formData = ref<CreateTimerRequest>({
 })
 
 // Cron input helpers (visual mode)
-const cronMinute = ref('0')
+const cronMinute = ref('*')
 const cronHour = ref('*')
 const cronDay = ref('*')
 const cronMonth = ref('*')
 const cronWeek = ref('*')
 
+// Cron 表达式说明
+// 格式：分 时 日 月 周
+// 特殊字符：* = 任意值, , = 列表, - = 范围, / = 步长
+// 例如：*/5 * * * * = 每5分钟执行一次
+//       0 9 * * * = 每天9:00执行
+//       0 */2 * * * = 每2小时执行一次
+
 const cronPresets = [
+  { label: 'Every Minute', value: '* * * * *' },
+  { label: 'Every 5 Minutes', value: '*/5 * * * *' },
+  { label: 'Every 15 Minutes', value: '*/15 * * * *' },
   { label: 'Every Hour', value: '0 * * * *' },
-  { label: 'Daily 9:00', value: '0 9 * * *' },
-  { label: 'Daily 18:00', value: '0 18 * * *' },
-  { label: 'Weekly Mon', value: '0 9 * * 1' },
-  { label: 'Monthly 1st', value: '0 9 1 * *' }
+  { label: 'Every Day 9:00', value: '0 9 * * *' },
+  { label: 'Every Day 18:00', value: '0 18 * * *' },
+  { label: 'Every Week (Mon)', value: '0 9 * * 1' },
+  { label: 'Every Month (1st)', value: '0 9 1 * *' }
 ]
 
-// Periodic interval presets (in seconds)
+// Periodic interval presets (in seconds) - 支持秒级精度
 const intervalPresets = [
+  { label: '10 seconds', value: 10 },
+  { label: '30 seconds', value: 30 },
+  { label: '1 minute', value: 60 },
   { label: '5 minutes', value: 300 },
   { label: '15 minutes', value: 900 },
   { label: '30 minutes', value: 1800 },
@@ -87,6 +100,18 @@ const intervalPresets = [
   { label: '6 hours', value: 21600 },
   { label: '12 hours', value: 43200 },
   { label: '1 day', value: 86400 }
+]
+
+// Delayed presets (一次性任务，触发后自动暂停)
+const delayPresets = [
+  { label: '5 seconds', value: 5 },
+  { label: '10 seconds', value: 10 },
+  { label: '30 seconds', value: 30 },
+  { label: '1 minute', value: 60 },
+  { label: '5 minutes', value: 300 },
+  { label: '15 minutes', value: 900 },
+  { label: '30 minutes', value: 1800 },
+  { label: '1 hour', value: 3600 }
 ]
 
 // Load timers
@@ -176,7 +201,7 @@ function resetCreateForm() {
     callback_headers: {},
     callback_body: ''
   }
-  cronMinute.value = '0'
+  cronMinute.value = '*'
   cronHour.value = '*'
   cronDay.value = '*'
   cronMonth.value = '*'
@@ -540,10 +565,15 @@ function formatInterval(seconds: number) {
           </div>
           <div>
             <label class="block text-sm font-medium text-gray-700 mb-2">Cron 表达式</label>
+            <div class="text-xs text-gray-500 mb-3 p-2 bg-gray-50 rounded">
+              <p><b>格式说明：</b>分 时 日 月 周</p>
+              <p class="mt-1"><b>特殊字符：</b>* 任意值 | , 列表 | - 范围 | / 步长</p>
+              <p class="mt-1"><b>示例：</b>*/5 * * * * = 每5分钟 | 0 9 * * * = 每天9:00 | */2 * * * * = 每2小时</p>
+            </div>
             <div class="grid grid-cols-5 gap-2 mb-2">
               <div>
                 <label class="text-xs text-gray-500">分 (0-59)</label>
-                <Input v-model="cronMinute" placeholder="0" />
+                <Input v-model="cronMinute" placeholder="*" />
               </div>
               <div>
                 <label class="text-xs text-gray-500">时 (0-23)</label>
@@ -562,8 +592,8 @@ function formatInterval(seconds: number) {
                 <Input v-model="cronWeek" placeholder="*" />
               </div>
             </div>
-            <p class="text-xs text-gray-500">
-              当前: <span class="font-mono">{{ buildCronExpression() }}</span>
+            <p class="text-xs text-gray-500 mt-2">
+              当前表达式: <span class="font-mono bg-gray-100 px-2 py-1 rounded">{{ buildCronExpression() }}</span>
             </p>
           </div>
           <div>
@@ -574,6 +604,13 @@ function formatInterval(seconds: number) {
 
         <!-- Periodic Fields -->
         <template v-if="formData.trigger_type === 'periodic'">
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-2">间隔说明</label>
+            <div class="text-xs text-gray-500 mb-3 p-2 bg-gray-50 rounded">
+              <p><b>Periodic</b>：固定间隔重复执行，支持秒级精度</p>
+              <p class="mt-1">例：每 10 秒执行、每 5 分钟执行</p>
+            </div>
+          </div>
           <div>
             <label class="block text-sm font-medium text-gray-700 mb-1">间隔预设</label>
             <div class="flex flex-wrap gap-2">
@@ -590,15 +627,36 @@ function formatInterval(seconds: number) {
           </div>
           <div>
             <label class="block text-sm font-medium text-gray-700 mb-1">间隔 (秒) *</label>
-            <Input v-model.number="formData.interval_seconds" type="number" placeholder="3600" />
+            <Input v-model.number="formData.interval_seconds" type="number" placeholder="60" min="1" />
           </div>
         </template>
 
         <!-- Delayed Fields -->
         <template v-if="formData.trigger_type === 'delayed'">
           <div>
+            <label class="block text-sm font-medium text-gray-700 mb-2">延迟说明</label>
+            <div class="text-xs text-gray-500 mb-3 p-2 bg-gray-50 rounded">
+              <p><b>Delayed</b>：一次性任务，延迟指定时间后执行一次，然后自动暂停</p>
+              <p class="mt-1">适合：定时提醒、单次通知、延迟处理等场景</p>
+            </div>
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">延迟预设</label>
+            <div class="flex flex-wrap gap-2">
+              <Button
+                v-for="preset in delayPresets"
+                :key="preset.value"
+                variant="gray"
+                class="text-sm"
+                @click="formData.delay_seconds = preset.value"
+              >
+                {{ preset.label }}
+              </Button>
+            </div>
+          </div>
+          <div>
             <label class="block text-sm font-medium text-gray-700 mb-1">延迟 (秒) *</label>
-            <Input v-model.number="formData.delay_seconds" type="number" placeholder="60" />
+            <Input v-model.number="formData.delay_seconds" type="number" placeholder="60" min="1" />
           </div>
         </template>
 

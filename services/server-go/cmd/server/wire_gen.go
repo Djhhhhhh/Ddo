@@ -74,7 +74,7 @@ func InitializeApp(cfgPath string) (*bootstrap.App, func(), error) {
 	cronScheduler := scheduler.NewScheduler(queueQueue, timerRepo, zapLogger)
 
 	// 初始化 Callback Executor
-	callbackExecutor := service.NewCallbackExecutor(queueQueue, timerLogRepo, zapLogger)
+	callbackExecutor := service.NewCallbackExecutor(queueQueue, timerLogRepo, timerRepo, zapLogger)
 
 	// 初始化路由
 	router := httpinterface.NewRouter(zapLogger)

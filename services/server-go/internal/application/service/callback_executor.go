@@ -21,6 +21,7 @@ import (
 type CallbackExecutor struct {
 	queue        queue.Queue
 	timerLogRepo repository.TimerLogRepository
+	timerRepo    repository.TimerRepository
 	logger       *zap.Logger
 	httpClient   *http.Client
 	ctx          context.Context
@@ -31,6 +32,7 @@ type CallbackExecutor struct {
 type TimerPayload struct {
 	TimerUUID       string `json:"timer_uuid"`
 	Name            string `json:"name"`
+	TriggerType     string `json:"trigger_type"`
 	CallbackURL     string `json:"callback_url"`
 	CallbackMethod  string `json:"callback_method"`
 	CallbackHeaders string `json:"callback_headers"`
@@ -41,12 +43,14 @@ type TimerPayload struct {
 func NewCallbackExecutor(
 	queue queue.Queue,
 	timerLogRepo repository.TimerLogRepository,
+	timerRepo repository.TimerRepository,
 	logger *zap.Logger,
 ) *CallbackExecutor {
 	ctx, cancel := context.WithCancel(context.Background())
 	return &CallbackExecutor{
 		queue:        queue,
 		timerLogRepo: timerLogRepo,
+		timerRepo:    timerRepo,
 		logger:       logger.With(zap.String("service", "callback_executor")),
 		httpClient: &http.Client{
 			Timeout: 30 * time.Second,
@@ -108,7 +112,32 @@ func (e *CallbackExecutor) handleMessage(ctx context.Context, msg *queue.Message
 		return err
 	}
 
+	// 如果是 delayed 类型任务，执行完成后暂停
+	if payload.TriggerType == models.TriggerTypeDelayed {
+		e.pauseDelayedTimer(payload.TimerUUID)
+	}
+
 	return nil
+}
+
+// pauseDelayedTimer 暂停延迟一次性任务
+func (e *CallbackExecutor) pauseDelayedTimer(timerUUID string) {
+	if e.timerRepo == nil {
+		return
+	}
+
+	ctx := context.Background()
+	if err := e.timerRepo.UpdateStatus(ctx, timerUUID, models.TimerStatusPaused); err != nil {
+		e.logger.Error("Failed to pause delayed timer",
+			zap.String("uuid", timerUUID),
+			zap.Error(err),
+		)
+		return
+	}
+
+	e.logger.Info("Delayed timer paused after execution",
+		zap.String("uuid", timerUUID),
+	)
 }
 
 // ExecuteCallback 立即执行回调（供手动触发使用）

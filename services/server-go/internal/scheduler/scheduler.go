@@ -29,12 +29,13 @@ type Scheduler struct {
 
 // TimerPayload 定时任务消息载荷
 type TimerPayload struct {
-	TimerUUID      string            `json:"timer_uuid"`
-	Name           string            `json:"name"`
-	CallbackURL    string            `json:"callback_url"`
-	CallbackMethod string            `json:"callback_method"`
-	CallbackHeaders string           `json:"callback_headers"`
-	CallbackBody   string            `json:"callback_body"`
+	TimerUUID       string `json:"timer_uuid"`
+	Name            string `json:"name"`
+	TriggerType     string `json:"trigger_type"`
+	CallbackURL     string `json:"callback_url"`
+	CallbackMethod  string `json:"callback_method"`
+	CallbackHeaders string `json:"callback_headers"`
+	CallbackBody    string `json:"callback_body"`
 }
 
 // NewScheduler 创建调度器
@@ -128,6 +129,84 @@ func (s *Scheduler) addJobInternal(timer *models.Timer) error {
 		return fmt.Errorf("scheduler not started")
 	}
 
+	// 根据触发类型处理
+	switch timer.TriggerType {
+	case models.TriggerTypeDelayed:
+		// delayed 类型通过延迟队列处理：立即发布延迟消息
+		return s.publishDelayedJob(timer)
+
+	case models.TriggerTypePeriodic:
+		// periodic 类型转换为 cron 表达式: @every Ns
+		cronExpr := fmt.Sprintf("@every %ds", timer.IntervalSeconds)
+		schedule, err := cron.ParseStandard(cronExpr)
+		if err != nil {
+			return fmt.Errorf("invalid periodic expression: %w", err)
+		}
+		return s.addCronJob(timer, schedule)
+
+	case models.TriggerTypeCron, "":
+		// cron 类型或默认类型，使用 cron 表达式
+		if timer.CronExpr == "" {
+			return fmt.Errorf("cron expression is required for cron trigger")
+		}
+		schedule, err := cron.ParseStandard(timer.CronExpr)
+		if err != nil {
+			return fmt.Errorf("invalid cron expression %s: %w", timer.CronExpr, err)
+		}
+		return s.addCronJob(timer, schedule)
+
+	default:
+		return fmt.Errorf("unsupported trigger type: %s", timer.TriggerType)
+	}
+}
+
+// publishDelayedJob 发布延迟任务到队列
+func (s *Scheduler) publishDelayedJob(timer *models.Timer) error {
+	if s.queue == nil {
+		return fmt.Errorf("queue not available")
+	}
+
+	// 计算触发时间
+	delayDuration := time.Duration(timer.DelaySeconds) * time.Second
+	triggerAt := time.Now().Add(delayDuration)
+
+	// 构造消息载荷
+	payload := TimerPayload{
+		TimerUUID:       timer.UUID,
+		Name:            timer.Name,
+		TriggerType:     timer.TriggerType,
+		CallbackURL:     timer.CallbackURL,
+		CallbackMethod:  timer.CallbackMethod,
+		CallbackHeaders: timer.CallbackHeaders,
+		CallbackBody:    timer.CallbackBody,
+	}
+
+	payloadBytes, err := json.Marshal(payload)
+	if err != nil {
+		return fmt.Errorf("marshal payload failed: %w", err)
+	}
+
+	// 发布延迟消息到队列
+	ctx := context.Background()
+	if err := s.queue.Publish(ctx, "timer", payloadBytes, 0, delayDuration); err != nil {
+		return fmt.Errorf("publish delayed message failed: %w", err)
+	}
+
+	// 更新下次执行时间
+	s.updateNextRunTime(timer.UUID, triggerAt)
+
+	s.logger.Info("Delayed timer job published to queue",
+		zap.String("uuid", timer.UUID),
+		zap.String("name", timer.Name),
+		zap.Int64("delay_seconds", timer.DelaySeconds),
+		zap.Time("trigger_at", triggerAt),
+	)
+
+	return nil
+}
+
+// addCronJob 添加 cron 任务到调度器
+func (s *Scheduler) addCronJob(timer *models.Timer, schedule cron.Schedule) error {
 	// 解析时区
 	loc := time.Local
 	if timer.Timezone != "" && timer.Timezone != "Local" {
@@ -141,28 +220,19 @@ func (s *Scheduler) addJobInternal(timer *models.Timer) error {
 		}
 	}
 
-	// 创建带时区的 cron 调度
-	schedule, err := cron.ParseStandard(timer.CronExpr)
-	if err != nil {
-		return fmt.Errorf("invalid cron expression %s: %w", timer.CronExpr, err)
-	}
-
 	// 包装任务函数，捕获 timer 信息
 	timerCopy := *timer
 	jobFunc := func() {
 		s.triggerJob(&timerCopy)
 	}
 
-	// 使用 cron.WithLocation 来包装 schedule
-	// 注意：robfig/cron v3 的 AddFunc 不支持按任务设置时区
-	// 这里我们使用 Schedule 接口手动处理时区
+	// 使用带时区的 schedule 包装
 	wrappedSchedule := &locationSchedule{
 		Schedule: schedule,
 		Location: loc,
 	}
 
 	entryID := s.cron.Schedule(wrappedSchedule, cron.FuncJob(jobFunc))
-
 	s.entryIDs[timer.UUID] = entryID
 
 	// 计算并更新下次执行时间
@@ -212,6 +282,7 @@ func (s *Scheduler) triggerJob(timer *models.Timer) {
 	payload := TimerPayload{
 		TimerUUID:       timer.UUID,
 		Name:            timer.Name,
+		TriggerType:     timer.TriggerType,
 		CallbackURL:     timer.CallbackURL,
 		CallbackMethod:  timer.CallbackMethod,
 		CallbackHeaders: timer.CallbackHeaders,
