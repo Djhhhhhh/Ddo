@@ -1,7 +1,3 @@
-# ddo cli客户端修复
-1. 添加 /xx-web 系列命令，快速弹出对应功能的web页面
-2. 优化cli端添加mcp工具，添加定时任务等操作流程，流程和需要添加的表单和web端保持一致，如：/status-web 用于弹出dashboard页
-
 # 项目图标问题
 1. web端的所有项目icon均使用@services\web-ui\public\icons\icon.svg这个图片，包含任务栏托管图标
 

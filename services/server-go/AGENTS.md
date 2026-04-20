@@ -59,8 +59,9 @@ server-go/
 │   │       │   ├── mcp_handler.go           # MCP Handler（2026-04-15）
 │   │       │   ├── llm_handler.go           # LLM Handler（2026-04-15）
 │   │       │   ├── metrics_handler.go       # Metrics Handler（2026-04-20）
-│   │       │   ├── category_handler.go     # 分类 Handler（2026-04-17）
-│   │       │   └── conversation_handler.go  # 对话 Handler（2026-04-17）
+│   │       │   ├── category_handler.go      # 分类 Handler（2026-04-17）
+│   │       │   ├── conversation_handler.go  # 对话 Handler（2026-04-17）
+│   │       │   └── notification_handler.go  # 通知 Handler（2026-04-20）
 │   │       ├── middleware/
 │   │       │   ├── recovery.go              # 异常恢复（2026-04-14）
 │   │       │   ├── logger.go                # 请求日志（2026-04-14）
@@ -83,19 +84,24 @@ server-go/
 │   │   │   ├── knowledge.go                 # 知识库模型
 │   │   │   ├── timer.go                     # 定时任务模型
 │   │   │   ├── timer_log.go                 # 定时任务日志模型
-│   │   │   └── mcp.go                       # MCP 配置模型
-│   │   │   └── category.go                  # ← 新增：分类模型（2026-04-17）
+│   │   │   ├── mcp.go                       # MCP 配置模型
+│   │   │   ├── category.go                  # 分类模型（2026-04-17）
+│   │   │   └── notification.go              # 通知模型（2026-04-20）
 │   │   └── repository/                      # ← 新增：数据访问层（2026-04-15）
 │   │       ├── knowledge_repo.go            # 知识库 Repository
 │   │       ├── timer_repo.go                # 定时任务 Repository
 │   │       ├── timer_log_repo.go            # 定时任务日志 Repository
 │   │       ├── mcp_repo.go                  # MCP Repository
-│   │       └── category_repo.go             # ← 新增：分类 Repository（2026-04-17）
+│   │       ├── category_repo.go             # 分类 Repository（2026-04-17）
+│   │       └── notification_repo.go         # 通知 Repository（2026-04-20）
 │   ├── queue/                               # ← 新增：消息队列层（2026-04-15）
 │   │   ├── queue.go                         # Queue 接口定义
 │   │   └── badger_queue.go                  # BadgerDB 队列实现
 │   └── scheduler/                           # ← 新增：任务调度层（2026-04-15）
-│       └── scheduler.go                     # Cron 调度器（预留接口）
+│       └── scheduler.go                     # Cron 调度器
+│   ├── application/service/                  # 应用层服务（2026-04-20）
+│   │   ├── callback_executor.go              # 回调执行器
+│   │   └── notification.go                   # 通知服务（新增）
 ├── pkg/
 │   └── utils/
 │       └── validator.go                     # 通用验证工具（2026-04-14）
@@ -153,4 +159,4 @@ server-go/
 
 ## 🕒 最后更新时间
 
-2026-04-20 10:00:00
+2026-04-20 23:35:00

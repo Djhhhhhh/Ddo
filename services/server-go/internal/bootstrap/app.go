@@ -188,6 +188,7 @@ func (a *App) autoMigrate() error {
 		&models.MCPConfig{},
 		&models.Category{},
 		&models.KnowledgeCategory{},
+		&models.Notification{},
 	)
 
 	if err != nil {

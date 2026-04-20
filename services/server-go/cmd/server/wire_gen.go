@@ -65,16 +65,21 @@ func InitializeApp(cfgPath string) (*bootstrap.App, func(), error) {
 	// 初始化 Repository
 	var timerRepo repository.TimerRepository
 	var timerLogRepo repository.TimerLogRepository
+	var notificationRepo repository.NotificationRepository
 	if mySQLConn != nil && mySQLConn.DB() != nil {
 		timerRepo = repository.NewTimerRepository(mySQLConn.DB())
 		timerLogRepo = repository.NewTimerLogRepository(mySQLConn.DB())
+		notificationRepo = repository.NewNotificationRepository(mySQLConn)
 	}
+
+	// 初始化 Notification Service
+	notificationService := service.NewNotificationService(notificationRepo, zapLogger)
 
 	// 初始化 Scheduler
 	cronScheduler := scheduler.NewScheduler(queueQueue, timerRepo, zapLogger)
 
 	// 初始化 Callback Executor
-	callbackExecutor := service.NewCallbackExecutor(queueQueue, timerLogRepo, timerRepo, zapLogger)
+	callbackExecutor := service.NewCallbackExecutor(queueQueue, timerLogRepo, timerRepo, notificationService, zapLogger)
 
 	// 初始化路由
 	router := httpinterface.NewRouter(zapLogger)
@@ -199,8 +204,11 @@ func InitializeApp(cfgPath string) (*bootstrap.App, func(), error) {
 	// 初始化对话 Handler
 	conversationHandler := handler.NewConversationHandler(conversationService)
 
+	// 初始化通知 Handler
+	notificationHandler := handler.NewNotificationHandler(notificationService)
+
 	// 注册路由
-	router.RegisterRoutes(healthHandler, knowledgeHandler, timerHandler, mcpHandler, llmHandler, metricsHandler, categoryHandler, conversationHandler)
+	router.RegisterRoutes(healthHandler, knowledgeHandler, timerHandler, mcpHandler, llmHandler, metricsHandler, categoryHandler, conversationHandler, notificationHandler)
 
 	// 初始化服务器
 	ginServer := server.NewGinServer(cfg, zapLogger, engine)

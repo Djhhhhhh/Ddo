@@ -45,6 +45,7 @@ func (r *Router) RegisterRoutes(
 	metricsHandler *handler.MetricsHandler,
 	categoryHandler *handler.CategoryHandler,
 	conversationHandler *handler.ConversationHandler,
+	notificationHandler *handler.NotificationHandler,
 ) {
 	// 健康检查
 	r.engine.GET("/health", healthHandler.HealthCheck)
@@ -109,6 +110,13 @@ func (r *Router) RegisterRoutes(
 			categories.GET("", categoryHandler.ListCategories)                            // 查询分类列表
 			categories.GET("/:id/knowledge", categoryHandler.GetKnowledgeByCategory)      // 获取某分类下的知识
 			categories.DELETE("/:id", categoryHandler.DeleteCategory)                     // 删除分类
+		}
+
+		// 通知路由组
+		notifications := v1.Group("/notifications")
+		{
+			notifications.GET("/subscribe", notificationHandler.SubscribeNotifications)   // 订阅通知（轮询接口）
+			notifications.POST("/:id/read", notificationHandler.MarkAsRead)              // 标记通知为已读
 		}
 	}
 }

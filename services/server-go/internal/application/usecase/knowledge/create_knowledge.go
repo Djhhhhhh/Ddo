@@ -68,8 +68,8 @@ func (uc *createKnowledgeUseCase) Execute(ctx context.Context, input CreateKnowl
 
 	// 2. 调用 llm-py 分析 tags 和 categories（如果内容不为空）
 	var aiTags []string
-	var aiCategories []string
-	var isNewCategories []bool
+	var aiCategory string
+	var isNewCategory bool
 
 	if input.Content != "" && uc.llmProxy != nil {
 		analyzeResp, err := uc.llmProxy.AnalyzeKnowledge(ctx, &service.AnalyzeRequest{
@@ -79,51 +79,62 @@ func (uc *createKnowledgeUseCase) Execute(ctx context.Context, input CreateKnowl
 		})
 		if err == nil && analyzeResp != nil {
 			aiTags = analyzeResp.Tags
-			aiCategories = analyzeResp.Categories
-			isNewCategories = analyzeResp.IsNewCategories
+			// 只取第一个分类作为主要类别
+			if len(analyzeResp.Categories) > 0 {
+				aiCategory = analyzeResp.Categories[0]
+				// 检查是否为新分类
+				if len(analyzeResp.IsNewCategories) > 0 {
+					isNewCategory = analyzeResp.IsNewCategories[0]
+				} else {
+					isNewCategory = true
+				}
+			}
 			// 如果用户没有提供 tags，使用 AI 分析的 tags
 			if len(input.Tags) == 0 {
 				input.Tags = aiTags
 			}
-			// 如果用户没有提供 category，使用第一个 AI 分类
-			if input.Category == "" && len(aiCategories) > 0 {
-				input.Category = aiCategories[0]
+			// 如果用户没有提供 category，使用 AI 分析的第一个分类
+			if input.Category == "" && aiCategory != "" {
+				input.Category = aiCategory
 			}
 		}
 		// 注意：AI 分析失败不影响知识创建，使用用户提供的值
 	}
 
-	// 3. 处理 category 自动创建
-	var categoryIDs []string
-	if len(aiCategories) > 0 {
-		for i, catName := range aiCategories {
-			var catID string
-			// 尝试获取已有分类
-			existing, err := uc.categoryRepo.GetByName(ctx, catName)
-			if err != nil {
-				// 分类不存在，需要创建
-				// 修复：当 isNewCategories 为 nil、空数组、或超出范围时，都视为新分类
-				shouldCreate := isNewCategories == nil || len(isNewCategories) == 0 || i >= len(isNewCategories) || isNewCategories[i]
-				if shouldCreate {
-					newCat := &models.Category{
-						Name: catName,
-					}
-					if err := uc.categoryRepo.Create(ctx, newCat); err == nil {
-						catID = newCat.ID
-					}
+	// 3. 处理 category 自动创建（只处理单一类别）
+	var categoryID string
+	if aiCategory != "" {
+		// 尝试获取已有分类
+		existing, err := uc.categoryRepo.GetByName(ctx, aiCategory)
+		if err != nil {
+			// 分类不存在，需要创建
+			if isNewCategory {
+				newCat := &models.Category{
+					Name: aiCategory,
 				}
-			} else {
-				catID = existing.ID
+				if err := uc.categoryRepo.Create(ctx, newCat); err == nil {
+					categoryID = newCat.ID
+				}
 			}
-			if catID != "" {
-				categoryIDs = append(categoryIDs, catID)
-			}
+		} else {
+			categoryID = existing.ID
 		}
 	}
 
-	// 额外检查：如果用户提供了 category 但不在 categoryIDs 中，也应该自动创建
-	if input.Category != "" {
-		categoryIDs = append(categoryIDs, input.Category)
+	// 如果 AI 没有分析出分类，但用户提供了 category，尝试获取或创建
+	if categoryID == "" && input.Category != "" {
+		existing, err := uc.categoryRepo.GetByName(ctx, input.Category)
+		if err != nil {
+			// 创建新分类
+			newCat := &models.Category{
+				Name: input.Category,
+			}
+			if err := uc.categoryRepo.Create(ctx, newCat); err == nil {
+				categoryID = newCat.ID
+			}
+		} else {
+			categoryID = existing.ID
+		}
 	}
 
 	// 4. 序列化标签
@@ -146,9 +157,9 @@ func (uc *createKnowledgeUseCase) Execute(ctx context.Context, input CreateKnowl
 		return result.NewFailure[CreateKnowledgeOutput](fmt.Errorf("create knowledge failed: %w", err))
 	}
 
-	// 6. 创建知识-分类关联
-	for _, catID := range categoryIDs {
-		_ = uc.categoryRepo.AddKnowledgeCategory(ctx, knowledge.UUID, catID)
+	// 6. 创建知识-分类关联（单一类别）
+	if categoryID != "" {
+		_ = uc.categoryRepo.AddKnowledgeCategory(ctx, knowledge.UUID, categoryID)
 	}
 
 	// 7. 调用 RAG 代理生成向量
@@ -169,12 +180,12 @@ func (uc *createKnowledgeUseCase) Execute(ctx context.Context, input CreateKnowl
 		// 注意：嵌入失败不影响知识创建，只记录日志即可
 	}
 
-	// 8. 返回结果
+	// 8. 返回结果（只返回单一类别）
 	return result.NewSuccess(CreateKnowledgeOutput{
 		UUID:        knowledge.UUID,
 		Title:       knowledge.Title,
 		Category:    knowledge.Category,
-		Categories:  aiCategories,
+		Categories:  []string{knowledge.Category}, // 只返回包含主分类的数组
 		Tags:        input.Tags,
 		Status:      knowledge.Status,
 		EmbeddingID: embeddingID,

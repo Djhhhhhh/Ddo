@@ -19,13 +19,14 @@ import (
 // CallbackExecutor 回调执行器
 // 订阅定时任务队列消息，执行 HTTP 回调，记录执行日志
 type CallbackExecutor struct {
-	queue        queue.Queue
-	timerLogRepo repository.TimerLogRepository
-	timerRepo    repository.TimerRepository
-	logger       *zap.Logger
-	httpClient   *http.Client
-	ctx          context.Context
-	cancel       context.CancelFunc
+	queue               queue.Queue
+	timerLogRepo        repository.TimerLogRepository
+	timerRepo           repository.TimerRepository
+	notificationService *NotificationService
+	logger              *zap.Logger
+	httpClient          *http.Client
+	ctx                 context.Context
+	cancel              context.CancelFunc
 }
 
 // TimerPayload 定时任务消息载荷
@@ -44,14 +45,16 @@ func NewCallbackExecutor(
 	queue queue.Queue,
 	timerLogRepo repository.TimerLogRepository,
 	timerRepo repository.TimerRepository,
+	notificationService *NotificationService,
 	logger *zap.Logger,
 ) *CallbackExecutor {
 	ctx, cancel := context.WithCancel(context.Background())
 	return &CallbackExecutor{
-		queue:        queue,
-		timerLogRepo: timerLogRepo,
-		timerRepo:    timerRepo,
-		logger:       logger.With(zap.String("service", "callback_executor")),
+		queue:               queue,
+		timerLogRepo:        timerLogRepo,
+		timerRepo:           timerRepo,
+		notificationService: notificationService,
+		logger:              logger.With(zap.String("service", "callback_executor")),
 		httpClient: &http.Client{
 			Timeout: 30 * time.Second,
 		},
@@ -226,6 +229,9 @@ func (e *CallbackExecutor) executeCallbackWithLog(ctx context.Context, payload *
 
 	e.saveLog(log)
 
+	// 发送通知
+	e.sendNotification(payload, log.Status, duration)
+
 	e.logger.Info("Callback executed",
 		zap.String("timer_uuid", payload.TimerUUID),
 		zap.String("url", payload.CallbackURL),
@@ -256,6 +262,39 @@ func (e *CallbackExecutor) saveLog(log *models.TimerLog) {
 	if err := e.timerLogRepo.Create(ctx, log); err != nil {
 		e.logger.Error("Failed to save timer log",
 			zap.String("timer_uuid", log.TimerUUID),
+			zap.Error(err),
+		)
+	}
+}
+
+// sendNotification 发送任务执行通知
+func (e *CallbackExecutor) sendNotification(payload *TimerPayload, status string, duration int64) {
+	if e.notificationService == nil {
+		return
+	}
+
+	var notifyStatus string
+	var body string
+
+	if status == models.TimerLogStatusSuccess {
+		notifyStatus = models.NotificationStatusCompleted
+		body = fmt.Sprintf("任务执行成功，耗时 %d ms", duration)
+	} else {
+		notifyStatus = models.NotificationStatusFailed
+		body = fmt.Sprintf("任务执行失败，耗时 %d ms", duration)
+	}
+
+	ctx := context.Background()
+	_, err := e.notificationService.CreateTimerNotification(
+		ctx,
+		payload.TimerUUID,
+		payload.Name,
+		notifyStatus,
+		body,
+	)
+	if err != nil {
+		e.logger.Error("Failed to send notification",
+			zap.String("timer_uuid", payload.TimerUUID),
 			zap.Error(err),
 		)
 	}
