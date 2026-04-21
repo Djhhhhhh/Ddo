@@ -43,11 +43,9 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.stopCommand = stopCommand;
 const yaml_1 = __importDefault(require("yaml"));
 const fs = __importStar(require("fs-extra"));
-const chalk_1 = __importDefault(require("chalk"));
 const logger_1 = __importDefault(require("../utils/logger"));
 const paths_1 = require("../utils/paths");
 const manager_1 = require("../services/manager");
-const docker_1 = require("../utils/docker");
 /**
  * 执行 stop 命令
  */
@@ -116,27 +114,6 @@ async function stopCommand(options = {}) {
                 logger_1.default.error(`  ${service}: ${result.error}`);
             }
         }
-    }
-    // 7. 停止 MySQL（如果指定）
-    if (options.includeMysql) {
-        logger_1.default.section('停止 MySQL 数据库');
-        const mysqlStatus = await (0, docker_1.getContainerStatus)(docker_1.MYSQL_CONTAINER_NAME);
-        if (mysqlStatus.running) {
-            const mysqlStopResult = await (0, docker_1.stopMySQL)();
-            if (mysqlStopResult.success) {
-                logger_1.default.success('MySQL 容器已停止');
-            }
-            else {
-                logger_1.default.error(`停止 MySQL 失败: ${mysqlStopResult.message}`);
-            }
-        }
-        else {
-            logger_1.default.info('MySQL 容器未运行');
-        }
-    }
-    else {
-        logger_1.default.newline();
-        logger_1.default.info(chalk_1.default.gray('MySQL 容器仍在运行（使用 --include-mysql 停止）'));
     }
     // 8. 输出结果
     logger_1.default.newline();

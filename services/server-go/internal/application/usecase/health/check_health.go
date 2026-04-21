@@ -44,7 +44,7 @@ func (uc *useCase) Execute(ctx context.Context, input CheckHealthInput) *result.
 	// 创建聚合根，执行业务逻辑
 	aggregate := health.NewAggregate(uc.version)
 
-	// 检查 MySQL 状态
+	// 检查数据库状态
 	var mysqlStatus map[string]interface{}
 	if uc.dbConn != nil {
 		status, err := uc.dbConn.GetMySQLStatus()
@@ -59,7 +59,7 @@ func (uc *useCase) Execute(ctx context.Context, input CheckHealthInput) *result.
 	} else {
 		mysqlStatus = map[string]interface{}{
 			"connected": false,
-			"error":     "MySQL connection not initialized",
+			"error":     "database connection not initialized",
 		}
 	}
 

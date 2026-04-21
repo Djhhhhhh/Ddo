@@ -4,7 +4,6 @@ import (
 	"context"
 	"time"
 
-	"github.com/ddo/server-go/internal/db"
 	"github.com/ddo/server-go/internal/db/models"
 	"gorm.io/gorm"
 )
@@ -26,9 +25,9 @@ type notificationRepository struct {
 }
 
 // NewNotificationRepository 创建通知仓库实例
-func NewNotificationRepository(dbConn *db.MySQLConn) NotificationRepository {
+func NewNotificationRepository(dbConn *gorm.DB) NotificationRepository {
 	return &notificationRepository{
-		db: dbConn.DB(),
+		db: dbConn,
 	}
 }
 

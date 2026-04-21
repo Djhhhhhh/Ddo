@@ -83,6 +83,7 @@
 - REPL 命令通过 `registry.register()` 注册，支持 name + aliases 多名称映射
 - 面向用户的 Timer/MCP 交互文案应优先使用页面表单语义，例如“目标 URL”“请求方法”“连接配置”（发现日期：2026-04-20）
 - 间隔重复任务可在 CLI 内转换为 cron 表达式后创建；一次性延迟任务若后端未提供专用字段，则必须明确提示能力边界，不能伪装成已创建成功（发现日期：2026-04-20）
+- CLI 默认走本地启动模式：`init/start/status/stop` 不能把 Docker/MySQL 作为必需前置条件，server-go 数据库路径统一从 `config.database.path` 传递（发现日期：2026-04-21）
 
 ## 常见陷阱
 

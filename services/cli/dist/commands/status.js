@@ -47,7 +47,6 @@ const chalk_1 = __importDefault(require("chalk"));
 const logger_1 = __importDefault(require("../utils/logger"));
 const paths_1 = require("../utils/paths");
 const manager_1 = require("../services/manager");
-const docker_1 = require("../utils/docker");
 const pid_file_1 = require("../services/pid-file");
 const pid_file_2 = require("../services/pid-file");
 const health_check_1 = require("../services/health-check");
@@ -80,25 +79,20 @@ async function statusCommand(options = {}) {
     catch (err) {
         logger_1.default.warn(`读取配置文件失败: ${err instanceof Error ? err.message : String(err)}`);
     }
-    // 4. 显示 MySQL 状态
+    // 4. 显示数据库状态
     logger_1.default.divider();
     console.log(chalk_1.default.bold.cyan('数据库服务'));
     logger_1.default.divider();
-    const mysqlStatus = await (0, docker_1.getContainerStatus)(docker_1.MYSQL_CONTAINER_NAME);
-    const mysqlState = mysqlStatus.running
-        ? mysqlStatus.health === 'healthy'
-            ? chalk_1.default.green('✓ 健康')
-            : mysqlStatus.health === 'starting'
-                ? chalk_1.default.yellow('启动中')
-                : chalk_1.default.yellow('运行中')
-        : chalk_1.default.red('✗ 已停止');
-    console.log(`${mysqlState} MySQL (容器: ${docker_1.MYSQL_CONTAINER_NAME})`);
-    if (mysqlStatus.id) {
-        console.log(`  容器ID: ${chalk_1.default.gray(mysqlStatus.id)}`);
-    }
+    const databasePath = config?.database?.path || paths.serverGoDb;
+    const databaseExists = await fs.pathExists(databasePath);
+    const databaseState = databaseExists
+        ? chalk_1.default.green('✓ 就绪')
+        : chalk_1.default.yellow('○ 未创建');
+    console.log(`${databaseState} SQLite`);
     if (config?.database) {
-        console.log(`  连接: ${chalk_1.default.gray(`${config.database.host}:${config.database.port}`)}`);
+        console.log(`  驱动: ${chalk_1.default.gray(config.database.driver || 'sqlite')}`);
     }
+    console.log(`  路径: ${chalk_1.default.gray((0, paths_1.prettyPath)(databasePath))}`);
     // 5. 显示后端服务状态
     logger_1.default.newline();
     logger_1.default.divider();
@@ -179,14 +173,14 @@ async function statusCommand(options = {}) {
     logger_1.default.newline();
     logger_1.default.divider();
     const runningCount = services.filter((s) => manager.getStatus(s).running).length;
-    const mysqlRunning = mysqlStatus.running ? 1 : 0;
-    const totalServices = services.length + 1; // +1 for MySQL
-    const summaryColor = runningCount + mysqlRunning === totalServices
+    const databaseReady = databaseExists ? 1 : 0;
+    const totalServices = services.length + 1;
+    const summaryColor = runningCount + databaseReady === totalServices
         ? chalk_1.default.green
-        : runningCount + mysqlRunning > 0
+        : runningCount + databaseReady > 0
             ? chalk_1.default.yellow
             : chalk_1.default.red;
-    console.log(`${summaryColor(`${runningCount + mysqlRunning}/${totalServices}`)} 服务运行中`);
+    console.log(`${summaryColor(`${runningCount + databaseReady}/${totalServices}`)} 服务运行中`);
     logger_1.default.divider();
     return { success: true };
 }

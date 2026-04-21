@@ -2,6 +2,7 @@
  * 配置文件模板
  */
 
+import * as path from 'path';
 import type { DdoConfig } from '../types';
 import { prettyPath } from '../utils/paths';
 
@@ -13,11 +14,8 @@ export function generateDefaultConfig(dataDir: string): DdoConfig {
     version: '0.1.0',
     dataDir: dataDir,
     database: {
-      host: 'localhost',
-      port: 3306,
-      name: 'ddo',
-      user: 'ddo',
-      password: 'ddo_password',
+      driver: 'sqlite',
+      path: `${dataDir}/data/go/server-go.db`,
     },
     logging: {
       level: 'info',
@@ -47,12 +45,8 @@ dataDir: "${prettyPath(config.dataDir)}"
 
 # 数据库配置
 database:
-  host: "${config.database.host}"
-  port: ${config.database.port}
-  name: "${config.database.name}"
-  user: "${config.database.user}"
-  # 密码存储在环境变量更安全: DDO_DB_PASSWORD
-  password: "${config.database.password}"
+  driver: "${config.database.driver}"
+  path: "${prettyPath(config.database.path)}"
 
 # 日志配置
 logging:
@@ -65,5 +59,42 @@ endpoints:
   serverGo: "${config.endpoints.serverGo}"   # server-go 服务地址
   llmPy: "${config.endpoints.llmPy}"         # llm-py 服务地址
   webUi: "${config.endpoints.webUi}"         # web-ui 服务地址
+`;
+}
+
+/**
+ * 生成 server-go 专用配置文件内容
+ * server-go 使用不同的配置结构
+ */
+export function generateServerGoConfigYaml(dataDir: string, serverPort: number, llmPyUrl: string): string {
+  const dbPath = path.join(dataDir, 'data', 'go', 'server-go.db');
+
+  return `# server-go 配置文件
+# 生成时间: ${new Date().toISOString()}
+
+# 服务器配置
+server:
+  host: "127.0.0.1"
+  port: ${serverPort}
+  mode: "release"
+
+# 数据库配置 (SQLite)
+database:
+  path: "${prettyPath(dbPath)}"
+  host: ""
+  port: 0
+  user: ""
+  password: ""
+  dbname: ""
+  charset: ""
+
+# 日志配置
+log:
+  level: "info"
+  format: "json"
+  output: "stdout"
+
+# LLM-Py 服务地址
+llm_py_url: "${llmPyUrl}"
 `;
 }

@@ -8,7 +8,7 @@ import (
 
 var (
 	// 命令行参数
-	configPath = flag.String("config", "", "配置文件路径 (默认: ./configs/config.yaml)")
+	configPath = flag.String("config", "", "配置文件路径 (默认: <DDO_DATA_DIR>/server-go/config.yaml 或 ~/.ddo/server-go/config.yaml)")
 	showVersion = flag.Bool("version", false, "显示版本信息")
 
 	// 应用版本号（通过 ldflags 注入）

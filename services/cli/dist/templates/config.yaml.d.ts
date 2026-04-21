@@ -10,4 +10,9 @@ export declare function generateDefaultConfig(dataDir: string): DdoConfig;
  * 生成配置文件 YAML 内容
  */
 export declare function generateConfigYaml(config: DdoConfig): string;
+/**
+ * 生成 server-go 专用配置文件内容
+ * server-go 使用不同的配置结构
+ */
+export declare function generateServerGoConfigYaml(dataDir: string, serverPort: number, llmPyUrl: string): string;
 //# sourceMappingURL=config.yaml.d.ts.map

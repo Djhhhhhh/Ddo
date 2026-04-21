@@ -8,12 +8,7 @@ server:
 
 # 数据库配置（预留）
 database:
-  host: 127.0.0.1
-  port: 3306
-  user: ddo
-  password: "ddo_password"
-  dbname: ddo
-  charset: utf8mb4
+  path: ~/.ddo/data/go/server-go.db
 
 # 日志配置
 log:

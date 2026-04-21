@@ -52,14 +52,13 @@ const fs = __importStar(require("fs-extra"));
 const readline = __importStar(require("readline"));
 const child_process_1 = require("child_process");
 /** 支持的服务列表 */
-exports.SUPPORTED_SERVICES = ['cli', 'server-go', 'llm-py', 'web-ui', 'mysql', 'all'];
+exports.SUPPORTED_SERVICES = ['cli', 'server-go', 'llm-py', 'web-ui', 'all'];
 /** 服务显示名称映射 */
 exports.SERVICE_DISPLAY_NAMES = {
     cli: 'CLI',
     'server-go': 'Server-Go',
     'llm-py': 'LLM-Py',
     'web-ui': 'Web-UI',
-    mysql: 'MySQL',
 };
 /** 判断是否为有效的服务名 */
 function isValidService(service) {

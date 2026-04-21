@@ -2,6 +2,8 @@ package config
 
 import (
 	"fmt"
+	"os"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -10,6 +12,31 @@ import (
 
 // DefaultShutdownTimeout 默认优雅关闭超时时间
 const DefaultShutdownTimeout = 10 * time.Second
+
+func resolveDataRoot() string {
+	if dataDir := strings.TrimSpace(os.Getenv("DDO_DATA_DIR")); dataDir != "" {
+		return filepath.Clean(dataDir)
+	}
+
+	homeDir, err := os.UserHomeDir()
+	if err != nil {
+		return filepath.Clean(".ddo")
+	}
+
+	return filepath.Join(homeDir, ".ddo")
+}
+
+func DefaultServerGoConfigDir() string {
+	return filepath.Join(resolveDataRoot(), "server-go")
+}
+
+func DefaultSQLitePath() string {
+	return filepath.Join(resolveDataRoot(), "data", "go", "server-go.db")
+}
+
+func DefaultQueueDataDir() string {
+	return filepath.Join(resolveDataRoot(), "data", "badger", "queue")
+}
 
 // Config 配置结构
 type Config struct {
@@ -28,6 +55,7 @@ type ServerConfig struct {
 
 // DatabaseConfig 数据库配置（预留，用于 MySQL 连接）
 type DatabaseConfig struct {
+	Path     string `mapstructure:"path"`
 	Host     string `mapstructure:"host"`
 	Port     int    `mapstructure:"port"`
 	User     string `mapstructure:"user"`
@@ -50,19 +78,15 @@ func (c *Config) ServerAddr() string {
 
 // QueueDataDir 获取队列数据目录
 func (c *Config) QueueDataDir() string {
-	return "./data/queue"
+	return DefaultQueueDataDir()
 }
 
 // MySQLDSN 获取 MySQL DSN
 func (c *Config) MySQLDSN() string {
-	return fmt.Sprintf("%s:%s@tcp(%s:%d)/%s?charset=%s&parseTime=True&loc=Local",
-		c.Database.User,
-		c.Database.Password,
-		c.Database.Host,
-		c.Database.Port,
-		c.Database.DBName,
-		c.Database.Charset,
-	)
+	if c.Database.Path != "" {
+		return c.Database.Path
+	}
+	return DefaultSQLitePath()
 }
 
 // Loader 配置加载器接口
@@ -91,9 +115,9 @@ func (l *ViperLoader) Load(path string) (*Config, error) {
 	} else {
 		v.SetConfigName("config")
 		v.SetConfigType("yaml")
+		v.AddConfigPath(DefaultServerGoConfigDir())
 		v.AddConfigPath("./configs")
 		v.AddConfigPath(".")
-		v.AddConfigPath("$HOME/.ddo/server-go")
 	}
 
 	// 环境变量支持
@@ -125,6 +149,7 @@ func (l *ViperLoader) setDefaults(v *viper.Viper) {
 	v.SetDefault("server.mode", "release")
 
 	// 数据库默认配置
+	v.SetDefault("database.path", DefaultSQLitePath())
 	v.SetDefault("database.host", "127.0.0.1")
 	v.SetDefault("database.port", 3306)
 	v.SetDefault("database.user", "root")

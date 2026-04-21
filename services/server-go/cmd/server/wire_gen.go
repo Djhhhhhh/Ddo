@@ -5,10 +5,6 @@
 package main
 
 import (
-	"fmt"
-	"os"
-	"path/filepath"
-
 	"github.com/ddo/server-go/internal/application/service"
 	"github.com/ddo/server-go/internal/application/usecase/category"
 	"github.com/ddo/server-go/internal/application/usecase/health"
@@ -47,7 +43,7 @@ func InitializeApp(cfgPath string) (*bootstrap.App, func(), error) {
 		return nil, nil, err
 	}
 
-	// 初始化 MySQL 连接
+	// 初始化数据库连接
 	mySQLConn, mysqlCleanup, err := provideMySQLConn(cfg, zapLogger)
 	if err != nil {
 		logCleanup()
@@ -69,7 +65,7 @@ func InitializeApp(cfgPath string) (*bootstrap.App, func(), error) {
 	if mySQLConn != nil && mySQLConn.DB() != nil {
 		timerRepo = repository.NewTimerRepository(mySQLConn.DB())
 		timerLogRepo = repository.NewTimerLogRepository(mySQLConn.DB())
-		notificationRepo = repository.NewNotificationRepository(mySQLConn)
+		notificationRepo = repository.NewNotificationRepository(mySQLConn.DB())
 	}
 
 	// 初始化 Notification Service
@@ -260,8 +256,8 @@ func provideLogger(cfg *config.Config) (*zap.Logger, func(), error) {
 func provideMySQLConn(cfg *config.Config, logger *zap.Logger) (*db.MySQLConn, func(), error) {
 	conn, cleanup, err := db.NewMySQLConn(cfg)
 	if err != nil {
-		logger.Error("Failed to connect to MySQL", zap.Error(err))
-		// MySQL 连接失败不应阻止服务启动
+		logger.Error("Failed to connect to SQLite database", zap.Error(err))
+		// 数据库连接失败不应阻止服务启动
 		// 返回 nil，服务启动后可以通过健康检查发现
 		return nil, func() {}, nil
 	}
@@ -270,13 +266,7 @@ func provideMySQLConn(cfg *config.Config, logger *zap.Logger) (*db.MySQLConn, fu
 
 // provideQueue 提供消息队列
 func provideQueue(cfg *config.Config, logger *zap.Logger) (queue.Queue, func(), error) {
-	// 数据目录在 ~/.ddo/data/badger/queue
-	homeDir, err := os.UserHomeDir()
-	if err != nil {
-		return nil, func() {}, fmt.Errorf("get user home dir failed: %w", err)
-	}
-	dataDir := filepath.Join(homeDir, ".ddo", "data", "badger", "queue")
-	qCfg := queue.DefaultConfig(dataDir)
+	qCfg := queue.DefaultConfig(cfg.QueueDataDir())
 	q, cleanup, err := queue.NewBadgerQueue(qCfg, logger)
 	if err != nil {
 		logger.Error("Failed to create queue", zap.Error(err))

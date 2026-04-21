@@ -53,6 +53,16 @@ export function getPaths(dataDir: string) {
     dockerCompose: path.join(dataDir, 'docker', 'docker-compose.yml'),
     // 服务 PID 文件目录
     services: path.join(dataDir, 'services'),
+    // 数据库目录
+    database: path.join(dataDir, 'data'),
+    // server-go 配置目录
+    serverGoConfig: path.join(dataDir, 'server-go'),
+    // server-go 配置文件
+    serverGoConfigYaml: path.join(dataDir, 'server-go', 'config.yaml'),
+    // server-go 数据目录
+    goData: path.join(dataDir, 'data', 'go'),
+    // server-go SQLite 数据库文件
+    serverGoDb: path.join(dataDir, 'data', 'go', 'server-go.db'),
     // MySQL 数据目录
     mysqlData: path.join(dataDir, 'data', 'mysql'),
     // 缓存目录

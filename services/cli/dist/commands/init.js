@@ -44,7 +44,6 @@ exports.initCommand = initCommand;
 const fs = __importStar(require("fs-extra"));
 const paths_1 = require("../utils/paths");
 const logger_1 = __importDefault(require("../utils/logger"));
-const docker_1 = require("../utils/docker");
 const config_yaml_1 = require("../templates/config.yaml");
 const docker_compose_yml_1 = require("../templates/docker-compose.yml");
 /**
@@ -60,36 +59,6 @@ async function initCommand(options = {}) {
         envDataDir: process.env.DDO_DATA_DIR,
     });
     logger_1.default.info(`数据目录: ${logger_1.default.path((0, paths_1.prettyPath)(dataDir))}`);
-    // 2. 检查 Docker 环境（除非跳过）
-    if (!options.skipDocker) {
-        const dockerCheck = await (0, docker_1.checkDocker)();
-        if (!dockerCheck.installed) {
-            return {
-                success: false,
-                dataDir,
-                actions,
-                error: 'Docker 未安装。请访问 https://docs.docker.com/get-docker/ 安装 Docker Desktop。',
-            };
-        }
-        if (!dockerCheck.running) {
-            return {
-                success: false,
-                dataDir,
-                actions,
-                error: 'Docker 未运行。请先启动 Docker Desktop。',
-            };
-        }
-        if (!(0, docker_1.checkDockerCompose)()) {
-            return {
-                success: false,
-                dataDir,
-                actions,
-                error: 'Docker Compose 未安装。请确保 Docker Desktop 已正确安装。',
-            };
-        }
-        logger_1.default.success('Docker 环境检查通过');
-        actions.push('docker_check');
-    }
     // 3. 创建目录结构
     logger_1.default.section('创建目录结构');
     const paths = (0, paths_1.getPaths)(dataDir);
@@ -97,7 +66,9 @@ async function initCommand(options = {}) {
         paths.root,
         paths.docker,
         paths.services,
-        paths.mysqlData,
+        paths.database,
+        paths.goData,
+        paths.serverGoConfig,
         paths.cache,
         paths.logs,
         paths.backup,
@@ -127,53 +98,22 @@ async function initCommand(options = {}) {
     if (composeExists && !options.force) {
         logger_1.default.info('发现已有 Docker Compose 配置，将保留现有配置');
     }
-    else {
+    else if (!options.skipDocker) {
         await fs.writeFile(paths.dockerCompose, (0, docker_compose_yml_1.generateDockerCompose)(config), 'utf8');
         logger_1.default.success(`生成配置: ${(0, paths_1.prettyPath)(paths.dockerCompose)}`);
         actions.push('generate_docker_compose');
     }
-    // 5. 启动 MySQL 容器（除非跳过）
-    if (!options.skipDocker) {
-        logger_1.default.section('启动 MySQL 服务');
-        // 检查容器状态
-        const containerStatus = await (0, docker_1.getContainerStatus)(docker_1.MYSQL_CONTAINER_NAME);
-        if (containerStatus.running) {
-            logger_1.default.success(`MySQL 容器已在运行 (ID: ${containerStatus.id})`);
-            actions.push('mysql_already_running');
-        }
-        else {
-            // 启动容器
-            const startResult = await (0, docker_1.startMySQL)(paths.dockerCompose);
-            if (!startResult.success) {
-                return {
-                    success: false,
-                    dataDir,
-                    actions,
-                    error: `启动 MySQL 容器失败: ${startResult.message}`,
-                };
-            }
-            logger_1.default.success('MySQL 容器已启动');
-            actions.push('start_mysql');
-            // 等待健康检查
-            const healthy = await (0, docker_1.waitForHealthy)(docker_1.MYSQL_CONTAINER_NAME, 60000);
-            if (!healthy) {
-                logger_1.default.warn('MySQL 健康检查超时，但容器可能仍在启动中');
-            }
-            else {
-                logger_1.default.success('MySQL 服务已就绪');
-                actions.push('mysql_healthy');
-            }
-        }
-        // 6. 验证数据持久化
-        logger_1.default.section('验证数据持久化');
-        const mountOk = await (0, docker_1.verifyDataMount)(dataDir);
-        if (mountOk) {
-            logger_1.default.success('数据目录挂载正常');
-            actions.push('verify_mount');
-        }
-        else {
-            logger_1.default.warn('数据挂载验证可能有问题，请手动检查');
-        }
+    // 5. 生成 server-go 专用配置
+    logger_1.default.section('生成 server-go 配置');
+    const serverGoConfigExists = await fs.pathExists(paths.serverGoConfigYaml);
+    if (serverGoConfigExists && !options.force) {
+        logger_1.default.info('发现已有 server-go 配置，将保留现有配置');
+    }
+    else {
+        const serverPort = parseInt(config.endpoints.serverGo.split(':').pop() || '8080', 10);
+        await fs.writeFile(paths.serverGoConfigYaml, (0, config_yaml_1.generateServerGoConfigYaml)(dataDir, serverPort, config.endpoints.llmPy), 'utf8');
+        logger_1.default.success(`生成配置: ${(0, paths_1.prettyPath)(paths.serverGoConfigYaml)}`);
+        actions.push('generate_server_go_config');
     }
     // 7. 输出完成信息
     logger_1.default.newline();
@@ -183,27 +123,21 @@ async function initCommand(options = {}) {
     logger_1.default.newline();
     logger_1.default.info('目录结构:');
     logger_1.default.info(`  数据目录: ${logger_1.default.path((0, paths_1.prettyPath)(paths.root))}`);
-    logger_1.default.info(`  配置文件: ${logger_1.default.path((0, paths_1.prettyPath)(paths.config))}`);
-    logger_1.default.info(`  MySQL 数据: ${logger_1.default.path((0, paths_1.prettyPath)(paths.mysqlData))}`);
+    logger_1.default.info(`  CLI 配置: ${logger_1.default.path((0, paths_1.prettyPath)(paths.config))}`);
+    logger_1.default.info(`  server-go 配置: ${logger_1.default.path((0, paths_1.prettyPath)(paths.serverGoConfigYaml))}`);
+    logger_1.default.info(`  SQLite 数据库: ${logger_1.default.path((0, paths_1.prettyPath)(paths.serverGoDb))}`);
     logger_1.default.newline();
     if (!options.skipDocker) {
-        logger_1.default.info('服务状态:');
-        const status = await (0, docker_1.getContainerStatus)(docker_1.MYSQL_CONTAINER_NAME);
-        logger_1.default.info(`  MySQL: ${status.running ? chalk_1.default.green('运行中') : chalk_1.default.red('未运行')}`);
-        if (status.id) {
-            logger_1.default.info(`  容器ID: ${status.id}`);
-        }
+        logger_1.default.info(`兼容文件: ${logger_1.default.path((0, paths_1.prettyPath)(paths.dockerCompose))}`);
         logger_1.default.newline();
-        logger_1.default.info('下一步:');
-        logger_1.default.info(`  运行 ${logger_1.default.command('ddo start')} 启动所有服务`);
-        logger_1.default.info(`  运行 ${logger_1.default.command('ddo status')} 查看服务状态`);
     }
+    logger_1.default.info('下一步:');
+    logger_1.default.info(`  运行 ${logger_1.default.command('ddo start')} 启动所有服务`);
+    logger_1.default.info(`  运行 ${logger_1.default.command('ddo status')} 查看服务状态`);
     return {
         success: true,
         dataDir,
         actions,
     };
 }
-// 导入 chalk 用于输出
-const chalk_1 = __importDefault(require("chalk"));
 //# sourceMappingURL=init.js.map

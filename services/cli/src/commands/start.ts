@@ -15,7 +15,6 @@ import {
   ServiceStatus,
 } from '../services/manager';
 import { startRepl } from '../repl';
-import { getContainerStatus, MYSQL_CONTAINER_NAME } from '../utils/docker';
 
 interface StartOptions {
   dataDir?: string;
@@ -62,21 +61,6 @@ export async function startCommand(options: StartOptions = {}): Promise<{
     };
   }
 
-  // 4. 检查 MySQL 容器
-  logger.section('检查 MySQL 数据库');
-  const mysqlStatus = await getContainerStatus(MYSQL_CONTAINER_NAME);
-
-  if (!mysqlStatus.running) {
-    logger.error('MySQL 容器未运行');
-    logger.info('请先运行: ddo init');
-    return {
-      success: false,
-      error: 'MySQL 服务未启动',
-    };
-  }
-
-  logger.success(`MySQL 正在运行 (容器: ${mysqlStatus.id})`);
-
   // 辅助函数：从配置中提取端口号
   function getPort(endpoint: string | undefined, defaultPort: number): number {
     if (!endpoint) return defaultPort;
@@ -86,22 +70,24 @@ export async function startCommand(options: StartOptions = {}): Promise<{
 
   // 检查服务目录是否存在
   const serverGoDir = path.join(process.cwd(), '..', '..', 'server-go');
+  const serverGoCmdDir = path.join(serverGoDir, 'cmd', 'server');
   const llmPyDir = path.join(process.cwd(), '..', '..', 'llm-py');
   const webUiDir = path.join(process.cwd(), '..', '..', 'web-ui');
 
   // 5. 定义服务列表（只包含存在的服务）
   const allServices: ServiceDefinition[] = [];
 
-  if (await fs.pathExists(serverGoDir)) {
+  if (await fs.pathExists(serverGoCmdDir)) {
     allServices.push({
       name: 'server-go',
       displayName: 'server-go',
       port: getPort(config.endpoints?.serverGo, 8080),
       healthUrl: `${config.endpoints?.serverGo || 'http://localhost:8080'}/health`,
-      command: ['go', 'run', 'main.go'],
-      cwd: serverGoDir,
+      command: ['go', 'run', '.'],
+      cwd: serverGoCmdDir,
       env: {
         DDO_DATA_DIR: dataDir,
+        DDO_DATABASE_PATH: config.database?.path || paths.serverGoDb,
         PORT: String(getPort(config.endpoints?.serverGo, 8080)),
       },
     });

@@ -41,7 +41,7 @@ func (h *HealthHandler) HealthCheck(c *gin.Context) {
 
 	output := result.Data
 
-	// 转换 MySQL 状态
+	// 转换数据库状态
 	mysqlStatus := "disconnected"
 	if output.MySQL != nil {
 		if connected, ok := output.MySQL["connected"].(bool); ok && connected {
@@ -57,7 +57,7 @@ func (h *HealthHandler) HealthCheck(c *gin.Context) {
 		BadgerDB:  "ok",
 	})
 
-	// 如果 MySQL 未连接，返回 503
+	// 如果数据库未连接，返回 503
 	if mysqlStatus != "connected" {
 		c.JSON(http.StatusServiceUnavailable, response)
 		return
@@ -83,7 +83,7 @@ func (h *HealthHandler) HealthCheckV1(c *gin.Context) {
 
 	output := result.Data
 
-	// 转换 MySQL 状态
+	// 转换数据库状态
 	mysqlStatus := "disconnected"
 	if output.MySQL != nil {
 		if connected, ok := output.MySQL["connected"].(bool); ok && connected {
@@ -99,7 +99,7 @@ func (h *HealthHandler) HealthCheckV1(c *gin.Context) {
 		BadgerDB:  "ok", // BadgerDB 启动时已验证，暂视为正常
 	})
 
-	// 如果 MySQL 未连接，返回 503
+	// 如果数据库未连接，返回 503
 	if mysqlStatus != "connected" {
 		c.JSON(http.StatusServiceUnavailable, response)
 		return

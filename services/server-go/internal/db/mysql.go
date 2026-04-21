@@ -3,10 +3,12 @@ package db
 import (
 	"context"
 	"database/sql"
-	"fmt"
+	"os"
+	"path/filepath"
+	"strings"
 	"time"
 
-	"gorm.io/driver/mysql"
+	"github.com/glebarez/sqlite"
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
 
@@ -14,9 +16,8 @@ import (
 )
 
 const (
-	defaultMaxOpenConns    = 100
-	defaultMaxIdleConns    = 10
-	defaultConnMaxLifetime = time.Hour
+	defaultMaxOpenConns = 1
+	defaultMaxIdleConns = 1
 )
 
 // MySQLConn MySQL 连接
@@ -30,6 +31,9 @@ type MySQLConn struct {
 // 从配置中读取 DSN，初始化 GORM 连接池
 func NewMySQLConn(cfg *config.Config) (*MySQLConn, func(), error) {
 	dsn := buildDSN(&cfg.Database)
+	if err := os.MkdirAll(filepath.Dir(dsn), 0o755); err != nil {
+		return nil, nil, err
+	}
 
 	// 配置 GORM 日志
 	logLevel := logger.Silent
@@ -38,22 +42,37 @@ func NewMySQLConn(cfg *config.Config) (*MySQLConn, func(), error) {
 	}
 
 	// 打开连接
-	db, err := gorm.Open(mysql.Open(dsn), &gorm.Config{
+	db, err := gorm.Open(sqlite.Open(dsn), &gorm.Config{
 		Logger: logger.Default.LogMode(logLevel),
 	})
 	if err != nil {
-		return nil, nil, fmt.Errorf("open mysql connection failed: %w", err)
+		return nil, nil, err
 	}
 
 	// 配置连接池
 	sqlDB, err := db.DB()
 	if err != nil {
-		return nil, nil, fmt.Errorf("get sql.DB from gorm failed: %w", err)
+		return nil, nil, err
 	}
 
 	sqlDB.SetMaxOpenConns(defaultMaxOpenConns)
 	sqlDB.SetMaxIdleConns(defaultMaxIdleConns)
-	sqlDB.SetConnMaxLifetime(defaultConnMaxLifetime)
+	sqlDB.SetConnMaxLifetime(0)
+
+	if err := sqlDB.Ping(); err != nil {
+		_ = sqlDB.Close()
+		return nil, nil, err
+	}
+
+	if err := db.Exec("PRAGMA journal_mode=WAL;").Error; err != nil {
+		_ = sqlDB.Close()
+		return nil, nil, err
+	}
+
+	if err := db.Exec("PRAGMA busy_timeout=5000;").Error; err != nil {
+		_ = sqlDB.Close()
+		return nil, nil, err
+	}
 
 	conn := &MySQLConn{
 		db:    db,
@@ -91,16 +110,22 @@ func (m *MySQLConn) AutoMigrate(models ...interface{}) error {
 	return m.db.AutoMigrate(models...)
 }
 
-// buildDSN 构建 MySQL DSN
+// buildDSN 构建 SQLite DSN
+// 支持展开 ~ 为用户主目录
 func buildDSN(cfg *config.DatabaseConfig) string {
-	return fmt.Sprintf("%s:%s@tcp(%s:%d)/%s?charset=%s&parseTime=True&loc=Local",
-		cfg.User,
-		cfg.Password,
-		cfg.Host,
-		cfg.Port,
-		cfg.DBName,
-		cfg.Charset,
-	)
+	path := cfg.Path
+	if path == "" {
+		path = config.DefaultSQLitePath()
+	}
+
+	// 展开 ~ 为用户主目录
+	if strings.HasPrefix(path, "~/") || strings.HasPrefix(path, "~\\") {
+		if homeDir, err := os.UserHomeDir(); err == nil {
+			path = filepath.Join(homeDir, path[2:])
+		}
+	}
+
+	return path
 }
 
 // GetMySQLStatus 获取 MySQL 连接状态
@@ -112,6 +137,7 @@ func (m *MySQLConn) GetMySQLStatus() (map[string]interface{}, error) {
 
 	status := map[string]interface{}{
 		"connected":    true,
+		"driver":       "sqlite",
 		"open_conns":   stats.OpenConnections,
 		"idle_conns":   stats.Idle,
 		"in_use":       stats.InUse,

@@ -70,7 +70,7 @@ func (a *App) Start() error {
 	// 执行数据库自动迁移
 	if err := a.autoMigrate(); err != nil {
 		a.logger.Error("Database migration failed", zap.Error(err))
-		// 迁移失败不阻止服务启动，但 MySQL 状态会显示错误
+		// 迁移失败不阻止服务启动，但数据库状态会显示错误
 	}
 
 	// 启动 Scheduler
@@ -175,7 +175,7 @@ func (a *App) Run() error {
 // autoMigrate 执行数据库自动迁移
 func (a *App) autoMigrate() error {
 	if a.dbConn == nil {
-		a.logger.Warn("MySQL connection not available, skipping migration")
+		a.logger.Warn("Database connection not available, skipping migration")
 		return nil
 	}
 

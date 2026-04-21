@@ -31,7 +31,7 @@ program
   .command('init')
   .description('初始化 Ddo 工作空间')
   .option('-d, --data-dir <path>', '指定数据目录路径')
-  .option('--skip-docker', '跳过 Docker 检查和 MySQL 启动')
+  .option('--skip-docker', '跳过生成 Docker 兼容文件')
   .option('--force', '强制重新生成配置文件')
   .action(async (options) => {
     try {
@@ -106,7 +106,6 @@ program
   .command('stop')
   .description('停止所有 Ddo 服务')
   .option('-d, --data-dir <path>', '指定数据目录路径')
-  .option('--include-mysql', '同时停止 MySQL 容器')
   .option('-v, --verbose', '显示详细日志')
   .option('--silent', '静默模式')
   .action(async (options) => {
@@ -122,7 +121,6 @@ program
 
       const result = await stopCommand({
         dataDir: options.dataDir,
-        includeMysql: options.includeMysql,
       });
 
       if (!result.success) {
@@ -171,7 +169,7 @@ program
 // logs 命令
 program
   .command('logs [service]')
-  .description('查看服务日志 (cli|server-go|llm-py|web-ui|mysql|all)')
+  .description('查看服务日志 (cli|server-go|llm-py|web-ui|all)')
   .option('-d, --data-dir <path>', '指定数据目录路径')
   .option('-n, --lines <number>', '显示最后 N 行', '100')
   .option('-f, --follow', '实时跟踪日志')

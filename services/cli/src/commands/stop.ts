@@ -5,15 +5,12 @@
 
 import yaml from 'yaml';
 import * as fs from 'fs-extra';
-import chalk from 'chalk';
 import logger from '../utils/logger';
 import { resolveDataDir, getPaths, prettyPath } from '../utils/paths';
 import { createServiceManager, ServiceDefinition } from '../services/manager';
-import { getContainerStatus, MYSQL_CONTAINER_NAME, stopMySQL } from '../utils/docker';
 
 interface StopOptions {
   dataDir?: string;
-  includeMysql?: boolean;
 }
 
 /**
@@ -95,26 +92,6 @@ export async function stopCommand(options: StopOptions = {}): Promise<{
         logger.error(`  ${service}: ${result.error}`);
       }
     }
-  }
-
-  // 7. 停止 MySQL（如果指定）
-  if (options.includeMysql) {
-    logger.section('停止 MySQL 数据库');
-    const mysqlStatus = await getContainerStatus(MYSQL_CONTAINER_NAME);
-
-    if (mysqlStatus.running) {
-      const mysqlStopResult = await stopMySQL();
-      if (mysqlStopResult.success) {
-        logger.success('MySQL 容器已停止');
-      } else {
-        logger.error(`停止 MySQL 失败: ${mysqlStopResult.message}`);
-      }
-    } else {
-      logger.info('MySQL 容器未运行');
-    }
-  } else {
-    logger.newline();
-    logger.info(chalk.gray('MySQL 容器仍在运行（使用 --include-mysql 停止）'));
   }
 
   // 8. 输出结果

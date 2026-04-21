@@ -10,11 +10,8 @@ export interface DdoConfig {
   dataDir: string;
   /** 数据库配置 */
   database: {
-    host: string;
-    port: number;
-    name: string;
-    user: string;
-    password: string;
+    driver: 'sqlite';
+    path: string;
   };
   /** 日志配置 */
   logging: {

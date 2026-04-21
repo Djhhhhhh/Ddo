@@ -103,7 +103,7 @@ func (h *MetricsHandler) Metrics(c *gin.Context) {
 		}
 	}
 
-	// MySQL 状态
+	// 数据库状态
 	mysqlStatus := "disconnected"
 	if h.dbConn != nil {
 		status, err := h.dbConn.GetMySQLStatus()
@@ -160,6 +160,9 @@ func (h *MetricsHandler) Metrics(c *gin.Context) {
 				MySQL:    mysqlStatus,
 				CLI:      "running", // 前端组件，默认运行状态
 				Web:      "running", // 前端 SPA，默认运行状态
+				Extra: map[string]string{
+					"database_driver": "sqlite",
+				},
 			},
 			Timers: TimerMetrics{
 				Total:  int(timersTotal),

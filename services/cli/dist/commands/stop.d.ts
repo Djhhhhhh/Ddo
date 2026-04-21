@@ -4,7 +4,6 @@
  */
 interface StopOptions {
     dataDir?: string;
-    includeMysql?: boolean;
 }
 /**
  * 执行 stop 命令

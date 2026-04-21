@@ -23,6 +23,11 @@ export declare function getPaths(dataDir: string): {
     docker: string;
     dockerCompose: string;
     services: string;
+    database: string;
+    serverGoConfig: string;
+    serverGoConfigYaml: string;
+    goData: string;
+    serverGoDb: string;
     mysqlData: string;
     cache: string;
     logs: string;

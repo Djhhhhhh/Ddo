@@ -9,7 +9,6 @@ import chalk from 'chalk';
 import logger from '../utils/logger';
 import { resolveDataDir, getPaths, prettyPath } from '../utils/paths';
 import { createServiceManager, ServiceDefinition } from '../services/manager';
-import { getContainerStatus, MYSQL_CONTAINER_NAME } from '../utils/docker';
 import { readPid } from '../services/pid-file';
 import { isProcessRunning } from '../services/pid-file';
 import { checkHealth } from '../services/health-check';
@@ -55,27 +54,22 @@ export async function statusCommand(options: StatusOptions = {}): Promise<{
     logger.warn(`读取配置文件失败: ${err instanceof Error ? err.message : String(err)}`);
   }
 
-  // 4. 显示 MySQL 状态
+  // 4. 显示数据库状态
   logger.divider();
   console.log(chalk.bold.cyan('数据库服务'));
   logger.divider();
 
-  const mysqlStatus = await getContainerStatus(MYSQL_CONTAINER_NAME);
-  const mysqlState = mysqlStatus.running
-    ? mysqlStatus.health === 'healthy'
-      ? chalk.green('✓ 健康')
-      : mysqlStatus.health === 'starting'
-        ? chalk.yellow('启动中')
-        : chalk.yellow('运行中')
-    : chalk.red('✗ 已停止');
+  const databasePath = config?.database?.path || paths.serverGoDb;
+  const databaseExists = await fs.pathExists(databasePath);
+  const databaseState = databaseExists
+    ? chalk.green('✓ 就绪')
+    : chalk.yellow('○ 未创建');
 
-  console.log(`${mysqlState} MySQL (容器: ${MYSQL_CONTAINER_NAME})`);
-  if (mysqlStatus.id) {
-    console.log(`  容器ID: ${chalk.gray(mysqlStatus.id)}`);
-  }
+  console.log(`${databaseState} SQLite`);
   if (config?.database) {
-    console.log(`  连接: ${chalk.gray(`${config.database.host}:${config.database.port}`)}`);
+    console.log(`  驱动: ${chalk.gray(config.database.driver || 'sqlite')}`);
   }
+  console.log(`  路径: ${chalk.gray(prettyPath(databasePath))}`);
 
   // 5. 显示后端服务状态
   logger.newline();
@@ -163,16 +157,16 @@ export async function statusCommand(options: StatusOptions = {}): Promise<{
   logger.divider();
 
   const runningCount = services.filter((s) => manager.getStatus(s).running).length;
-  const mysqlRunning = mysqlStatus.running ? 1 : 0;
-  const totalServices = services.length + 1; // +1 for MySQL
+  const databaseReady = databaseExists ? 1 : 0;
+  const totalServices = services.length + 1;
 
-  const summaryColor = runningCount + mysqlRunning === totalServices
+  const summaryColor = runningCount + databaseReady === totalServices
     ? chalk.green
-    : runningCount + mysqlRunning > 0
+    : runningCount + databaseReady > 0
       ? chalk.yellow
       : chalk.red;
 
-  console.log(`${summaryColor(`${runningCount + mysqlRunning}/${totalServices}`)} 服务运行中`);
+  console.log(`${summaryColor(`${runningCount + databaseReady}/${totalServices}`)} 服务运行中`);
   logger.divider();
 
   return { success: true };

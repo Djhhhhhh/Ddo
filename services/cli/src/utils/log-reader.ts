@@ -9,7 +9,7 @@ import { spawn } from 'child_process';
 import type { LogEntry, LogOptions } from '../types';
 
 /** 支持的服务列表 */
-export const SUPPORTED_SERVICES = ['cli', 'server-go', 'llm-py', 'web-ui', 'mysql', 'all'];
+export const SUPPORTED_SERVICES = ['cli', 'server-go', 'llm-py', 'web-ui', 'all'];
 
 /** 服务显示名称映射 */
 export const SERVICE_DISPLAY_NAMES: Record<string, string> = {
@@ -17,7 +17,6 @@ export const SERVICE_DISPLAY_NAMES: Record<string, string> = {
   'server-go': 'Server-Go',
   'llm-py': 'LLM-Py',
   'web-ui': 'Web-UI',
-  mysql: 'MySQL',
 };
 
 /** 判断是否为有效的服务名 */

@@ -52,6 +52,11 @@
 - 提供 Close 方法优雅关闭，返回 cleanup 函数
 - 失败时返回详细错误信息，不 panic
 
+### SQLite 本地存储规范（2026-04-21）
+- server-go 默认使用 SQLite 文件数据库，配置项优先读取 `database.path`
+- SQLite 连接初始化时统一开启 `WAL` 和 `busy_timeout`，降低本地并发写入冲突
+- Repository 构造函数优先依赖 `*gorm.DB`，避免与具体数据库连接包装类型耦合
+
 ### 队列消息处理规范（2026-04-15）
 - Handler 接口分离，支持函数和结构体实现
 - 消息失败时根据重试次数决定是否重新投递
