@@ -32,6 +32,11 @@ const api = {
   removeNotificationListener: () => {
     ipcRenderer.removeAllListeners('notification:show')
     ipcRenderer.removeAllListeners('island:show')
+  },
+
+  // Hide island window
+  hideIsland: () => {
+    ipcRenderer.send('island:hide')
   }
 }
 

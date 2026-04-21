@@ -42,6 +42,10 @@ var api = {
   removeNotificationListener: () => {
     import_electron.ipcRenderer.removeAllListeners("notification:show");
     import_electron.ipcRenderer.removeAllListeners("island:show");
+  },
+  // Hide island window
+  hideIsland: () => {
+    import_electron.ipcRenderer.send("island:hide");
   }
 };
 import_electron.contextBridge.exposeInMainWorld("ddoElectron", api);

@@ -2,6 +2,7 @@ import { ipcMain } from 'electron'
 import { handleNotificationAction, getNotificationHistory } from './notification.js'
 import { toggleMainWindow } from './windows/mainWindow.js'
 import { getStore } from './store.js'
+import { hideIslandWindow } from './windows/islandWindow.js'
 
 export function initIpcHandlers(): void {
   // Get config
@@ -32,6 +33,11 @@ export function initIpcHandlers(): void {
     return getNotificationHistory()
   })
 
+  // Hide island window
+  ipcMain.on('island:hide', () => {
+    hideIslandWindow()
+  })
+
   console.log('[Ddo Ding] IPC handlers initialized')
 }
 
@@ -47,5 +53,8 @@ export const IPC_CHANNELS = {
   NOTIFICATION_HISTORY: 'notification:history',
 
   // Window
-  WINDOW_TOGGLE: 'window:toggle'
+  WINDOW_TOGGLE: 'window:toggle',
+
+  // Island
+  ISLAND_HIDE: 'island:hide'
 } as const

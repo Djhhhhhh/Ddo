@@ -62,7 +62,13 @@ function measureHeight() {
 
 function dismiss() {
   isVisible.value = false
-  setTimeout(showNext, 300)
+  setTimeout(() => {
+    showNext()
+    // 如果队列为空，通知主进程隐藏窗口
+    if (queue.value.length === 0 && !notification.value) {
+      window.ddoElectron?.hideIsland?.()
+    }
+  }, 300)
 }
 
 function handleClick() {

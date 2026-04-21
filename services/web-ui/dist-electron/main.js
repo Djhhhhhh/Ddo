@@ -234,6 +234,11 @@ function createIslandWindow() {
   });
   return islandWindow;
 }
+function hideIslandWindow() {
+  if (islandWindow && !islandWindow.isDestroyed()) {
+    islandWindow.hide();
+  }
+}
 function showIslandWindow(notification) {
   console.log("[IslandWindow] showIslandWindow called:", notification.title);
   if (!islandWindow || islandWindow.isDestroyed()) {
@@ -470,6 +475,9 @@ function initIpcHandlers() {
   });
   ipcMain.handle("notification:history", () => {
     return getNotificationHistory();
+  });
+  ipcMain.on("island:hide", () => {
+    hideIslandWindow();
   });
   console.log("[Ddo Ding] IPC handlers initialized");
 }

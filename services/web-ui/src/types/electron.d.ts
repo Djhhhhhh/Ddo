@@ -43,6 +43,7 @@ export interface DdoElectronAPI {
 
   // 窗口控制
   toggleWindow: () => void
+  hideIsland: () => void
 
   // 配置
   getConfig: () => Promise<AppConfig>
