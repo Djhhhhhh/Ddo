@@ -83,6 +83,14 @@ export interface TestMCPData {
 export interface TestMCPResponse extends ApiResponse<TestMCPData> {}
 
 // Timer Types
+export interface TimerNotifyConfig {
+  enabled: boolean
+  island_enabled: boolean
+  system_enabled: boolean
+  notify_on: 'all' | 'failure' | 'success' | 'manual'
+  cooldown_seconds: number
+}
+
 export interface Timer {
   uuid: string
   name: string
@@ -99,6 +107,7 @@ export interface Timer {
   callback_body?: string
   last_run_at?: string
   next_run_at?: string
+  notify_config?: TimerNotifyConfig
   created_at?: string
   updated_at?: string
 }
@@ -133,6 +142,7 @@ export interface CreateTimerRequest {
   callback_method?: string
   callback_headers?: Record<string, string>
   callback_body?: string
+  notify_config?: TimerNotifyConfig
 }
 
 export interface CreateTimerData {
@@ -169,6 +179,7 @@ export interface UpdateTimerRequest {
   callback_method?: string
   callback_headers?: Record<string, string>
   callback_body?: string
+  notify_config?: TimerNotifyConfig
 }
 
 export interface UpdateTimerData {

@@ -7,6 +7,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"go.uber.org/zap"
 
+	"github.com/ddo/server-go/internal/db/models"
 	"github.com/ddo/server-go/internal/application/usecase/timer"
 	"github.com/ddo/server-go/internal/interfaces/http/dto"
 )
@@ -78,6 +79,7 @@ func (h *TimerHandler) CreateTimer(c *gin.Context) {
 		CallbackMethod:  req.CallbackMethod,
 		CallbackHeaders: req.CallbackHeaders,
 		CallbackBody:    req.CallbackBody,
+		NotifyConfig:    toModelNotifyConfig(req.NotifyConfig),
 	})
 
 	if !result.IsSuccess() {
@@ -154,6 +156,7 @@ func (h *TimerHandler) ListTimers(c *gin.Context) {
 			Status:          item.Status,
 			LastRunAt:       item.LastRunAt,
 			NextRunAt:       item.NextRunAt,
+			NotifyConfig:    toDTONotifyConfig(item.NotifyConfig),
 		})
 	}
 
@@ -218,6 +221,7 @@ func (h *TimerHandler) GetTimer(c *gin.Context) {
 				Status:          t.Status,
 				LastRunAt:       timeToString(t.LastRunAt),
 				NextRunAt:       timeToString(t.NextRunAt),
+				NotifyConfig:    toDTONotifyConfig(t.NotifyConfig),
 				Stats: dto.TimerStatsDTO{
 					TotalRuns:   t.Stats.TotalRuns,
 					SuccessRate: t.Stats.SuccessRate,
@@ -269,6 +273,7 @@ func (h *TimerHandler) UpdateTimer(c *gin.Context) {
 		CallbackMethod:  req.CallbackMethod,
 		CallbackHeaders: req.CallbackHeaders,
 		CallbackBody:    req.CallbackBody,
+		NotifyConfig:    toModelNotifyConfig(req.NotifyConfig),
 	})
 
 	if !result.IsSuccess() {
@@ -524,4 +529,28 @@ func timeToString(t *time.Time) string {
 		return ""
 	}
 	return t.Format("2006-01-02T15:04:05Z07:00")
+}
+
+func toDTONotifyConfig(cfg models.TimerNotifyConfig) dto.TimerNotifyConfigDTO {
+	return dto.TimerNotifyConfigDTO{
+		Enabled:         cfg.Enabled,
+		IslandEnabled:   cfg.IslandEnabled,
+		SystemEnabled:   cfg.SystemEnabled,
+		NotifyOn:        cfg.NotifyOn,
+		CooldownSeconds: cfg.CooldownSeconds,
+	}
+}
+
+func toModelNotifyConfig(cfg *dto.TimerNotifyConfigDTO) *models.TimerNotifyConfig {
+	if cfg == nil {
+		return nil
+	}
+
+	return &models.TimerNotifyConfig{
+		Enabled:         cfg.Enabled,
+		IslandEnabled:   cfg.IslandEnabled,
+		SystemEnabled:   cfg.SystemEnabled,
+		NotifyOn:        cfg.NotifyOn,
+		CooldownSeconds: cfg.CooldownSeconds,
+	}
 }

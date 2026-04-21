@@ -1,6 +1,7 @@
 import client from './client'
 import type {
   CreateTimerRequest,
+  TimerNotifyConfig,
   UpdateTimerRequest,
 } from './types'
 
@@ -21,6 +22,7 @@ export interface ApiTimerItem {
   callback_body?: string
   last_run_at?: string
   next_run_at?: string
+  notify_config?: TimerNotifyConfig
   created_at?: string
   updated_at?: string
 }

@@ -106,9 +106,31 @@ func (s *NotificationService) CreateTimerNotification(
 	ctx context.Context,
 	timerUUID string,
 	taskName string,
+	description string,
 	status string,
+	triggerSource string,
+	notifyConfig models.TimerNotifyConfig,
 	body string,
 ) (*models.Notification, error) {
+	if !shouldCreateTimerNotification(status, triggerSource, notifyConfig) {
+		return nil, nil
+	}
+
+	// 检查是否已存在相同状态的未读通知（防止队列重试导致重复通知）
+	exists, err := s.repo.CheckUnreadNotificationByTimerUUID(ctx, timerUUID, status)
+	if err != nil {
+		s.logger.Warn("Failed to check existing notification",
+			zap.String("timer_uuid", timerUUID),
+			zap.Error(err))
+		// 继续执行，不要因为检查失败而阻止通知创建
+	}
+	if exists {
+		s.logger.Info("Duplicate notification skipped",
+			zap.String("timer_uuid", timerUUID),
+			zap.String("status", status))
+		return nil, nil
+	}
+
 	var level string
 	var title string
 
@@ -128,14 +150,17 @@ func (s *NotificationService) CreateTimerNotification(
 	}
 
 	notification := &models.Notification{
-		Title:     title,
-		Body:      body,
-		Level:     level,
-		Type:      models.NotificationTypeScheduledTask,
-		TaskName:  taskName,
-		Status:    status,
-		TimerUUID: timerUUID,
-		ExpiredAt: time.Now().Add(5 * time.Minute),
+		Title:         title,
+		Body:          body,
+		Level:         level,
+		Type:          models.NotificationTypeScheduledTask,
+		TaskName:      taskName,
+		Description:   description,
+		Status:        status,
+		TimerUUID:     timerUUID,
+		IslandEnabled: notifyConfig.IslandEnabled,
+		SystemEnabled: notifyConfig.SystemEnabled,
+		ExpiredAt:     time.Now().Add(5 * time.Minute),
 	}
 
 	if err := s.AddNotification(ctx, notification); err != nil {
@@ -143,4 +168,26 @@ func (s *NotificationService) CreateTimerNotification(
 	}
 
 	return notification, nil
+}
+
+func shouldCreateTimerNotification(status string, triggerSource string, notifyConfig models.TimerNotifyConfig) bool {
+	if !notifyConfig.Enabled {
+		return false
+	}
+	if !notifyConfig.IslandEnabled && !notifyConfig.SystemEnabled {
+		return false
+	}
+
+	switch notifyConfig.NotifyOn {
+	case models.TimerNotifyOnFailure:
+		return status == models.NotificationStatusFailed
+	case models.TimerNotifyOnSuccess:
+		return status == models.NotificationStatusCompleted
+	case models.TimerNotifyOnManual:
+		return triggerSource == models.TimerTriggerSourceManual
+	case models.TimerNotifyOnAll, "":
+		return true
+	default:
+		return true
+	}
 }

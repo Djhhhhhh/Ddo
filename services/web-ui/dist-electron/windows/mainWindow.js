@@ -50,6 +50,22 @@ function showMainWindow() {
     mainWindow.focus();
   }
 }
+function navigateMainWindow(hashPath) {
+  if (!mainWindow || mainWindow.isDestroyed()) {
+    return;
+  }
+  const isDev = !app.isPackaged;
+  if (isDev) {
+    const baseUrl = process.env.VITE_DEV_SERVER_URL || "http://localhost:3000";
+    mainWindow.loadURL(`${baseUrl}#${hashPath}`);
+  } else {
+    mainWindow.loadFile(path.join(__dirname, "..", "dist", "index.html"), {
+      hash: hashPath
+    });
+  }
+  mainWindow.show();
+  mainWindow.focus();
+}
 function hideMainWindow() {
   if (mainWindow && !mainWindow.isDestroyed()) {
     mainWindow.hide();
@@ -69,6 +85,7 @@ export {
   createMainWindow,
   getMainWindow,
   hideMainWindow,
+  navigateMainWindow,
   showMainWindow,
   toggleMainWindow
 };

@@ -34,6 +34,7 @@ type CreateTimerInput struct {
 	CallbackMethod  string
 	CallbackHeaders map[string]string
 	CallbackBody    string
+	NotifyConfig    *models.TimerNotifyConfig
 }
 
 // CreateTimerOutput 创建定时任务输出
@@ -75,10 +76,6 @@ func (uc *createTimerUseCase) Execute(ctx context.Context, input CreateTimerInpu
 	if input.TriggerType == "" {
 		return result.NewFailure[CreateTimerOutput](fmt.Errorf("trigger_type is required"))
 	}
-	if input.CallbackURL == "" {
-		return result.NewFailure[CreateTimerOutput](fmt.Errorf("callback_url is required"))
-	}
-
 	// 2. 根据 TriggerType 验证特定参数
 	var timer *models.Timer
 	var nextRun *time.Time
@@ -161,6 +158,12 @@ func (uc *createTimerUseCase) Execute(ctx context.Context, input CreateTimerInpu
 	}
 	timer.CallbackHeaders = string(headersJSON)
 	timer.CallbackBody = input.CallbackBody
+
+	notifyConfigJSON, err := models.EncodeTimerNotifyConfig(input.NotifyConfig)
+	if err != nil {
+		return result.NewFailure[CreateTimerOutput](fmt.Errorf("marshal notify config failed: %w", err))
+	}
+	timer.NotifyConfig = notifyConfigJSON
 
 	// 4. 创建定时任务
 	if err := uc.timerRepo.Create(ctx, timer); err != nil {

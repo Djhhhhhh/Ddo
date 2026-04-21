@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, watch } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import Card from '@/components/ui/Card.vue'
 import Button from '@/components/ui/Button.vue'
 import Badge from '@/components/ui/Badge.vue'
@@ -7,12 +8,15 @@ import Input from '@/components/ui/Input.vue'
 import Select from '@/components/ui/Select.vue'
 import Modal from '@/components/ui/Modal.vue'
 import * as timerApi from '@/api/timer'
-import type { Timer, TimerLog } from '@/api/types'
+import type { Timer, TimerDetail, TimerLog, TimerNotifyConfig } from '@/api/types'
+
+const route = useRoute()
+const router = useRouter()
 
 const timers = ref<Timer[]>([])
 const loading = ref(false)
 const selectedTimerUuid = ref<string | null>(null)
-const selectedTimer = ref<Timer | null>(null)
+const selectedTimer = ref<TimerDetail | null>(null)
 const detailLoading = ref(false)
 
 // Logs
@@ -41,6 +45,13 @@ const httpMethodOptions = [
   { label: 'DELETE', value: 'DELETE' }
 ]
 
+const notifyOnOptions = [
+  { label: '全部执行结果', value: 'all' },
+  { label: '仅失败', value: 'failure' },
+  { label: '仅成功', value: 'success' },
+  { label: '仅手动触发', value: 'manual' }
+]
+
 // Timezone options
 const timezoneOptions = [
   { label: 'Asia/Shanghai (UTC+8)', value: 'Asia/Shanghai' },
@@ -48,20 +59,42 @@ const timezoneOptions = [
   { label: 'America/New_York (UTC-5)', value: 'America/New_York' }
 ]
 
-// Create/Edit form
-const formData = ref({
-  name: '',
-  description: '',
-  trigger_type: 'cron' as 'cron' | 'periodic' | 'delayed',
-  cron_expr: '',
-  interval_seconds: 3600,
-  delay_seconds: 60,
-  timezone: 'Asia/Shanghai',
-  callback_url: '',
-  callback_method: 'POST',
-  callback_headers: {} as Record<string, string>,
-  callback_body: ''
-})
+function createDefaultNotifyConfig(): TimerNotifyConfig {
+  return {
+    enabled: true,
+    island_enabled: true,
+    system_enabled: false,
+    notify_on: 'all',
+    cooldown_seconds: 0
+  }
+}
+
+function cloneNotifyConfig(config?: TimerNotifyConfig): TimerNotifyConfig {
+  return {
+    ...createDefaultNotifyConfig(),
+    ...config
+  }
+}
+
+function createDefaultFormData() {
+  return {
+    name: '',
+    description: '',
+    trigger_type: 'cron' as 'cron' | 'periodic' | 'delayed',
+    cron_expr: '',
+    interval_seconds: 3600,
+    delay_seconds: 60,
+    timezone: 'Asia/Shanghai',
+    callback_enabled: false,
+    callback_url: '',
+    callback_method: 'POST',
+    callback_headers: {} as Record<string, string>,
+    callback_body: '',
+    notify_config: createDefaultNotifyConfig()
+  }
+}
+
+const formData = ref(createDefaultFormData())
 
 // Cron input helpers (visual mode)
 const cronMinute = ref('*')
@@ -155,12 +188,53 @@ async function loadLogs(uuid: string) {
   }
 }
 
-onMounted(loadTimers)
+function getRouteTimerUuid(): string | null {
+  return typeof route.query.timerUuid === 'string' ? route.query.timerUuid : null
+}
+
+async function syncSelectedTimerFromRoute() {
+  const timerUuid = getRouteTimerUuid()
+
+  if (!timerUuid) {
+    selectedTimerUuid.value = null
+    selectedTimer.value = null
+    logs.value = []
+    return
+  }
+
+  if (selectedTimerUuid.value === timerUuid && selectedTimer.value) {
+    return
+  }
+
+  await Promise.all([
+    loadTimerDetail(timerUuid),
+    loadLogs(timerUuid)
+  ])
+}
+
+onMounted(async () => {
+  await loadTimers()
+  await syncSelectedTimerFromRoute()
+})
+
+watch(() => route.query.timerUuid, () => {
+  void syncSelectedTimerFromRoute()
+})
 
 // Select timer
 function selectTimer(uuid: string) {
-  loadTimerDetail(uuid)
-  loadLogs(uuid)
+  if (getRouteTimerUuid() === uuid) {
+    void syncSelectedTimerFromRoute()
+    return
+  }
+
+  void router.replace({
+    path: route.path,
+    query: {
+      ...route.query,
+      timerUuid: uuid
+    }
+  })
 }
 
 // Build cron expression from parts
@@ -188,19 +262,7 @@ function applyPreset(expr: string) {
 
 // Reset create form
 function resetCreateForm() {
-  formData.value = {
-    name: '',
-    description: '',
-    trigger_type: 'cron',
-    cron_expr: '',
-    interval_seconds: 3600,
-    delay_seconds: 60,
-    timezone: 'Asia/Shanghai',
-    callback_url: '',
-    callback_method: 'POST',
-    callback_headers: {},
-    callback_body: ''
-  }
+  formData.value = createDefaultFormData()
   cronMinute.value = '*'
   cronHour.value = '*'
   cronDay.value = '*'
@@ -214,10 +276,25 @@ async function submitCreateForm() {
   if (formData.value.trigger_type === 'cron') {
     formData.value.cron_expr = buildCronExpression()
   }
+  // Build payload based on callback_enabled
+  const payload = {
+    ...formData.value,
+    callback_url: formData.value.callback_enabled ? formData.value.callback_url : '',
+    callback_method: formData.value.callback_enabled ? formData.value.callback_method : 'POST',
+    callback_headers: formData.value.callback_enabled ? formData.value.callback_headers : {},
+    callback_body: formData.value.callback_enabled ? formData.value.callback_body : ''
+  }
   try {
-    await timerApi.createTimer(formData.value)
+    const res = await timerApi.createTimer(payload)
     showCreateForm.value = false
     await loadTimers()
+    await router.replace({
+      path: route.path,
+      query: {
+        ...route.query,
+        timerUuid: res.data.uuid
+      }
+    })
   } catch (e) {
     console.error('Failed to create timer:', e)
   } finally {
@@ -232,8 +309,16 @@ async function submitEditForm() {
   if (formData.value.trigger_type === 'cron') {
     formData.value.cron_expr = buildCronExpression()
   }
+  // Build payload based on callback_enabled
+  const payload = {
+    ...formData.value,
+    callback_url: formData.value.callback_enabled ? formData.value.callback_url : '',
+    callback_method: formData.value.callback_enabled ? formData.value.callback_method : 'POST',
+    callback_headers: formData.value.callback_enabled ? formData.value.callback_headers : {},
+    callback_body: formData.value.callback_enabled ? formData.value.callback_body : ''
+  }
   try {
-    await timerApi.updateTimer(selectedTimerUuid.value, formData.value)
+    await timerApi.updateTimer(selectedTimerUuid.value, payload)
     showEditForm.value = false
     await loadTimerDetail(selectedTimerUuid.value)
     await loadTimers()
@@ -255,10 +340,12 @@ function startEdit() {
     interval_seconds: (selectedTimer.value as any).interval_seconds || 3600,
     delay_seconds: (selectedTimer.value as any).delay_seconds || 60,
     timezone: selectedTimer.value.timezone || 'Asia/Shanghai',
+    callback_enabled: !!selectedTimer.value.callback_url,
     callback_url: selectedTimer.value.callback_url,
     callback_method: selectedTimer.value.callback_method || 'POST',
     callback_headers: selectedTimer.value.callback_headers || {},
-    callback_body: selectedTimer.value.callback_body || ''
+    callback_body: selectedTimer.value.callback_body || '',
+    notify_config: cloneNotifyConfig(selectedTimer.value.notify_config)
   }
   if (formData.value.cron_expr) {
     parseCronExpression(formData.value.cron_expr)
@@ -323,6 +410,12 @@ async function deleteTimer() {
     selectedTimerUuid.value = null
     logs.value = []
     await loadTimers()
+    const nextQuery = { ...route.query }
+    delete nextQuery.timerUuid
+    await router.replace({
+      path: route.path,
+      query: nextQuery
+    })
   } catch (e) {
     console.error('Failed to delete timer:', e)
   }
@@ -363,6 +456,24 @@ function formatInterval(seconds: number) {
   if (seconds < 3600) return `${Math.floor(seconds / 60)}m`
   if (seconds < 86400) return `${Math.floor(seconds / 3600)}h`
   return `${Math.floor(seconds / 86400)}d`
+}
+
+function getNotifyOnText(notifyOn?: string) {
+  const map: Record<string, string> = {
+    all: '全部执行结果',
+    failure: '仅失败',
+    success: '仅成功',
+    manual: '仅手动触发'
+  }
+  return map[notifyOn || 'all'] || notifyOn || '全部执行结果'
+}
+
+function getNotifyChannelsText(config?: TimerNotifyConfig) {
+  const notifyConfig = cloneNotifyConfig(config)
+  if (!notifyConfig.enabled) {
+    return '已关闭'
+  }
+  return notifyConfig.island_enabled ? '灵动岛提醒' : '无渠道'
 }
 </script>
 
@@ -425,17 +536,17 @@ function formatInterval(seconds: number) {
         <template v-else-if="selectedTimer">
           <!-- Timer Header -->
           <Card>
-            <div class="flex items-start justify-between mb-4">
-              <div>
+            <div class="flex items-start justify-between mb-4 gap-4">
+              <div class="min-w-0 flex-1">
                 <div class="flex items-center gap-3 mb-2">
-                  <h2 class="text-xl font-medium text-gray-900">{{ selectedTimer.name }}</h2>
+                  <h2 class="text-xl font-medium text-gray-900 truncate">{{ selectedTimer.name }}</h2>
                   <Badge :variant="getStatusVariant(selectedTimer.status)">
                     {{ getStatusText(selectedTimer.status) }}
                   </Badge>
                 </div>
-                <p v-if="selectedTimer.description" class="text-gray-500">{{ selectedTimer.description }}</p>
+                <p v-if="selectedTimer.description" class="text-gray-500 break-words">{{ selectedTimer.description }}</p>
               </div>
-              <div class="flex gap-2">
+              <div class="flex gap-2 flex-shrink-0">
                 <Button
                   v-if="selectedTimer.status === 'active'"
                   variant="gray"
@@ -489,6 +600,14 @@ function formatInterval(seconds: number) {
               <div class="p-4 bg-gray-50" style="border-radius: 12px;">
                 <p class="text-sm text-gray-500 mb-1">上次执行</p>
                 <p class="font-medium text-gray-900">{{ formatTime(selectedTimer.last_run_at) }}</p>
+              </div>
+              <div class="p-4 bg-gray-50" style="border-radius: 12px;">
+                <p class="text-sm text-gray-500 mb-1">提醒渠道</p>
+                <p class="font-medium text-gray-900">{{ getNotifyChannelsText(selectedTimer.notify_config) }}</p>
+              </div>
+              <div class="p-4 bg-gray-50" style="border-radius: 12px;">
+                <p class="text-sm text-gray-500 mb-1">提醒时机</p>
+                <p class="font-medium text-gray-900">{{ getNotifyOnText(selectedTimer.notify_config?.notify_on) }}</p>
               </div>
             </div>
           </Card>
@@ -660,23 +779,60 @@ function formatInterval(seconds: number) {
           </div>
         </template>
 
-        <!-- Common Fields -->
-        <div>
-          <label class="block text-sm font-medium text-gray-700 mb-1">回调 URL *</label>
-          <Input v-model="formData.callback_url" placeholder="https://example.com/webhook" />
+        <!-- Callback Config -->
+        <div class="space-y-4 border border-gray-200 p-4" style="border-radius: 12px;">
+          <div class="flex items-center justify-between">
+            <div>
+              <p class="text-sm font-medium text-gray-900">回调配置</p>
+              <p class="text-xs text-gray-500">配置定时任务触发后是否发送 HTTP 回调请求</p>
+            </div>
+            <input v-model="formData.callback_enabled" type="checkbox" class="h-4 w-4" />
+          </div>
+
+          <template v-if="formData.callback_enabled">
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">回调 URL *</label>
+              <Input v-model="formData.callback_url" placeholder="https://example.com/webhook" />
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">HTTP 方法</label>
+              <Select v-model="formData.callback_method" :options="httpMethodOptions" />
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">请求体</label>
+              <textarea
+                v-model="formData.callback_body"
+                placeholder='{"key": "value"}'
+                class="w-full h-24 bg-white border border-gray-200 outline-none p-3 text-sm"
+                style="border-radius: 12px;"
+              />
+            </div>
+          </template>
         </div>
-        <div>
-          <label class="block text-sm font-medium text-gray-700 mb-1">HTTP 方法</label>
-          <Select v-model="formData.callback_method" :options="httpMethodOptions" />
-        </div>
-        <div>
-          <label class="block text-sm font-medium text-gray-700 mb-1">请求体</label>
-          <textarea
-            v-model="formData.callback_body"
-            placeholder='{"key": "value"}'
-            class="w-full h-24 bg-white border border-gray-200 outline-none p-3 text-sm"
-            style="border-radius: 12px;"
-          />
+
+        <!-- Notification Config -->
+        <div class="space-y-4 border border-gray-200 p-4" style="border-radius: 12px;">
+          <div class="flex items-center justify-between">
+            <div>
+              <p class="text-sm font-medium text-gray-900">执行提醒</p>
+              <p class="text-xs text-gray-500">配置定时任务触发后是否通过灵动岛或系统通知提醒</p>
+            </div>
+            <input v-model="formData.notify_config.enabled" type="checkbox" class="h-4 w-4" />
+          </div>
+          <div class="flex items-center gap-4">
+            <label class="flex items-center gap-2 text-sm text-gray-700">
+              <input v-model="formData.notify_config.island_enabled" type="checkbox" class="h-4 w-4" :disabled="!formData.notify_config.enabled" />
+              <span>灵动岛提醒</span>
+            </label>
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">提醒时机</label>
+            <Select v-model="formData.notify_config.notify_on" :options="notifyOnOptions" :disabled="!formData.notify_config.enabled" />
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">冷却时间（秒）</label>
+            <Input v-model.number="formData.notify_config.cooldown_seconds" type="number" min="0" :disabled="!formData.notify_config.enabled" />
+          </div>
         </div>
         <div class="flex justify-end gap-2 pt-4">
           <Button variant="gray" @click="showCreateForm = false">取消</Button>
@@ -750,23 +906,60 @@ function formatInterval(seconds: number) {
           </div>
         </template>
 
-        <!-- Common Fields -->
-        <div>
-          <label class="block text-sm font-medium text-gray-700 mb-1">回调 URL *</label>
-          <Input v-model="formData.callback_url" placeholder="https://example.com/webhook" />
+        <!-- Callback Config -->
+        <div class="space-y-4 border border-gray-200 p-4" style="border-radius: 12px;">
+          <div class="flex items-center justify-between">
+            <div>
+              <p class="text-sm font-medium text-gray-900">回调配置</p>
+              <p class="text-xs text-gray-500">配置定时任务触发后是否发送 HTTP 回调请求</p>
+            </div>
+            <input v-model="formData.callback_enabled" type="checkbox" class="h-4 w-4" />
+          </div>
+
+          <template v-if="formData.callback_enabled">
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">回调 URL *</label>
+              <Input v-model="formData.callback_url" placeholder="https://example.com/webhook" />
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">HTTP 方法</label>
+              <Select v-model="formData.callback_method" :options="httpMethodOptions" />
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">请求体</label>
+              <textarea
+                v-model="formData.callback_body"
+                placeholder='{"key": "value"}'
+                class="w-full h-24 bg-white border border-gray-200 outline-none p-3 text-sm"
+                style="border-radius: 12px;"
+              />
+            </div>
+          </template>
         </div>
-        <div>
-          <label class="block text-sm font-medium text-gray-700 mb-1">HTTP 方法</label>
-          <Select v-model="formData.callback_method" :options="httpMethodOptions" />
-        </div>
-        <div>
-          <label class="block text-sm font-medium text-gray-700 mb-1">请求体</label>
-          <textarea
-            v-model="formData.callback_body"
-            placeholder='{"key": "value"}'
-            class="w-full h-24 bg-white border border-gray-200 outline-none p-3 text-sm"
-            style="border-radius: 12px;"
-          />
+
+        <!-- Notification Config -->
+        <div class="space-y-4 border border-gray-200 p-4" style="border-radius: 12px;">
+          <div class="flex items-center justify-between">
+            <div>
+              <p class="text-sm font-medium text-gray-900">执行提醒</p>
+              <p class="text-xs text-gray-500">支持按执行结果或手动触发分别提醒</p>
+            </div>
+            <input v-model="formData.notify_config.enabled" type="checkbox" class="h-4 w-4" />
+          </div>
+          <div class="flex items-center gap-4">
+            <label class="flex items-center gap-2 text-sm text-gray-700">
+              <input v-model="formData.notify_config.island_enabled" type="checkbox" class="h-4 w-4" :disabled="!formData.notify_config.enabled" />
+              <span>灵动岛提醒</span>
+            </label>
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">提醒时机</label>
+            <Select v-model="formData.notify_config.notify_on" :options="notifyOnOptions" :disabled="!formData.notify_config.enabled" />
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">冷却时间（秒）</label>
+            <Input v-model.number="formData.notify_config.cooldown_seconds" type="number" min="0" :disabled="!formData.notify_config.enabled" />
+          </div>
         </div>
         <div class="flex justify-end gap-2 pt-4">
           <Button variant="gray" @click="showEditForm = false">取消</Button>

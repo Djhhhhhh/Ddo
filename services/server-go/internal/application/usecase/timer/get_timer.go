@@ -40,6 +40,7 @@ type GetTimerOutput struct {
 	Status          string           `json:"status"`
 	LastRunAt       *time.Time       `json:"last_run_at,omitempty"`
 	NextRunAt       *time.Time       `json:"next_run_at,omitempty"`
+	NotifyConfig    models.TimerNotifyConfig `json:"notify_config"`
 	Stats           TimerStatsOutput `json:"stats"`
 	CreatedAt       time.Time        `json:"created_at"`
 	UpdatedAt       time.Time        `json:"updated_at"`
@@ -100,6 +101,7 @@ func (uc *getTimerUseCase) Execute(ctx context.Context, input GetTimerInput) *re
 		Status:          timer.Status,
 		LastRunAt:       timer.LastRunAt,
 		NextRunAt:       timer.NextRunAt,
+		NotifyConfig:    models.ParseTimerNotifyConfig(timer.NotifyConfig),
 		Stats:           stats,
 		CreatedAt:       timer.CreatedAt,
 		UpdatedAt:       timer.UpdatedAt,

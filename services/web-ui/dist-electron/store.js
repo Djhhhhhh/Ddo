@@ -4,7 +4,9 @@ var defaults = {
   notificationLevel: "all",
   soundEnabled: true,
   autoStart: false,
-  theme: "system"
+  theme: "system",
+  timerIslandEnabled: true,
+  timerSystemNotificationEnabled: false
 };
 var storeInstance = null;
 function getStore() {

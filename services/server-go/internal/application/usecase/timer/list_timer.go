@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/ddo/server-go/internal/application/result"
+	"github.com/ddo/server-go/internal/db/models"
 	"github.com/ddo/server-go/internal/db/repository"
 )
 
@@ -27,6 +28,7 @@ type TimerItemOutput struct {
 	Status          string `json:"status"`
 	LastRunAt       string `json:"last_run_at,omitempty"`
 	NextRunAt       string `json:"next_run_at,omitempty"`
+	NotifyConfig    models.TimerNotifyConfig `json:"notify_config"`
 }
 
 // ListTimerOutput 查询定时任务列表输出
@@ -77,6 +79,7 @@ func (uc *listTimerUseCase) Execute(ctx context.Context, input ListTimerInput) *
 			DelaySeconds:    timer.DelaySeconds,
 			Timezone:        timer.Timezone,
 			Status:          timer.Status,
+			NotifyConfig:    models.ParseTimerNotifyConfig(timer.NotifyConfig),
 		}
 
 		if timer.LastRunAt != nil {

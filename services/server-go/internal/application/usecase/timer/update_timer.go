@@ -28,6 +28,7 @@ type UpdateTimerInput struct {
 	CallbackMethod  string
 	CallbackHeaders map[string]string
 	CallbackBody    string
+	NotifyConfig    *models.TimerNotifyConfig
 }
 
 // UpdateTimerOutput 更新定时任务输出
@@ -125,6 +126,13 @@ func (uc *updateTimerUseCase) Execute(ctx context.Context, input UpdateTimerInpu
 	}
 	if input.CallbackBody != "" {
 		timer.CallbackBody = input.CallbackBody
+	}
+	if input.NotifyConfig != nil {
+		notifyConfigJSON, err := models.EncodeTimerNotifyConfig(input.NotifyConfig)
+		if err != nil {
+			return result.NewFailure[UpdateTimerOutput](fmt.Errorf("marshal notify config failed: %w", err))
+		}
+		timer.NotifyConfig = notifyConfigJSON
 	}
 
 	// 5. 如果需要重新调度，先计算下次执行时间

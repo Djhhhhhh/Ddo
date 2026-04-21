@@ -66,19 +66,27 @@ func (uc *triggerTimerUseCase) Execute(ctx context.Context, input TriggerTimerIn
 	type TimerPayload struct {
 		TimerUUID       string `json:"timer_uuid"`
 		Name            string `json:"name"`
+		Description     string `json:"description"`
+		TriggerType     string `json:"trigger_type"`
 		CallbackURL     string `json:"callback_url"`
 		CallbackMethod  string `json:"callback_method"`
 		CallbackHeaders string `json:"callback_headers"`
 		CallbackBody    string `json:"callback_body"`
+		TriggerSource   string `json:"trigger_source"`
+		NotifyConfig    string `json:"notify_config"`
 	}
 
 	payload := TimerPayload{
 		TimerUUID:       timer.UUID,
 		Name:            timer.Name,
+		Description:     timer.Description,
+		TriggerType:     timer.TriggerType,
 		CallbackURL:     timer.CallbackURL,
 		CallbackMethod:  timer.CallbackMethod,
 		CallbackHeaders: timer.CallbackHeaders,
 		CallbackBody:    timer.CallbackBody,
+		TriggerSource:   models.TimerTriggerSourceManual,
+		NotifyConfig:    timer.NotifyConfig,
 	}
 
 	payloadBytes, err := json.Marshal(payload)

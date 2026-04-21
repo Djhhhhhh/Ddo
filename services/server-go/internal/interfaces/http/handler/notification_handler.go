@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"context"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -48,21 +49,29 @@ func (h *NotificationHandler) SubscribeNotifications(c *gin.Context) {
 
 	for i, n := range notifications {
 		responseNotifications[i] = gin.H{
-			"id":        n.ID,
-			"title":     n.Title,
-			"body":      n.Body,
-			"level":     n.Level,
-			"timestamp": n.CreatedAt.UnixMilli(),
-			"type":      n.Type,
-			"taskName":  n.TaskName,
-			"status":    n.Status,
+			"id":          n.ID,
+			"title":       n.Title,
+			"body":        n.Body,
+			"level":       n.Level,
+			"timestamp":   n.CreatedAt.UnixMilli(),
+			"type":        n.Type,
+			"taskName":    n.TaskName,
+			"description": n.Description,
+			"status":      n.Status,
+			"timerUUID":   n.TimerUUID,
+			"channels": gin.H{
+				"island": n.IslandEnabled,
+				"system": n.SystemEnabled,
+			},
 		}
 		notificationIDs[i] = n.ID
 	}
 
 	// 标记为已读（因为已经返回给客户端）
+	// 使用独立的 background context，避免 HTTP 请求结束后 context 被取消
 	go func() {
-		h.notificationService.MarkMultipleAsRead(ctx, notificationIDs)
+		markCtx := context.Background()
+		h.notificationService.MarkMultipleAsRead(markCtx, notificationIDs)
 	}()
 
 	c.JSON(http.StatusOK, gin.H{

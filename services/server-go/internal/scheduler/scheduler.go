@@ -31,11 +31,14 @@ type Scheduler struct {
 type TimerPayload struct {
 	TimerUUID       string `json:"timer_uuid"`
 	Name            string `json:"name"`
+	Description     string `json:"description"`
 	TriggerType     string `json:"trigger_type"`
 	CallbackURL     string `json:"callback_url"`
 	CallbackMethod  string `json:"callback_method"`
 	CallbackHeaders string `json:"callback_headers"`
 	CallbackBody    string `json:"callback_body"`
+	TriggerSource   string `json:"trigger_source"`
+	NotifyConfig    string `json:"notify_config"`
 }
 
 // NewScheduler 创建调度器
@@ -179,6 +182,8 @@ func (s *Scheduler) publishDelayedJob(timer *models.Timer) error {
 		CallbackMethod:  timer.CallbackMethod,
 		CallbackHeaders: timer.CallbackHeaders,
 		CallbackBody:    timer.CallbackBody,
+		TriggerSource:   models.TimerTriggerSourceSchedule,
+		NotifyConfig:    timer.NotifyConfig,
 	}
 
 	payloadBytes, err := json.Marshal(payload)
@@ -282,11 +287,14 @@ func (s *Scheduler) triggerJob(timer *models.Timer) {
 	payload := TimerPayload{
 		TimerUUID:       timer.UUID,
 		Name:            timer.Name,
+		Description:     timer.Description,
 		TriggerType:     timer.TriggerType,
 		CallbackURL:     timer.CallbackURL,
 		CallbackMethod:  timer.CallbackMethod,
 		CallbackHeaders: timer.CallbackHeaders,
 		CallbackBody:    timer.CallbackBody,
+		TriggerSource:   models.TimerTriggerSourceSchedule,
+		NotifyConfig:    timer.NotifyConfig,
 	}
 
 	payloadBytes, err := json.Marshal(payload)

@@ -28,6 +28,15 @@ export interface NotificationData {
   body: string
   level: 'normal' | 'important' | 'urgent'
   timestamp: number
+  type?: string
+  taskName?: string
+  description?: string
+  status?: string
+  timerUUID?: string
+  channels?: {
+    island: boolean
+    system: boolean
+  }
 }
 
 export function createIslandWindow(): BrowserWindow {

@@ -1,7 +1,7 @@
 import { ipcMain } from 'electron'
-import { handleNotificationAction, getNotificationHistory } from './notification'
-import { getMainWindow, toggleMainWindow } from './windows/mainWindow'
-import { getStore } from './store'
+import { handleNotificationAction, getNotificationHistory } from './notification.js'
+import { toggleMainWindow } from './windows/mainWindow.js'
+import { getStore } from './store.js'
 
 export function initIpcHandlers(): void {
   // Get config

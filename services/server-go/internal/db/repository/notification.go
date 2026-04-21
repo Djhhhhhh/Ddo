@@ -16,6 +16,8 @@ type NotificationRepository interface {
 	MarkAsRead(ctx context.Context, id string) error
 	MarkMultipleAsRead(ctx context.Context, ids []string) error
 	DeleteExpired(ctx context.Context) (int64, error)
+	// CheckUnreadNotificationByTimerUUID 检查指定定时任务是否存在未读通知（用于去重）
+	CheckUnreadNotificationByTimerUUID(ctx context.Context, timerUUID string, status string) (bool, error)
 }
 
 // notificationRepository 通知数据访问实现
@@ -67,4 +69,15 @@ func (r *notificationRepository) DeleteExpired(ctx context.Context) (int64, erro
 		Where("expired_at < ? OR is_read = ?", time.Now(), true).
 		Delete(&models.Notification{})
 	return result.RowsAffected, result.Error
+}
+
+// CheckUnreadNotificationByTimerUUID 检查指定定时任务是否存在未读通知（用于去重）
+func (r *notificationRepository) CheckUnreadNotificationByTimerUUID(ctx context.Context, timerUUID string, status string) (bool, error) {
+	var count int64
+	err := r.db.WithContext(ctx).
+		Model(&models.Notification{}).
+		Where("timer_uuid = ? AND status = ? AND is_read = ? AND expired_at > ?",
+			timerUUID, status, false, time.Now()).
+		Count(&count).Error
+	return count > 0, err
 }

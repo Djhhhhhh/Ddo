@@ -1,6 +1,8 @@
 import { Notification, BrowserWindow } from 'electron'
-import { showIslandWindow } from './windows/islandWindow'
-import { updateTrayIcon } from './tray'
+import { showIslandWindow } from './windows/islandWindow.js'
+import { navigateMainWindow } from './windows/mainWindow.js'
+import { updateTrayIcon } from './tray.js'
+import { getStore } from './store.js'
 
 export interface NotificationData {
   id: string
@@ -8,6 +10,15 @@ export interface NotificationData {
   body: string
   level: 'normal' | 'important' | 'urgent'
   timestamp: number
+  type?: string
+  taskName?: string
+  description?: string
+  status?: string
+  timerUUID?: string
+  channels?: {
+    island: boolean
+    system: boolean
+  }
 }
 
 export interface NotificationAction {
@@ -16,8 +27,78 @@ export interface NotificationAction {
   type: 'complete' | 'snooze' | 'view'
 }
 
+interface NotificationSubscribeResponse {
+  notifications?: NotificationData[]
+}
+
 // Notification history
 const notificationHistory: NotificationData[] = []
+
+// Track processed notification IDs to prevent duplicates within short period
+const processedNotificationIds = new Set<string>()
+const PROCESSED_ID_EXPIRY_MS = 30000 // 30 seconds
+
+// Clean up old processed IDs periodically
+function cleanupProcessedIds(): void {
+  // Keep only recent IDs, this is a simple cleanup
+  // In production, you might want to use a time-based expiry
+  if (processedNotificationIds.size > 1000) {
+    processedNotificationIds.clear()
+  }
+}
+
+// Check if notification was recently processed
+function isRecentlyProcessed(id: string): boolean {
+  return processedNotificationIds.has(id)
+}
+
+// Mark notification as processed
+function markAsProcessed(id: string): void {
+  processedNotificationIds.add(id)
+  // Auto cleanup when size grows too large
+  if (processedNotificationIds.size % 100 === 0) {
+    cleanupProcessedIds()
+  }
+}
+
+function isTimerNotification(data: NotificationData): boolean {
+	return data.type === 'scheduled_task'
+}
+
+function shouldShowIsland(data: NotificationData): boolean {
+	const config = getStore().store
+	if (isTimerNotification(data) && !config.timerIslandEnabled) {
+		return false
+	}
+	if (data.channels) {
+		return data.channels.island
+	}
+	return data.level === 'important' || data.level === 'urgent'
+}
+
+function shouldShowSystem(data: NotificationData): boolean {
+	const config = getStore().store
+	if (isTimerNotification(data) && !config.timerSystemNotificationEnabled) {
+		return false
+	}
+	if (data.channels) {
+		return data.channels.system
+	}
+	return data.level === 'normal' || data.level === 'urgent'
+}
+
+function navigateToNotificationTarget(data: NotificationData): void {
+	if (data.timerUUID) {
+		navigateMainWindow(`/timer?timerUuid=${encodeURIComponent(data.timerUUID)}`)
+		return
+	}
+
+	const windows = BrowserWindow.getAllWindows()
+	if (windows.length > 0) {
+		windows[0].show()
+		windows[0].focus()
+	}
+}
 
 // Show system notification
 export function showSystemNotification(data: NotificationData): void {
@@ -33,12 +114,7 @@ export function showSystemNotification(data: NotificationData): void {
   })
 
   notification.on('click', () => {
-    // Click to open main window
-    const windows = BrowserWindow.getAllWindows()
-    if (windows.length > 0) {
-      windows[0].show()
-      windows[0].focus()
-    }
+    navigateToNotificationTarget(data)
   })
 
   notification.show()
@@ -52,28 +128,26 @@ export function showDingIslandNotification(data: NotificationData): void {
 
 // Show notification (based on level)
 export function showNotification(data: NotificationData): void {
+  // Check for duplicate notification
+  if (isRecentlyProcessed(data.id)) {
+    console.log('[Ddo Ding] Duplicate notification skipped:', data.id)
+    return
+  }
+
+  // Mark as processed to prevent duplicates
+  markAsProcessed(data.id)
+
   // Store in history
   notificationHistory.push(data)
   if (notificationHistory.length > 100) {
     notificationHistory.shift()
   }
 
-  // Choose display method based on level
-  switch (data.level) {
-    case 'urgent':
-      // Urgent: show both island and system notification
-      showDingIslandNotification(data)
-      showSystemNotification(data)
-      break
-    case 'important':
-      // Important: show island only
-      showDingIslandNotification(data)
-      break
-    case 'normal':
-    default:
-      // Normal: system notification only
-      showSystemNotification(data)
-      break
+  if (shouldShowIsland(data)) {
+    showDingIslandNotification(data)
+  }
+  if (shouldShowSystem(data)) {
+    showSystemNotification(data)
   }
 }
 
@@ -100,12 +174,7 @@ export function handleNotificationAction(action: {
       }, 5 * 60 * 1000)
       break
     case 'view':
-      // Open main window
-      const windows = BrowserWindow.getAllWindows()
-      if (windows.length > 0) {
-        windows[0].show()
-        windows[0].focus()
-      }
+      navigateToNotificationTarget(notification)
       break
   }
 }
@@ -117,22 +186,19 @@ export function getNotificationHistory(): NotificationData[] {
 
 // Connect to backend notification service
 export function connectNotify(): void {
-  const WS_URL = process.env.NOTIFY_WS_URL || 'ws://localhost:8080/ws/notify'
-
   try {
-    console.log('[Ddo Ding] Connecting to notification service...', WS_URL)
+    console.log('[Ddo Ding] Connecting to notification polling service...')
 
-    // Backup polling mechanism
     let pollInterval: NodeJS.Timeout | null = null
 
     const startPolling = () => {
       pollInterval = setInterval(async () => {
         try {
-          const response = await fetch('http://localhost:8080/api/notifications/subscribe')
+          const response = await fetch('http://localhost:8080/api/v1/notifications/subscribe')
           if (response.ok) {
-            const data = await response.json()
+            const data = await response.json() as NotificationSubscribeResponse
             if (data.notifications && data.notifications.length > 0) {
-              data.notifications.forEach((n: NotificationData) => {
+              data.notifications.forEach((n) => {
                 showNotification(n)
               })
             }

@@ -33,11 +33,14 @@ type CallbackExecutor struct {
 type TimerPayload struct {
 	TimerUUID       string `json:"timer_uuid"`
 	Name            string `json:"name"`
+	Description     string `json:"description"`
 	TriggerType     string `json:"trigger_type"`
 	CallbackURL     string `json:"callback_url"`
 	CallbackMethod  string `json:"callback_method"`
 	CallbackHeaders string `json:"callback_headers"`
 	CallbackBody    string `json:"callback_body"`
+	TriggerSource   string `json:"trigger_source"`
+	NotifyConfig    string `json:"notify_config"`
 }
 
 // NewCallbackExecutor 创建回调执行器
@@ -158,6 +161,17 @@ func (e *CallbackExecutor) executeCallbackWithLog(ctx context.Context, payload *
 		Status:    models.TimerLogStatusSuccess,
 	}
 
+	// 如果回调 URL 为空，记录成功状态但不执行 HTTP 请求，仍然发送通知
+	if payload.CallbackURL == "" {
+		duration := time.Since(start).Milliseconds()
+		log.Duration = duration
+		log.Output = "No callback URL configured, task completed as pure reminder"
+		e.saveLog(log)
+		// 发送通知（纯文字提示任务也需要灵动岛提醒）
+		e.sendNotification(payload, log.Status, duration)
+		return log
+	}
+
 	// 解析 Headers
 	var headers map[string]string
 	if payload.CallbackHeaders != "" {
@@ -187,6 +201,7 @@ func (e *CallbackExecutor) executeCallbackWithLog(ctx context.Context, payload *
 		log.Error = fmt.Sprintf("Failed to create request: %v", err)
 		log.Duration = duration
 		e.saveLog(log)
+		e.sendNotification(payload, log.Status, duration)
 		return log
 	}
 
@@ -204,6 +219,7 @@ func (e *CallbackExecutor) executeCallbackWithLog(ctx context.Context, payload *
 		log.Status = models.TimerLogStatusFailed
 		log.Error = fmt.Sprintf("HTTP request failed: %v", err)
 		e.saveLog(log)
+		e.sendNotification(payload, log.Status, duration)
 		return log
 	}
 	defer resp.Body.Close()
@@ -284,12 +300,17 @@ func (e *CallbackExecutor) sendNotification(payload *TimerPayload, status string
 		body = fmt.Sprintf("任务执行失败，耗时 %d ms", duration)
 	}
 
+	notifyConfig := models.ParseTimerNotifyConfig(payload.NotifyConfig)
+
 	ctx := context.Background()
 	_, err := e.notificationService.CreateTimerNotification(
 		ctx,
 		payload.TimerUUID,
 		payload.Name,
+		payload.Description,
 		notifyStatus,
+		payload.TriggerSource,
+		notifyConfig,
 		body,
 	)
 	if err != nil {
@@ -312,6 +333,8 @@ func (e *CallbackExecutor) ManualTrigger(timer *models.Timer) *models.TimerLog {
 		CallbackMethod:  timer.CallbackMethod,
 		CallbackHeaders: timer.CallbackHeaders,
 		CallbackBody:    timer.CallbackBody,
+		TriggerSource:   models.TimerTriggerSourceManual,
+		NotifyConfig:    timer.NotifyConfig,
 	}
 
 	log := e.executeCallbackWithLog(ctx, payload)

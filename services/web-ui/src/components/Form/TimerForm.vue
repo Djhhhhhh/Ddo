@@ -25,6 +25,7 @@ const name = ref('')
 const description = ref('')
 const cron_expr = ref('')
 const timezone = ref('Asia/Shanghai')
+const callback_enabled = ref(false)
 const callback_url = ref('')
 const callback_method = ref('POST')
 const callback_headers = ref('')
@@ -33,7 +34,7 @@ const callback_body = ref('')
 const isValid = computed(() => {
   if (!name.value.trim()) return false
   if (!cron_expr.value.trim()) return false
-  if (!callback_url.value.trim()) return false
+  if (callback_enabled.value && !callback_url.value.trim()) return false
   return true
 })
 
@@ -44,10 +45,10 @@ function submit() {
     description: description.value.trim(),
     cron_expr: cron_expr.value.trim(),
     timezone: timezone.value,
-    callback_url: callback_url.value.trim(),
+    callback_url: callback_enabled.value ? callback_url.value.trim() : '',
     callback_method: callback_method.value,
-    callback_headers: callback_headers.value.trim(),
-    callback_body: callback_body.value.trim()
+    callback_headers: callback_enabled.value ? callback_headers.value.trim() : '',
+    callback_body: callback_enabled.value ? callback_body.value.trim() : ''
   })
 }
 </script>
@@ -98,49 +99,62 @@ function submit() {
       />
     </div>
 
-    <!-- Callback URL -->
-    <div>
-      <label class="block text-sm font-medium text-gray-700 mb-2">回调 URL *</label>
-      <Input
-        v-model="callback_url"
-        placeholder="例如: https://example.com/webhook"
-      />
-    </div>
+    <!-- Callback Config -->
+    <div class="space-y-4 border border-gray-200 p-4" style="border-radius: 12px;">
+      <div class="flex items-center justify-between">
+        <div>
+          <p class="text-sm font-medium text-gray-900">回调配置</p>
+          <p class="text-xs text-gray-500">配置定时任务触发后是否发送 HTTP 回调请求</p>
+        </div>
+        <input v-model="callback_enabled" type="checkbox" class="h-4 w-4" />
+      </div>
 
-    <!-- Callback Method -->
-    <div>
-      <label class="block text-sm font-medium text-gray-700 mb-2">HTTP 方法</label>
-      <Select
-        v-model="callback_method"
-        :options="[
-          { label: 'POST', value: 'POST' },
-          { label: 'GET', value: 'GET' },
-          { label: 'PUT', value: 'PUT' }
-        ]"
-      />
-    </div>
+      <template v-if="callback_enabled">
+        <!-- Callback URL -->
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-2">回调 URL *</label>
+          <Input
+            v-model="callback_url"
+            placeholder="例如: https://example.com/webhook"
+          />
+        </div>
 
-    <!-- Callback Headers -->
-    <div>
-      <label class="block text-sm font-medium text-gray-700 mb-2">请求头</label>
-      <Input
-        v-model="callback_headers"
-        placeholder="JSON 格式，例如: {&quot;Authorization&quot;: &quot;Bearer xxx&quot;}"
-      />
-    </div>
+        <!-- Callback Method -->
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-2">HTTP 方法</label>
+          <Select
+            v-model="callback_method"
+            :options="[
+              { label: 'POST', value: 'POST' },
+              { label: 'GET', value: 'GET' },
+              { label: 'PUT', value: 'PUT' }
+            ]"
+          />
+        </div>
 
-    <!-- Callback Body -->
-    <div>
-      <label class="block text-sm font-medium text-gray-700 mb-2">请求体</label>
-      <textarea
-        v-model="callback_body"
-        placeholder="JSON 格式的请求体"
-        class="w-full bg-white border border-gray-200 outline-none transition-colors duration-150 resize-none"
-        style="border-radius: 12px; padding: 10px 20px; min-height: 80px;"
-        :class="{
-          'focus:ring-2 focus:ring-blue-500/50 focus:border-gray-300': true
-        }"
-      />
+        <!-- Callback Headers -->
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-2">请求头</label>
+          <Input
+            v-model="callback_headers"
+            placeholder='JSON 格式，例如: {"Authorization": "Bearer xxx"}'
+          />
+        </div>
+
+        <!-- Callback Body -->
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-2">请求体</label>
+          <textarea
+            v-model="callback_body"
+            placeholder="JSON 格式的请求体"
+            class="w-full bg-white border border-gray-200 outline-none transition-colors duration-150 resize-none"
+            style="border-radius: 12px; padding: 10px 20px; min-height: 80px;"
+            :class="{
+              'focus:ring-2 focus:ring-blue-500/50 focus:border-gray-300': true
+            }"
+          />
+        </div>
+      </template>
     </div>
 
     <!-- Submit -->

@@ -5,13 +5,17 @@ interface AppConfig {
   soundEnabled: boolean
   autoStart: boolean
   theme: 'light' | 'dark' | 'system'
+  timerIslandEnabled: boolean
+  timerSystemNotificationEnabled: boolean
 }
 
 const defaults: AppConfig = {
   notificationLevel: 'all',
   soundEnabled: true,
   autoStart: false,
-  theme: 'system'
+  theme: 'system',
+  timerIslandEnabled: true,
+  timerSystemNotificationEnabled: false
 }
 
 let storeInstance: Store<AppConfig> | null = null

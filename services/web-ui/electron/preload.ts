@@ -42,6 +42,14 @@ interface NotificationData {
   body: string
   level: 'normal' | 'important' | 'urgent'
   timestamp: number
+  type?: string
+  taskName?: string
+  status?: string
+  timerUUID?: string
+  channels?: {
+    island: boolean
+    system: boolean
+  }
 }
 
 interface NotificationAction {

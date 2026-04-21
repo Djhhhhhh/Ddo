@@ -2,6 +2,14 @@ package dto
 
 import "time"
 
+type TimerNotifyConfigDTO struct {
+	Enabled         bool   `json:"enabled"`
+	IslandEnabled   bool   `json:"island_enabled"`
+	SystemEnabled   bool   `json:"system_enabled"`
+	NotifyOn        string `json:"notify_on"`
+	CooldownSeconds int64  `json:"cooldown_seconds"`
+}
+
 // TimerItemDTO 定时任务项 DTO
 type TimerItemDTO struct {
 	UUID            string `json:"uuid"`
@@ -15,6 +23,7 @@ type TimerItemDTO struct {
 	Status          string `json:"status"`
 	LastRunAt       string `json:"last_run_at,omitempty"`
 	NextRunAt       string `json:"next_run_at,omitempty"`
+	NotifyConfig    TimerNotifyConfigDTO `json:"notify_config"`
 }
 
 // TimerDetailDTO 定时任务详情 DTO
@@ -35,6 +44,7 @@ type TimerDetailDTO struct {
 	Status          string        `json:"status"`
 	LastRunAt       string        `json:"last_run_at,omitempty"`
 	NextRunAt       string        `json:"next_run_at,omitempty"`
+	NotifyConfig    TimerNotifyConfigDTO `json:"notify_config"`
 	Stats           TimerStatsDTO `json:"stats"`
 	CreatedAt       string        `json:"created_at"`
 	UpdatedAt       string        `json:"updated_at"`
@@ -71,10 +81,11 @@ type CreateTimerRequest struct {
 	Timezone        string            `json:"timezone"`
 	IntervalSeconds int64             `json:"interval_seconds"` // trigger_type=periodic 时必填
 	DelaySeconds    int64             `json:"delay_seconds"`    // trigger_type=delayed 时必填
-	CallbackURL     string            `json:"callback_url" binding:"required"`
+	CallbackURL     string            `json:"callback_url"`
 	CallbackMethod  string            `json:"callback_method"`
 	CallbackHeaders map[string]string `json:"callback_headers"`
 	CallbackBody    string            `json:"callback_body"`
+	NotifyConfig    *TimerNotifyConfigDTO `json:"notify_config"`
 }
 
 // CreateTimerResponse 创建定时任务响应
@@ -140,6 +151,7 @@ type UpdateTimerRequest struct {
 	CallbackMethod  string            `json:"callback_method"`
 	CallbackHeaders map[string]string `json:"callback_headers"`
 	CallbackBody    string            `json:"callback_body"`
+	NotifyConfig    *TimerNotifyConfigDTO `json:"notify_config"`
 }
 
 // UpdateTimerResponse 更新定时任务响应

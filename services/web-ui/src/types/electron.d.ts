@@ -1,11 +1,21 @@
 // Electron 预加载 API 类型定义
 
+export interface NotificationChannels {
+  island: boolean
+  system: boolean
+}
+
 export interface NotificationData {
   id: string
   title: string
   body: string
   level: 'normal' | 'important' | 'urgent'
   timestamp: number
+  type?: string
+  taskName?: string
+  status?: string
+  timerUUID?: string
+  channels?: NotificationChannels
 }
 
 export interface NotificationAction {
@@ -18,6 +28,8 @@ export interface AppConfig {
   soundEnabled: boolean
   autoStart: boolean
   theme: 'light' | 'dark' | 'system'
+  timerIslandEnabled: boolean
+  timerSystemNotificationEnabled: boolean
 }
 
 export interface DdoElectronAPI {

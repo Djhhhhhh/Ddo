@@ -62,12 +62,12 @@ function createFallbackIcon(active) {
   }
   return nativeImage.createFromBuffer(buffer, { width: size, height: size });
 }
-function createTrayMenu(getMainWindow3) {
+function createTrayMenu(getMainWindow2) {
   return Menu.buildFromTemplate([
     {
       label: "Show Window",
       click: () => {
-        const mainWindow3 = getMainWindow3();
+        const mainWindow3 = getMainWindow2();
         if (mainWindow3) {
           mainWindow3.show();
           mainWindow3.focus();
@@ -77,7 +77,7 @@ function createTrayMenu(getMainWindow3) {
     {
       label: "Settings",
       click: () => {
-        const mainWindow3 = getMainWindow3();
+        const mainWindow3 = getMainWindow2();
         if (mainWindow3) {
           mainWindow3.show();
           mainWindow3.focus();
@@ -94,7 +94,7 @@ function createTrayMenu(getMainWindow3) {
     }
   ]);
 }
-function createTray(getMainWindow3) {
+function createTray(getMainWindow2) {
   if (tray) {
     tray.destroy();
     tray = null;
@@ -104,9 +104,9 @@ function createTray(getMainWindow3) {
   console.log("[Tray] Icon created, isEmpty:", icon.isEmpty());
   tray = new Tray(icon);
   tray.setToolTip("Ddo Ding");
-  tray.setContextMenu(createTrayMenu(getMainWindow3));
+  tray.setContextMenu(createTrayMenu(getMainWindow2));
   tray.on("click", () => {
-    const mainWindow3 = getMainWindow3();
+    const mainWindow3 = getMainWindow2();
     if (mainWindow3) {
       if (mainWindow3.isVisible()) {
         mainWindow3.hide();
@@ -117,7 +117,7 @@ function createTray(getMainWindow3) {
     }
   });
   tray.on("right-click", () => {
-    tray?.setContextMenu(createTrayMenu(getMainWindow3));
+    tray?.setContextMenu(createTrayMenu(getMainWindow2));
   });
   return tray;
 }
@@ -253,8 +253,114 @@ function showIslandWindow(notification) {
 import { ipcMain } from "electron";
 
 // electron/notification.ts
-import { Notification, BrowserWindow as BrowserWindow2 } from "electron";
+import { Notification, BrowserWindow as BrowserWindow3 } from "electron";
+
+// electron/windows/mainWindow.ts
+import { BrowserWindow as BrowserWindow2, app as app3 } from "electron";
+import path3 from "node:path";
+import { fileURLToPath as fileURLToPath2 } from "node:url";
+var __filename2 = fileURLToPath2(import.meta.url);
+var __dirname2 = path3.dirname(__filename2);
+var mainWindow = null;
+function navigateMainWindow(hashPath) {
+  if (!mainWindow || mainWindow.isDestroyed()) {
+    return;
+  }
+  const isDev = !app3.isPackaged;
+  if (isDev) {
+    const baseUrl = process.env.VITE_DEV_SERVER_URL || "http://localhost:3000";
+    mainWindow.loadURL(`${baseUrl}#${hashPath}`);
+  } else {
+    mainWindow.loadFile(path3.join(__dirname2, "..", "dist", "index.html"), {
+      hash: hashPath
+    });
+  }
+  mainWindow.show();
+  mainWindow.focus();
+}
+function toggleMainWindow() {
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    if (mainWindow.isVisible()) {
+      mainWindow.hide();
+    } else {
+      mainWindow.show();
+      mainWindow.focus();
+    }
+  }
+}
+
+// electron/store.ts
+import Store from "electron-store";
+var defaults = {
+  notificationLevel: "all",
+  soundEnabled: true,
+  autoStart: false,
+  theme: "system",
+  timerIslandEnabled: true,
+  timerSystemNotificationEnabled: false
+};
+var storeInstance = null;
+function getStore() {
+  if (!storeInstance) {
+    storeInstance = new Store({
+      name: "ddo-ding-config",
+      defaults
+    });
+  }
+  return storeInstance;
+}
+
+// electron/notification.ts
 var notificationHistory = [];
+var processedNotificationIds = /* @__PURE__ */ new Set();
+function cleanupProcessedIds() {
+  if (processedNotificationIds.size > 1e3) {
+    processedNotificationIds.clear();
+  }
+}
+function isRecentlyProcessed(id) {
+  return processedNotificationIds.has(id);
+}
+function markAsProcessed(id) {
+  processedNotificationIds.add(id);
+  if (processedNotificationIds.size % 100 === 0) {
+    cleanupProcessedIds();
+  }
+}
+function isTimerNotification(data) {
+  return data.type === "scheduled_task";
+}
+function shouldShowIsland(data) {
+  const config = getStore().store;
+  if (isTimerNotification(data) && !config.timerIslandEnabled) {
+    return false;
+  }
+  if (data.channels) {
+    return data.channels.island;
+  }
+  return data.level === "important" || data.level === "urgent";
+}
+function shouldShowSystem(data) {
+  const config = getStore().store;
+  if (isTimerNotification(data) && !config.timerSystemNotificationEnabled) {
+    return false;
+  }
+  if (data.channels) {
+    return data.channels.system;
+  }
+  return data.level === "normal" || data.level === "urgent";
+}
+function navigateToNotificationTarget(data) {
+  if (data.timerUUID) {
+    navigateMainWindow(`/timer?timerUuid=${encodeURIComponent(data.timerUUID)}`);
+    return;
+  }
+  const windows = BrowserWindow3.getAllWindows();
+  if (windows.length > 0) {
+    windows[0].show();
+    windows[0].focus();
+  }
+}
 function showSystemNotification(data) {
   if (!Notification.isSupported()) {
     console.warn("[Ddo Ding] System notifications not supported");
@@ -266,11 +372,7 @@ function showSystemNotification(data) {
     silent: data.level === "normal"
   });
   notification.on("click", () => {
-    const windows = BrowserWindow2.getAllWindows();
-    if (windows.length > 0) {
-      windows[0].show();
-      windows[0].focus();
-    }
+    navigateToNotificationTarget(data);
   });
   notification.show();
 }
@@ -279,22 +381,20 @@ function showDingIslandNotification(data) {
   updateTrayIcon(true);
 }
 function showNotification(data) {
+  if (isRecentlyProcessed(data.id)) {
+    console.log("[Ddo Ding] Duplicate notification skipped:", data.id);
+    return;
+  }
+  markAsProcessed(data.id);
   notificationHistory.push(data);
   if (notificationHistory.length > 100) {
     notificationHistory.shift();
   }
-  switch (data.level) {
-    case "urgent":
-      showDingIslandNotification(data);
-      showSystemNotification(data);
-      break;
-    case "important":
-      showDingIslandNotification(data);
-      break;
-    case "normal":
-    default:
-      showSystemNotification(data);
-      break;
+  if (shouldShowIsland(data)) {
+    showDingIslandNotification(data);
+  }
+  if (shouldShowSystem(data)) {
+    showSystemNotification(data);
   }
 }
 function handleNotificationAction(action) {
@@ -313,11 +413,7 @@ function handleNotificationAction(action) {
       }, 5 * 60 * 1e3);
       break;
     case "view":
-      const windows = BrowserWindow2.getAllWindows();
-      if (windows.length > 0) {
-        windows[0].show();
-        windows[0].focus();
-      }
+      navigateToNotificationTarget(notification);
       break;
   }
 }
@@ -325,14 +421,13 @@ function getNotificationHistory() {
   return [...notificationHistory].reverse();
 }
 function connectNotify() {
-  const WS_URL = process.env.NOTIFY_WS_URL || "ws://localhost:8080/ws/notify";
   try {
-    console.log("[Ddo Ding] Connecting to notification service...", WS_URL);
+    console.log("[Ddo Ding] Connecting to notification polling service...");
     let pollInterval = null;
     const startPolling = () => {
       pollInterval = setInterval(async () => {
         try {
-          const response = await fetch("http://localhost:8080/api/notifications/subscribe");
+          const response = await fetch("http://localhost:8080/api/v1/notifications/subscribe");
           if (response.ok) {
             const data = await response.json();
             if (data.notifications && data.notifications.length > 0) {
@@ -354,43 +449,6 @@ function connectNotify() {
   } catch (error) {
     console.error("[Ddo Ding] Notification service connection failed:", error);
   }
-}
-
-// electron/windows/mainWindow.ts
-import { BrowserWindow as BrowserWindow3, app as app3 } from "electron";
-import path3 from "node:path";
-import { fileURLToPath as fileURLToPath2 } from "node:url";
-var __filename2 = fileURLToPath2(import.meta.url);
-var __dirname2 = path3.dirname(__filename2);
-var mainWindow = null;
-function toggleMainWindow() {
-  if (mainWindow && !mainWindow.isDestroyed()) {
-    if (mainWindow.isVisible()) {
-      mainWindow.hide();
-    } else {
-      mainWindow.show();
-      mainWindow.focus();
-    }
-  }
-}
-
-// electron/store.ts
-import Store from "electron-store";
-var defaults = {
-  notificationLevel: "all",
-  soundEnabled: true,
-  autoStart: false,
-  theme: "system"
-};
-var storeInstance = null;
-function getStore() {
-  if (!storeInstance) {
-    storeInstance = new Store({
-      name: "ddo-ding-config",
-      defaults
-    });
-  }
-  return storeInstance;
 }
 
 // electron/ipc.ts
@@ -451,7 +509,7 @@ async function createMainWindow() {
     },
     show: false,
     // 启动时隐藏，通过托盘或快捷键控制显示
-    title: "Ddo Ding",
+    title: "Ddo",
     icon: APP_ICON_PATH,
     autoHideMenuBar: true
     // 自动隐藏菜单栏
@@ -499,7 +557,7 @@ function registerGlobalShortcuts() {
     }
   }
 }
-function getMainWindow2() {
+function getMainWindow() {
   return mainWindow2;
 }
 async function initElectron() {
@@ -509,7 +567,7 @@ async function initElectron() {
   }
   initIpcHandlers();
   await createMainWindow();
-  tray2 = createTray(() => getMainWindow2());
+  tray2 = createTray(() => getMainWindow());
   registerGlobalShortcuts();
   connectNotify();
   console.log("[Ddo Ding] Electron initialized successfully");
@@ -543,6 +601,6 @@ app4.on("will-quit", () => {
   destroyTray();
 });
 export {
-  getMainWindow2 as getMainWindow,
+  getMainWindow,
   initElectron
 };

@@ -15972,7 +15972,7 @@ var require_electron_store = __commonJS({
 import { ipcMain } from "electron";
 
 // electron/notification.ts
-import { Notification, BrowserWindow as BrowserWindow2 } from "electron";
+import { Notification, BrowserWindow as BrowserWindow3 } from "electron";
 
 // electron/windows/islandWindow.ts
 import { BrowserWindow, screen, app } from "electron";
@@ -16088,20 +16088,54 @@ function showIslandWindow(notification) {
   }
 }
 
-// electron/tray.ts
-import { Tray, Menu, nativeImage, app as app2 } from "electron";
+// electron/windows/mainWindow.ts
+import { BrowserWindow as BrowserWindow2, app as app2 } from "electron";
 import path2 from "node:path";
+import { fileURLToPath as fileURLToPath2 } from "node:url";
+var __filename3 = fileURLToPath2(import.meta.url);
+var __dirname2 = path2.dirname(__filename3);
+var mainWindow = null;
+function navigateMainWindow(hashPath) {
+  if (!mainWindow || mainWindow.isDestroyed()) {
+    return;
+  }
+  const isDev = !app2.isPackaged;
+  if (isDev) {
+    const baseUrl = process.env.VITE_DEV_SERVER_URL || "http://localhost:3000";
+    mainWindow.loadURL(`${baseUrl}#${hashPath}`);
+  } else {
+    mainWindow.loadFile(path2.join(__dirname2, "..", "dist", "index.html"), {
+      hash: hashPath
+    });
+  }
+  mainWindow.show();
+  mainWindow.focus();
+}
+function toggleMainWindow() {
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    if (mainWindow.isVisible()) {
+      mainWindow.hide();
+    } else {
+      mainWindow.show();
+      mainWindow.focus();
+    }
+  }
+}
+
+// electron/tray.ts
+import { Tray, Menu, nativeImage, app as app3 } from "electron";
+import path3 from "node:path";
 var tray = null;
 var hasNotification = false;
 function getProjectRoot2() {
-  if (app2.isPackaged) {
-    return app2.getAppPath();
+  if (app3.isPackaged) {
+    return app3.getAppPath();
   }
   return process.cwd();
 }
 function getAppIconPath(notify = false) {
-  const iconsDir = path2.join(getProjectRoot2(), "public", "icons");
-  return path2.join(iconsDir, notify ? "icon-active.svg" : "icon.svg");
+  const iconsDir = path3.join(getProjectRoot2(), "public", "icons");
+  return path3.join(iconsDir, notify ? "icon-active.svg" : "icon.svg");
 }
 function getTrayIcon(notify = false) {
   try {
@@ -16154,8 +16188,78 @@ function updateTrayIcon(notify) {
   }
 }
 
+// electron/store.ts
+var import_electron_store = __toESM(require_electron_store(), 1);
+var defaults = {
+  notificationLevel: "all",
+  soundEnabled: true,
+  autoStart: false,
+  theme: "system",
+  timerIslandEnabled: true,
+  timerSystemNotificationEnabled: false
+};
+var storeInstance = null;
+function getStore() {
+  if (!storeInstance) {
+    storeInstance = new import_electron_store.default({
+      name: "ddo-ding-config",
+      defaults
+    });
+  }
+  return storeInstance;
+}
+
 // electron/notification.ts
 var notificationHistory = [];
+var processedNotificationIds = /* @__PURE__ */ new Set();
+function cleanupProcessedIds() {
+  if (processedNotificationIds.size > 1e3) {
+    processedNotificationIds.clear();
+  }
+}
+function isRecentlyProcessed(id) {
+  return processedNotificationIds.has(id);
+}
+function markAsProcessed(id) {
+  processedNotificationIds.add(id);
+  if (processedNotificationIds.size % 100 === 0) {
+    cleanupProcessedIds();
+  }
+}
+function isTimerNotification(data) {
+  return data.type === "scheduled_task";
+}
+function shouldShowIsland(data) {
+  const config = getStore().store;
+  if (isTimerNotification(data) && !config.timerIslandEnabled) {
+    return false;
+  }
+  if (data.channels) {
+    return data.channels.island;
+  }
+  return data.level === "important" || data.level === "urgent";
+}
+function shouldShowSystem(data) {
+  const config = getStore().store;
+  if (isTimerNotification(data) && !config.timerSystemNotificationEnabled) {
+    return false;
+  }
+  if (data.channels) {
+    return data.channels.system;
+  }
+  return data.level === "normal" || data.level === "urgent";
+}
+function navigateToNotificationTarget(data) {
+  if (data.timerUUID) {
+    navigateMainWindow(`/timer?timerUuid=${encodeURIComponent(data.timerUUID)}`);
+    return;
+  }
+  const windows = BrowserWindow3.getAllWindows();
+  if (windows.length > 0) {
+    windows[0].show();
+    windows[0].focus();
+  }
+}
 function showSystemNotification(data) {
   if (!Notification.isSupported()) {
     console.warn("[Ddo Ding] System notifications not supported");
@@ -16167,11 +16271,7 @@ function showSystemNotification(data) {
     silent: data.level === "normal"
   });
   notification.on("click", () => {
-    const windows = BrowserWindow2.getAllWindows();
-    if (windows.length > 0) {
-      windows[0].show();
-      windows[0].focus();
-    }
+    navigateToNotificationTarget(data);
   });
   notification.show();
 }
@@ -16180,22 +16280,20 @@ function showDingIslandNotification(data) {
   updateTrayIcon(true);
 }
 function showNotification(data) {
+  if (isRecentlyProcessed(data.id)) {
+    console.log("[Ddo Ding] Duplicate notification skipped:", data.id);
+    return;
+  }
+  markAsProcessed(data.id);
   notificationHistory.push(data);
   if (notificationHistory.length > 100) {
     notificationHistory.shift();
   }
-  switch (data.level) {
-    case "urgent":
-      showDingIslandNotification(data);
-      showSystemNotification(data);
-      break;
-    case "important":
-      showDingIslandNotification(data);
-      break;
-    case "normal":
-    default:
-      showSystemNotification(data);
-      break;
+  if (shouldShowIsland(data)) {
+    showDingIslandNotification(data);
+  }
+  if (shouldShowSystem(data)) {
+    showSystemNotification(data);
   }
 }
 function handleNotificationAction(action) {
@@ -16214,53 +16312,12 @@ function handleNotificationAction(action) {
       }, 5 * 60 * 1e3);
       break;
     case "view":
-      const windows = BrowserWindow2.getAllWindows();
-      if (windows.length > 0) {
-        windows[0].show();
-        windows[0].focus();
-      }
+      navigateToNotificationTarget(notification);
       break;
   }
 }
 function getNotificationHistory() {
   return [...notificationHistory].reverse();
-}
-
-// electron/windows/mainWindow.ts
-import { BrowserWindow as BrowserWindow3, app as app3 } from "electron";
-import path3 from "node:path";
-import { fileURLToPath as fileURLToPath2 } from "node:url";
-var __filename3 = fileURLToPath2(import.meta.url);
-var __dirname2 = path3.dirname(__filename3);
-var mainWindow = null;
-function toggleMainWindow() {
-  if (mainWindow && !mainWindow.isDestroyed()) {
-    if (mainWindow.isVisible()) {
-      mainWindow.hide();
-    } else {
-      mainWindow.show();
-      mainWindow.focus();
-    }
-  }
-}
-
-// electron/store.ts
-var import_electron_store = __toESM(require_electron_store(), 1);
-var defaults = {
-  notificationLevel: "all",
-  soundEnabled: true,
-  autoStart: false,
-  theme: "system"
-};
-var storeInstance = null;
-function getStore() {
-  if (!storeInstance) {
-    storeInstance = new import_electron_store.default({
-      name: "ddo-ding-config",
-      defaults
-    });
-  }
-  return storeInstance;
 }
 
 // electron/ipc.ts
