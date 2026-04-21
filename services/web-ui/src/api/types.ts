@@ -363,6 +363,44 @@ export interface RagMessage {
   timestamp: Date
 }
 
+// LLM Types
+export interface OverviewStats {
+  requests: number
+  tokens: number
+  avg_latency_ms: number
+}
+
+export interface OverviewResponse {
+  today: OverviewStats
+  this_week: OverviewStats
+  this_month: OverviewStats
+}
+
+export interface TrendData {
+  dates: string[]
+  requests: number[]
+  tokens: number[]
+}
+
+export interface ConversationItem {
+  id: string
+  session_id?: string
+  title?: string
+  memory_enabled: boolean
+  source: string
+  created_at: string
+  updated_at: string
+  message_count: number
+}
+
+export interface ConversationListData {
+  items: ConversationItem[]
+  total: number
+  page: number
+  page_size: number
+  total_pages: number
+}
+
 // Word Cloud Data
 export interface WordCloudItem {
   name: string

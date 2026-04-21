@@ -38,18 +38,22 @@ server-go/
 │   │   └── usecase/
 │   │       ├── health/
 │   │       │   └── check_health.go          # CheckHealth 用例实现（2026-04-15）
-│   │       └── knowledge/                   # ← 新增：知识库用例层（2026-04-15）
-│   │           ├── create_knowledge.go      # 创建知识条目（含 AI 分析）
-│   │           ├── list_knowledge.go        # 查询知识列表
-│   │           ├── get_knowledge.go         # 获取知识详情
-│   │           ├── delete_knowledge.go      # 删除知识条目
-│   │           ├── search_knowledge.go      # 语义搜索
-│   │           └── ask_knowledge.go         # RAG 问答
-│   │       └── category/                    # ← 新增：分类用例层（2026-04-17）
-│   │           ├── list_category.go         # 列出分类
-│   │           ├── create_category.go       # 创建分类
-│   │           ├── delete_category.go       # 删除分类
-│   │           └── get_knowledge_by_category.go  # 按分类查询知识
+│   │       ├── knowledge/                   # 知识库用例层（2026-04-15）
+│   │       │   ├── create_knowledge.go      # 创建知识条目（含 AI 分析）
+│   │       │   ├── list_knowledge.go        # 查询知识列表
+│   │       │   ├── get_knowledge.go         # 获取知识详情
+│   │       │   ├── delete_knowledge.go      # 删除知识条目
+│   │       │   ├── search_knowledge.go      # 语义搜索
+│   │       │   └── ask_knowledge.go         # RAG 问答
+│   │       ├── category/                    # 分类用例层（2026-04-17）
+│   │       │   ├── list_category.go         # 列出分类
+│   │       │   ├── create_category.go       # 创建分类
+│   │       │   ├── delete_category.go       # 删除分类
+│   │       │   └── get_knowledge_by_category.go  # 按分类查询知识
+│   │       └── llm_stats/                   # ← 新增：LLM 统计用例层（2026-04-21）
+│   │           ├── get_overview.go          # 获取概览统计
+│   │           ├── get_trend.go             # 获取趋势数据
+│   │           └── list_conversations.go    # 获取对话列表
 │   ├── interfaces/                          # 接口层（协议适配）
 │   │   └── http/
 │   │       ├── handler/
@@ -61,7 +65,8 @@ server-go/
 │   │       │   ├── metrics_handler.go       # Metrics Handler（2026-04-20）
 │   │       │   ├── category_handler.go      # 分类 Handler（2026-04-17）
 │   │       │   ├── conversation_handler.go  # 对话 Handler（2026-04-17）
-│   │       │   └── notification_handler.go  # 通知 Handler（2026-04-20）
+│   │       │   ├── notification_handler.go    # 通知 Handler（2026-04-20）
+│   │       │   └── llm_stats_handler.go       # LLM 统计 Handler（2026-04-21）
 │   │       ├── middleware/
 │   │       │   ├── recovery.go              # 异常恢复（2026-04-14）
 │   │       │   ├── logger.go                # 请求日志（2026-04-14）
@@ -158,5 +163,9 @@ server-go/
 - ❌ 在 repository 中直接暴露数据库实现细节
 
 ## 🕒 最后更新时间
+
+2026-04-21：新增 LLM 统计 API 代理层
+- 新增 `/api/v1/llm/stats/*` Dashboard 统计接口
+- 转发 llm-py 对话记录和统计数据
 
 2026-04-20 23:35:00

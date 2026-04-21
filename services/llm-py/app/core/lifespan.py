@@ -11,6 +11,7 @@ from fastapi import FastAPI
 
 from app.core.config import get_settings
 from app.core.openrouter import close_openrouter_client
+from app.db import init_db, close_db
 
 logger = logging.getLogger(__name__)
 
@@ -44,9 +45,18 @@ async def lifespan(app: FastAPI):
     else:
         logger.info(f"Default LLM model: {settings.llm_default_model}")
 
+    # Initialize database
+    try:
+        await init_db()
+        logger.info("Database initialized successfully")
+    except Exception as e:
+        logger.error(f"Database initialization failed: {e}")
+        # Continue without database - chat functionality still works
+
     yield
 
     # Shutdown
     logger.info("Shutting down llm-py service...")
     await close_openrouter_client()
+    await close_db()
     logger.info("Cleanup complete")

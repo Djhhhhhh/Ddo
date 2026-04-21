@@ -24,3 +24,7 @@ python-multipart>=0.0.6
 # Vector Store (Choose one or both)
 chromadb>=0.5.0      # Recommended: persistent vector store with collection management
 # faiss-cpu>=1.8.0   # Alternative: high-performance vector search (uncomment to use)
+
+# Database
+sqlalchemy>=2.0.0    # ORM for database operations
+aiosqlite>=0.20.0    # Async SQLite driver

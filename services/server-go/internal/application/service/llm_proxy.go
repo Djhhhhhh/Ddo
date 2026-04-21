@@ -49,10 +49,13 @@ func NewLLMProxy() LLMProxy {
 
 // ChatRequest 对话请求
 type ChatRequest struct {
-	Messages     []Message `json:"messages"`
-	Model        string    `json:"model,omitempty"`
-	Stream       bool      `json:"stream,omitempty"`
-	SystemPrompt string    `json:"system_prompt,omitempty"`
+	Messages       []Message `json:"messages"`
+	Model          string    `json:"model,omitempty"`
+	Stream         bool      `json:"stream,omitempty"`
+	SystemPrompt   string    `json:"system_prompt,omitempty"`
+	ConversationID string    `json:"conversation_id,omitempty"`
+	SessionID      string    `json:"session_id,omitempty"`
+	PresetReply    string    `json:"preset_reply,omitempty"`
 }
 
 // Message 消息
@@ -128,6 +131,15 @@ func (r *llmProxy) Chat(ctx context.Context, req *ChatRequest) (*ChatResponse, e
 	if req.Model != "" {
 		payload["model"] = req.Model
 	}
+	if req.ConversationID != "" {
+		payload["conversation_id"] = req.ConversationID
+	}
+	if req.SessionID != "" {
+		payload["session_id"] = req.SessionID
+	}
+	if req.PresetReply != "" {
+		payload["preset_reply"] = req.PresetReply
+	}
 
 	body, err := json.Marshal(payload)
 	if err != nil {
@@ -197,6 +209,12 @@ func (r *llmProxy) ChatStream(ctx context.Context, req *ChatRequest) (<-chan str
 	}
 	if req.Model != "" {
 		payload["model"] = req.Model
+	}
+	if req.ConversationID != "" {
+		payload["conversation_id"] = req.ConversationID
+	}
+	if req.SessionID != "" {
+		payload["session_id"] = req.SessionID
 	}
 
 	body, err := json.Marshal(payload)

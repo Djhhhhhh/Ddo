@@ -1,7 +1,7 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
-import { getMetrics } from '@/api'
-import type { MetricsData } from '@/api/types'
+import { getMetrics, getLLMTrend } from '@/api'
+import type { MetricsData, TrendData } from '@/api/types'
 
 export const useDashboardStore = defineStore('dashboard', () => {
   // State
@@ -20,11 +20,18 @@ export const useDashboardStore = defineStore('dashboard', () => {
     return s.server_go === 'running' && s.llm_py === 'running'
   })
 
-  // 生成近7天的 mock 数据（实际应由后端提供）
+  // 从后端获取真实 LLM 趋势数据
+  const llmTrend = ref<TrendData | null>(null)
   const llmCallTrend = computed(() => {
-    const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
-    const baseValues = [5, 8, 3, 12, 7, 2, 9]
-    return { labels: days, data: baseValues }
+    if (!llmTrend.value) {
+      return { labels: [], data: [] }
+    }
+    // 格式化日期为简短形式
+    const labels = llmTrend.value.dates.map((dateStr: string) => {
+      const date = new Date(dateStr)
+      return `${date.getMonth() + 1}/${date.getDate()}`
+    })
+    return { labels, data: llmTrend.value.requests }
   })
 
   // Actions
@@ -33,11 +40,15 @@ export const useDashboardStore = defineStore('dashboard', () => {
     error.value = null
 
     try {
-      const res = await getMetrics()
+      const [metricsRes, trendRes] = await Promise.all([
+        getMetrics(),
+        getLLMTrend(7)
+      ])
 
-      if (res.code === 0) {
-        metrics.value = res.data
+      if (metricsRes.code === 0) {
+        metrics.value = metricsRes.data
       }
+      llmTrend.value = trendRes
 
       lastUpdate.value = new Date()
     } catch (e) {

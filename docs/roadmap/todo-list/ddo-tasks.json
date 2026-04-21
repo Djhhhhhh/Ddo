@@ -391,6 +391,14 @@
       "status": "done",
       "priority": "medium",
       "notes": "展示目前已经被录入的知识库信息"
+    },
+    {
+      "id": "custom-20250421-llm-conv",
+      "title": "LLM对话记录存储与趋势统计",
+      "module": "llm",
+      "status": "completed",
+      "priority": "high",
+      "notes": "本地保存LLM对话记录，支持历史查询和趋势统计，预留记忆系统扩展"
     }
   ]
 }

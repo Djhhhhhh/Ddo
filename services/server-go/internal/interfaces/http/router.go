@@ -46,6 +46,7 @@ func (r *Router) RegisterRoutes(
 	categoryHandler *handler.CategoryHandler,
 	conversationHandler *handler.ConversationHandler,
 	notificationHandler *handler.NotificationHandler,
+	llmStatsHandler *handler.LLMStatsHandler,
 ) {
 	// 健康检查
 	r.engine.GET("/health", healthHandler.HealthCheck)
@@ -117,6 +118,14 @@ func (r *Router) RegisterRoutes(
 		{
 			notifications.GET("/subscribe", notificationHandler.SubscribeNotifications)   // 订阅通知（轮询接口）
 			notifications.POST("/:id/read", notificationHandler.MarkAsRead)              // 标记通知为已读
+		}
+
+		// LLM 统计路由组（Dashboard 用）
+		llmStats := v1.Group("/llm")
+		{
+			llmStats.GET("/stats/overview", llmStatsHandler.GetOverview)    // 概览统计
+			llmStats.GET("/stats/trend", llmStatsHandler.GetTrend)          // 趋势数据
+			llmStats.GET("/conversations", llmStatsHandler.ListConversations) // 对话列表
 		}
 	}
 }

@@ -455,9 +455,11 @@ func (s *conversationService) handleChat(ctx context.Context, req *ConversationR
 	}
 
 	chatReq := &ChatRequest{
-		Messages: messages,
-		Model:    req.Model,
-		Stream:   false,
+		Messages:       messages,
+		Model:          req.Model,
+		Stream:         false,
+		ConversationID: req.ConversationID,
+		SessionID:      "cli", // CLI 调用标记
 	}
 
 	resp, err := s.llmProxy.Chat(ctx, chatReq)
@@ -477,7 +479,8 @@ func (s *conversationService) handleChatStream(ctx context.Context, req *Convers
 	// 如果意图识别已经提供了建议回复且不需要知识库，通过流式返回
 	// 注意：need_knowledge=true 时 SuggestedReply 只是中途提示，不能作为最终回答
 	if intentResult != nil && intentResult.SuggestedReply != "" && !intentResult.NeedKnowledge {
-		s.streamReply(intentResult.SuggestedReply, eventChan)
+		// 仍然调用 llmProxy 保存对话记录，但使用预设回复
+		s.streamReplyWithSave(ctx, req, intentResult.SuggestedReply, eventChan)
 		return
 	}
 
@@ -494,10 +497,12 @@ func (s *conversationService) handleChatStream(ctx context.Context, req *Convers
 	messages = append(messages, Message{Role: "user", Content: req.Query})
 
 	chatReq := &ChatRequest{
-		Messages:     messages,
-		Model:        req.Model,
-		Stream:       true,
-		SystemPrompt: systemPrompt,
+		Messages:       messages,
+		Model:          req.Model,
+		Stream:         true,
+		SystemPrompt:   systemPrompt,
+		ConversationID: req.ConversationID,
+		SessionID:      "cli", // CLI 调用标记
 	}
 
 	streamChan, err := s.llmProxy.ChatStream(ctx, chatReq)
@@ -531,6 +536,42 @@ func (s *conversationService) handleChatStream(ctx context.Context, req *Convers
 	eventChan <- StreamEvent{
 		Type: "completed",
 		Data: CompletedData{AnswerLength: len(fullAnswer)},
+	}
+}
+
+// streamReplyWithSave 保存对话并流式发送预设回复
+func (s *conversationService) streamReplyWithSave(ctx context.Context, req *ConversationRequest, reply string, eventChan chan<- StreamEvent) {
+	// 调用 llmProxy.Chat 保存对话记录（使用非流式，传入 preset_reply）
+	messages := []Message{
+		{Role: "user", Content: req.Query},
+	}
+	chatReq := &ChatRequest{
+		Messages:       messages,
+		Model:          req.Model,
+		Stream:         false,
+		ConversationID: req.ConversationID,
+		SessionID:      "cli",
+		PresetReply:    reply, // 使用预设回复，跳过 LLM 调用
+	}
+	// 异步保存，不阻塞回复
+	go s.llmProxy.Chat(ctx, chatReq)
+
+	// 流式发送预设回复
+	eventChan <- StreamEvent{
+		Type: "generating",
+		Data: map[string]string{},
+	}
+
+	for i, char := range reply {
+		eventChan <- StreamEvent{
+			Type: "delta",
+			Data: DeltaData{Content: string(char), Index: i},
+		}
+	}
+
+	eventChan <- StreamEvent{
+		Type: "completed",
+		Data: CompletedData{AnswerLength: len(reply)},
 	}
 }
 

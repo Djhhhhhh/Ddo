@@ -46,7 +46,8 @@ web-ui/
     │   ├── metrics.ts             # ← 新增：综合指标 API
     │   ├── timer.ts               # ← 新增：定时任务 API
     │   ├── mcp.ts                 # ← 新增：MCP 配置 API
-    │   └── knowledge.ts           # ← 新增：知识库 API
+    │   ├── knowledge.ts           # ← 新增：知识库 API
+    │   └── llm.ts                 # ← 新增：LLM 统计与对话 API (2026-04-21)
     ├── components/
     │   ├── ui/                    # UI 基础组件
     │   │   ├── Button.vue         # 按钮组件（Gray/White/Black Pill）
@@ -85,6 +86,8 @@ web-ui/
     │   │   └── KnowledgePage.vue   # 知识库页面（左右分割布局）
     │   ├── Config/
     │   │   └── ConfigView.vue      # 系统配置页面
+    │   ├── Conversation/         # ← 新增：对话记录页面 (2026-04-21)
+    │   │   └── ConversationView.vue  # LLM 对话历史与统计
     │   └── Island/               # ← 新增：灵动岛视图
     │       └── IslandView.vue     # 灵动岛独立窗口视图
     ├── router/

@@ -6,6 +6,7 @@ const themeStore = useThemeStore()
 const navItems = [
   { path: '/', label: 'Help' },
   { path: '/dashboard', label: 'Dashboard' },
+  { path: '/conversation', label: 'Conversation' },
   { path: '/mcp', label: 'MCP' },
   { path: '/timer', label: 'Timer' },
   { path: '/knowledge', label: 'Knowledge' }

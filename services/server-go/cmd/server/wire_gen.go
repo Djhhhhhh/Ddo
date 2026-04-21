@@ -207,8 +207,11 @@ func InitializeApp(cfgPath string) (*bootstrap.App, func(), error) {
 	// 初始化通知 Handler
 	notificationHandler := handler.NewNotificationHandler(notificationService)
 
+	// 初始化 LLM Stats Handler
+	llmStatsHandler := handler.NewLLMStatsHandler(llmPyURL)
+
 	// 注册路由
-	router.RegisterRoutes(healthHandler, knowledgeHandler, timerHandler, mcpHandler, llmHandler, metricsHandler, categoryHandler, conversationHandler, notificationHandler)
+	router.RegisterRoutes(healthHandler, knowledgeHandler, timerHandler, mcpHandler, llmHandler, metricsHandler, categoryHandler, conversationHandler, notificationHandler, llmStatsHandler)
 
 	// 初始化服务器
 	ginServer := server.NewGinServer(cfg, zapLogger, engine)

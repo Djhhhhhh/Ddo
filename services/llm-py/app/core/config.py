@@ -91,6 +91,25 @@ class Settings(BaseSettings):
         description="Maximum context length for RAG (characters)"
     )
 
+    # Database Configuration
+    db_path: str = Field(
+        default="~/.ddo/data/llm/conversations.db",
+        description="SQLite database file path for conversation storage"
+    )
+    db_echo: bool = Field(
+        default=False,
+        description="Enable SQLAlchemy query logging"
+    )
+
+    @property
+    def db_url(self) -> str:
+        """Get database URL."""
+        import os
+        expanded_path = os.path.expanduser(self.db_path)
+        # Ensure directory exists
+        os.makedirs(os.path.dirname(expanded_path), exist_ok=True)
+        return f"sqlite+aiosqlite:///{expanded_path}"
+
     @property
     def openrouter_api_key(self) -> Optional[str]:
         """Get OpenRouter API Key."""

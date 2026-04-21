@@ -10,12 +10,18 @@ FastAPI 职责：
 业务逻辑由 LangChain "大脑"层处理
 """
 
-from fastapi import APIRouter, HTTPException, status
+import time
+from datetime import datetime
+
+from fastapi import APIRouter, HTTPException, status, Depends
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 from typing import List, Dict, Any, Optional, Literal
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.llm_factory import get_llm_factory, LLMFactoryError
+from app.db import get_session
+from app.services.conversation_service import ConversationService
 from app.utils.logger import get_logger
 
 logger = get_logger(__name__)
@@ -37,6 +43,9 @@ class ChatRequest(BaseModel):
     stream: bool = Field(False, description="Enable streaming response")
     temperature: Optional[float] = Field(0.7, ge=0, le=2, description="Sampling temperature")
     system_prompt: Optional[str] = Field(None, description="System prompt override")
+    conversation_id: Optional[str] = Field(None, description="Conversation ID for continuity")
+    session_id: Optional[str] = Field(None, description="Session ID for grouping")
+    preset_reply: Optional[str] = Field(None, description="Preset reply content (skip LLM call)")
 
 
 class ChatResponseChoice(BaseModel):
@@ -97,7 +106,10 @@ def _map_llm_error_to_http(error: LLMFactoryError) -> HTTPException:
         502: {"description": "LLM service error"},
     },
 )
-async def chat_completions(request: ChatRequest) -> Dict[str, Any]:
+async def chat_completions(
+    request: ChatRequest,
+    session: AsyncSession = Depends(get_session)
+) -> Dict[str, Any]:
     """
     Chat completion endpoint (non-streaming).
 
@@ -108,6 +120,7 @@ async def chat_completions(request: ChatRequest) -> Dict[str, Any]:
         Chat completion response.
     """
     factory = get_llm_factory()
+    start_time = time.time()
 
     try:
         # Convert messages to dict format for LangChain
@@ -120,20 +133,60 @@ async def chat_completions(request: ChatRequest) -> Dict[str, Any]:
             f"[chat_request] model={model} stream=false messages={len(messages)}"
         )
 
-        # Call LangChain brain
-        response_text = await factory.chat(
-            messages=messages,
-            model=model,
-            temperature=request.temperature or 0.7,
-            system_prompt=request.system_prompt,
+        # Get or create conversation
+        conv_service = ConversationService(session)
+        conversation = await conv_service.get_or_create_conversation(
+            session_id=request.session_id,
+            conversation_id=request.conversation_id,
+            source="api"
         )
 
-        logger.info(f"[chat_complete] model={model} response_length={len(response_text)}")
+        # Store user message (last message from user)
+        last_user_msg = None
+        for msg in reversed(messages):
+            if msg["role"] == "user":
+                last_user_msg = msg["content"]
+                break
+
+        if last_user_msg:
+            await conv_service.add_message(
+                conversation_id=conversation.id,
+                role="user",
+                content=last_user_msg,
+                model=model,
+            )
+
+        # Use preset reply or call LLM
+        if request.preset_reply:
+            response_text = request.preset_reply
+            latency_ms = 0  # Preset reply has no latency
+            logger.info(f"[chat_preset_reply] conversation={conversation.id[:8]} using preset reply")
+        else:
+            # Call LangChain brain
+            response_text = await factory.chat(
+                messages=messages,
+                model=model,
+                temperature=request.temperature or 0.7,
+                system_prompt=request.system_prompt,
+            )
+            latency_ms = int((time.time() - start_time) * 1000)
+
+        # Store assistant response
+        await conv_service.add_message(
+            conversation_id=conversation.id,
+            role="assistant",
+            content=response_text,
+            model=model,
+            latency_ms=latency_ms,
+        )
+
+        logger.info(f"[chat_complete] model={model} response_length={len(response_text)} latency={latency_ms}ms")
 
         # Format response to match OpenAI-compatible format
         return {
-            "id": "chatcmpl-ddo",
+            "id": f"chatcmpl-{conversation.id[:8]}",
             "model": model,
+            "conversation_id": conversation.id,
             "choices": [{
                 "index": 0,
                 "message": {
@@ -177,7 +230,10 @@ async def chat_completions(request: ChatRequest) -> Dict[str, Any]:
         401: {"description": "Invalid or missing API key"},
     },
 )
-async def chat_completions_stream(request: ChatRequest):
+async def chat_completions_stream(
+    request: ChatRequest,
+    session: AsyncSession = Depends(get_session)
+):
     """
     Streaming chat completion endpoint.
 
@@ -188,6 +244,7 @@ async def chat_completions_stream(request: ChatRequest):
         Server-Sent Events stream.
     """
     factory = get_llm_factory()
+    start_time = time.time()
 
     try:
         # Convert messages
@@ -198,8 +255,32 @@ async def chat_completions_stream(request: ChatRequest):
             f"[chat_request] model={model} stream=true messages={len(messages)}"
         )
 
+        # Get or create conversation
+        conv_service = ConversationService(session)
+        conversation = await conv_service.get_or_create_conversation(
+            session_id=request.session_id,
+            conversation_id=request.conversation_id,
+            source="api"
+        )
+
+        # Store user message (last message from user)
+        last_user_msg = None
+        for msg in reversed(messages):
+            if msg["role"] == "user":
+                last_user_msg = msg["content"]
+                break
+
+        if last_user_msg:
+            await conv_service.add_message(
+                conversation_id=conversation.id,
+                role="user",
+                content=last_user_msg,
+                model=model,
+            )
+
         async def event_stream():
             """Generate SSE events from LangChain stream."""
+            full_response = []
             try:
                 chunk_index = 0
                 async for chunk in factory.stream_chat(
@@ -209,6 +290,7 @@ async def chat_completions_stream(request: ChatRequest):
                     system_prompt=request.system_prompt,
                 ):
                     chunk_index += 1
+                    full_response.append(chunk)
                     # Format as SSE data with proper JSON escaping
                     import json
                     sse_data = {"choices": [{"delta": {"content": chunk}, "index": 0}]}
@@ -216,8 +298,23 @@ async def chat_completions_stream(request: ChatRequest):
                     yield data
 
                 # End marker
-                logger.info(f"[chat_stream_complete] model={model} chunks={chunk_index}")
+                latency_ms = int((time.time() - start_time) * 1000)
+                logger.info(f"[chat_stream_complete] model={model} chunks={chunk_index} latency={latency_ms}ms")
                 yield "data: [DONE]\n\n"
+
+                # Store assistant response after stream completes
+                try:
+                    response_text = "".join(full_response)
+                    await conv_service.add_message(
+                        conversation_id=conversation.id,
+                        role="assistant",
+                        content=response_text,
+                        model=model,
+                        latency_ms=latency_ms,
+                    )
+                except Exception as e:
+                    logger.error(f"[chat_stream_save_error] error={str(e)}")
+
             except Exception as e:
                 logger.error(f"[chat_stream_error] error={str(e)}")
                 yield 'data: {"error": "' + str(e).replace('"', '\\"') + '"}\n\n'
@@ -227,6 +324,7 @@ async def chat_completions_stream(request: ChatRequest):
             event_stream(),
             media_type="text/event-stream",
             headers={
+                "X-Conversation-ID": conversation.id,
                 "Cache-Control": "no-cache",
                 "Connection": "keep-alive",
             },

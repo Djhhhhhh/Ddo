@@ -8,6 +8,7 @@ llm-py 是 Ddo 项目的 LLM 代理服务，基于 FastAPI 构建。
 - 代理 OpenRouter API 调用（Chat Completions）
 - 提供 RAG（检索增强生成）知识库服务
 - 为 CLI/server-go 提供 NLP 意图识别能力
+- 本地存储对话历史记录，支持趋势统计
 
 **边界**：
 - 只负责 LLM 相关功能，不处理业务逻辑
@@ -27,26 +28,37 @@ services/llm-py/
 │   ├── api/                      # API 路由模块 (FastAPI "大门" 层)
 │   │   ├── __init__.py          # 路由聚合 (api_router)
 │   │   ├── health.py            # /api/health - 健康检查
-│   │   ├── chat.py              # /api/chat/* - Chat Completions ✅ LangChain 实现
+│   │   ├── chat.py              # /api/chat/* - Chat Completions ✅ LangChain 实现，含对话存储
+│   │   ├── conversation.py      # /api/conversations/* - 对话历史管理 ✅ p2-9 新增
 │   │   ├── models.py            # /api/models/* - 模型管理
 │   │   ├── nlp.py               # /api/nlp/* - NLP 意图识别 ✅ LangChain 实现
 │   │   ├── analyze.py           # /api/analyze/* - 知识分析（标签/分类提取）✅ 知识库增强功能
-│   │   └── rag.py               # /api/rag/* - RAG 知识库 ✅ p2-8 Retriever / p2-9 Generator 已实现
+│   │   ├── rag.py               # /api/rag/* - RAG 知识库 ✅ p2-8 Retriever / p2-9 Generator 已实现
+│   │   └── stats.py             # /api/stats/* - LLM 使用统计 ✅ p2-9 新增
 │   ├── core/                     # 核心模块 (LangChain "大脑" 层)
 │   │   ├── __init__.py
-│   │   ├── config.py            # Pydantic Settings 配置管理
+│   │   ├── config.py            # Pydantic Settings 配置管理 (含数据库配置)
 │   │   ├── llm_factory.py       # LangChain 核心：模型工厂、链式编排、提示管理
 │   │   ├── embedder.py          # RAG Embedder 服务核心 - 文本向量化 (p2-7)
 │   │   ├── document_store.py    # 文档存储（临时内存实现）- 将被 RAG vector_store 替代 (p2-7)
-│   │   ├── lifespan.py          # FastAPI lifespan 生命周期
-│   │   └── rag/                  # ← 新增：RAG Engine 核心模块 (p2-8/p2-9)
+│   │   ├── lifespan.py          # FastAPI lifespan 生命周期（含数据库初始化）
+│   │   ├── openrouter.py        # OpenRouter API 客户端管理
+│   │   └── rag/                  # RAG Engine 核心模块 (p2-8/p2-9)
 │   │       ├── __init__.py      # RAG 模块导出
 │   │       ├── vector_store.py  # 向量存储封装 - Chroma/FAISS 双实现
 │   │       ├── retriever.py     # 语义检索服务 - 向量相似度搜索
 │   │       └── generator.py     # RAG 生成服务 - 上下文组装 + LLM 调用
-│   ├── models/                   # ← 新增：数据模型定义
+│   ├── db/                       # ← 新增：数据库层（对话存储）
+│   │   ├── __init__.py          # 数据库模块导出
+│   │   ├── models.py            # SQLAlchemy 模型 (Conversation/Message/Stats)
+│   │   └── session.py           # 异步会话管理
+│   ├── models/                   # Pydantic 数据模型定义
 │   │   ├── __init__.py          # 模型包导出
 │   │   └── rag.py               # RAG 相关 Pydantic 模型
+│   ├── services/                 # ← 新增：业务服务层
+│   │   ├── __init__.py          # 服务模块导出
+│   │   ├── conversation_service.py  # 对话存储服务
+│   │   └── stats_service.py     # 统计计算服务
 │   └── utils/                    # 工具模块
 │       ├── __init__.py
 │       └── logger.py            # 日志配置和工具函数
@@ -113,6 +125,12 @@ services/llm-py/
 - ❌ 直接暴露 llm-py 端口到外网（必须走 server-go 代理）
 
 ## 🕒 最后更新时间
+
+2026-04-21：新增对话记录存储与统计功能
+- 新增 `/api/conversations/*` 对话管理 API
+- 新增 `/api/stats/*` 统计查询 API
+- 新增 SQLite 数据库存储 (SQLAlchemy + aiosqlite)
+- 预留系统记忆扩展字段
 
 2026-04-17：新增知识分析 API (`/api/analyze`) 和 `create_knowledge_analysis_chain` 方法
 2026-04-16：新增 NLP 参数契约规范（llm_factory.py 意图识别提示词）
