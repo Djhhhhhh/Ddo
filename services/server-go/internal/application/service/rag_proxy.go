@@ -7,13 +7,11 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"os"
 	"time"
 )
 
 const (
 	defaultTimeout = 30 * time.Second
-	defaultLLMHost = "http://localhost:8000"
 )
 
 // RAGProxy RAG 代理服务接口
@@ -31,10 +29,7 @@ type ragProxy struct {
 
 // NewRAGProxy 创建 RAG 代理服务
 func NewRAGProxy() RAGProxy {
-	baseURL := os.Getenv("DDO_LLM_HOST")
-	if baseURL == "" {
-		baseURL = defaultLLMHost
-	}
+	baseURL := resolveLLMBaseURL()
 
 	return &ragProxy{
 		httpClient: &http.Client{

@@ -15,4 +15,6 @@ export declare function generateConfigYaml(config: DdoConfig): string;
  * server-go 使用不同的配置结构
  */
 export declare function generateServerGoConfigYaml(dataDir: string, serverPort: number, llmPyUrl: string): string;
+export declare function generateLLMPyConfigJson(config: DdoConfig): string;
+export declare function generateWebUiConfigJson(config: DdoConfig): string;
 //# sourceMappingURL=config.yaml.d.ts.map

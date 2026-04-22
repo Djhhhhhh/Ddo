@@ -59,10 +59,24 @@ export function getPaths(dataDir: string) {
     serverGoConfig: path.join(dataDir, 'server-go'),
     // server-go 配置文件
     serverGoConfigYaml: path.join(dataDir, 'server-go', 'config.yaml'),
+    // llm-py 配置目录
+    llmPyConfig: path.join(dataDir, 'llm-py'),
+    // llm-py 配置文件
+    llmPyConfigJson: path.join(dataDir, 'llm-py', 'config.json'),
+    // web-ui 配置目录
+    webUiConfig: path.join(dataDir, 'web-ui'),
+    // web-ui 配置文件
+    webUiConfigJson: path.join(dataDir, 'web-ui', 'config.json'),
     // server-go 数据目录
     goData: path.join(dataDir, 'data', 'go'),
     // server-go SQLite 数据库文件
     serverGoDb: path.join(dataDir, 'data', 'go', 'server-go.db'),
+    // llm-py 数据目录
+    llmData: path.join(dataDir, 'data', 'llm'),
+    // llm-py SQLite 数据库文件
+    llmPyDb: path.join(dataDir, 'data', 'llm', 'conversations.db'),
+    // RAG 向量存储目录
+    vectorData: path.join(dataDir, 'data', 'vector'),
     // MySQL 数据目录
     mysqlData: path.join(dataDir, 'data', 'mysql'),
     // 缓存目录

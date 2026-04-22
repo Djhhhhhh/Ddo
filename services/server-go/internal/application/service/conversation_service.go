@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"os"
 	"strings"
 	"time"
 
@@ -134,10 +133,7 @@ type conversationService struct {
 
 // NewConversationService 创建对话服务
 func NewConversationService(intentProxy IntentProxy, ragProxy RAGProxy, llmProxy LLMProxy) ConversationService {
-	baseURL := os.Getenv("DDO_LLM_HOST")
-	if baseURL == "" {
-		baseURL = defaultLLMHost
-	}
+	baseURL := resolveLLMBaseURL()
 
 	return &conversationService{
 		intentProxy: intentProxy,

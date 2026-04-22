@@ -8,6 +8,8 @@ export interface ServiceDefinition {
     displayName: string;
     port: number;
     healthUrl: string;
+    startupStrategy?: 'health' | 'process';
+    startupTimeoutMs?: number;
     command: string[];
     cwd?: string;
     env?: Record<string, string>;

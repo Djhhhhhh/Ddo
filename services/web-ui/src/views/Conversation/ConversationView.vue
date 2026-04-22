@@ -73,7 +73,7 @@
           </div>
         </div>
 
-        <div v-if="conversations?.total_pages > 1" class="p-4 border-t border-gray-200 flex items-center justify-between">
+        <div v-if="(conversations?.total_pages || 0) > 1" class="p-4 border-t border-gray-200 flex items-center justify-between">
           <span class="text-sm text-gray-500">
             共 {{ conversations?.total }} 条
           </span>
@@ -171,7 +171,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, onMounted } from 'vue'
 import { getLLMOverview, getConversations, getConversationDetail } from '../../api'
 import type { OverviewResponse, ConversationListResponse, ConversationDetailResponse } from '../../api'
 

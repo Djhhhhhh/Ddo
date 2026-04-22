@@ -1,6 +1,25 @@
 /**
  * Ddo CLI 类型定义
  */
+export interface ServiceEndpointConfig {
+    host: string;
+    port: number;
+    healthPath: string;
+    url: string;
+}
+export interface ServerGoServiceConfig extends ServiceEndpointConfig {
+    configPath: string;
+    databasePath: string;
+}
+export interface LLMPyServiceConfig extends ServiceEndpointConfig {
+    configPath: string;
+    databasePath: string;
+    ragStorePath: string;
+}
+export interface WebUiServiceConfig extends ServiceEndpointConfig {
+    configPath: string;
+    apiBaseUrl: string;
+}
 /** Ddo 配置结构 */
 export interface DdoConfig {
     /** 配置版本 */
@@ -23,6 +42,12 @@ export interface DdoConfig {
         serverGo: string;
         llmPy: string;
         webUi: string;
+    };
+    /** 服务级配置 */
+    services: {
+        serverGo: ServerGoServiceConfig;
+        llmPy: LLMPyServiceConfig;
+        webUi: WebUiServiceConfig;
     };
 }
 /** 路径解析选项 */

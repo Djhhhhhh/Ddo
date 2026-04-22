@@ -15,6 +15,8 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.ConversationHandler = void 0;
 exports.createConversationHandler = createConversationHandler;
 const chalk_1 = __importDefault(require("chalk"));
+const config_1 = require("../utils/config");
+const paths_1 = require("../utils/paths");
 /**
  * ConversationHandler 类
  */
@@ -25,7 +27,10 @@ class ConversationHandler {
             answerBuffer: '',
             isStreaming: false,
         };
-        this.serverGoUrl = serverGoUrl || process.env.DDO_SERVER_GO_URL || 'http://localhost:8080';
+        const dataDir = (0, paths_1.resolveDataDir)({
+            envDataDir: process.env.DDO_DATA_DIR,
+        });
+        this.serverGoUrl = serverGoUrl || process.env.DDO_SERVER_GO_URL || (0, config_1.loadDdoConfigSync)(dataDir).endpoints.serverGo;
     }
     /**
      * 处理用户输入

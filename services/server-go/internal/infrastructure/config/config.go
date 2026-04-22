@@ -145,7 +145,7 @@ func (l *ViperLoader) Load(path string) (*Config, error) {
 func (l *ViperLoader) setDefaults(v *viper.Viper) {
 	// 服务器默认配置
 	v.SetDefault("server.host", "127.0.0.1")
-	v.SetDefault("server.port", 8080)
+	v.SetDefault("server.port", 50001)
 	v.SetDefault("server.mode", "release")
 
 	// 数据库默认配置
@@ -163,5 +163,5 @@ func (l *ViperLoader) setDefaults(v *viper.Viper) {
 	v.SetDefault("log.output", "stdout")
 
 	// LLM-Py 服务地址
-	v.SetDefault("llm_py_url", "http://localhost:8000")
+	v.SetDefault("llm_py_url", "http://127.0.0.1:50002")
 }

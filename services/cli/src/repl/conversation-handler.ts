@@ -9,6 +9,8 @@
  */
 
 import chalk from 'chalk';
+import { loadDdoConfigSync } from '../utils/config';
+import { resolveDataDir } from '../utils/paths';
 
 // 状态类型
 export type ConversationStatus =
@@ -79,7 +81,10 @@ export class ConversationHandler {
   private serverGoUrl: string;
 
   constructor(serverGoUrl?: string) {
-    this.serverGoUrl = serverGoUrl || process.env.DDO_SERVER_GO_URL || 'http://localhost:8080';
+    const dataDir = resolveDataDir({
+      envDataDir: process.env.DDO_DATA_DIR,
+    });
+    this.serverGoUrl = serverGoUrl || process.env.DDO_SERVER_GO_URL || loadDdoConfigSync(dataDir).endpoints.serverGo;
   }
 
   /**

@@ -1,13 +1,6 @@
 import { spawn } from 'child_process';
-import * as fs from 'fs-extra';
-import yaml from 'yaml';
-import { getPaths, resolveDataDir } from './paths';
-
-interface DdoConfig {
-  endpoints?: {
-    webUi?: string;
-  };
-}
+import { loadDdoConfig } from './config';
+import { resolveDataDir } from './paths';
 
 interface OpenWebPageOptions {
   dataDir?: string;
@@ -20,22 +13,18 @@ interface OpenWebPageResult {
   error?: string;
 }
 
-const DEFAULT_WEB_UI_URL = 'http://localhost:3000';
+const DEFAULT_WEB_UI_URL = 'http://127.0.0.1:50003';
 
 export async function resolveWebUiBaseUrl(dataDir?: string): Promise<string> {
   const resolvedDataDir = resolveDataDir({
     dataDir,
     envDataDir: process.env.DDO_DATA_DIR,
   });
-  const paths = getPaths(resolvedDataDir);
 
   try {
-    if (await fs.pathExists(paths.config)) {
-      const configContent = await fs.readFile(paths.config, 'utf8');
-      const config = yaml.parse(configContent) as DdoConfig;
-      if (config?.endpoints?.webUi) {
-        return normalizeBaseUrl(config.endpoints.webUi);
-      }
+    const config = await loadDdoConfig(resolvedDataDir);
+    if (config?.endpoints?.webUi) {
+      return normalizeBaseUrl(config.endpoints.webUi);
     }
   } catch {
   }

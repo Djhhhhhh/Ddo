@@ -5,6 +5,8 @@
  */
 
 import logger from '../utils/logger';
+import { loadDdoConfigSync } from '../utils/config';
+import { resolveDataDir } from '../utils/paths';
 
 /** NLP API 响应 - 意图识别 */
 export interface NLPResponse {
@@ -152,8 +154,11 @@ let defaultService: ReturnType<typeof createNLPService> | null = null;
  */
 export function getNLPService(): ReturnType<typeof createNLPService> {
   if (!defaultService) {
+    const dataDir = resolveDataDir({
+      envDataDir: process.env.DDO_DATA_DIR,
+    });
     defaultService = createNLPService({
-      baseUrl: process.env.DDO_SERVER_GO_URL || 'http://localhost:8080',
+      baseUrl: process.env.DDO_SERVER_GO_URL || loadDdoConfigSync(dataDir).endpoints.serverGo,
     });
   }
   return defaultService;

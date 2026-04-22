@@ -41,11 +41,11 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.statusCommand = statusCommand;
-const yaml_1 = __importDefault(require("yaml"));
 const fs = __importStar(require("fs-extra"));
 const chalk_1 = __importDefault(require("chalk"));
 const logger_1 = __importDefault(require("../utils/logger"));
 const paths_1 = require("../utils/paths");
+const config_1 = require("../utils/config");
 const manager_1 = require("../services/manager");
 const pid_file_1 = require("../services/pid-file");
 const pid_file_2 = require("../services/pid-file");
@@ -73,8 +73,7 @@ async function statusCommand(options = {}) {
     // 3. 读取配置
     let config;
     try {
-        const configContent = await fs.readFile(paths.config, 'utf8');
-        config = yaml_1.default.parse(configContent);
+        config = await (0, config_1.loadDdoConfig)(dataDir);
     }
     catch (err) {
         logger_1.default.warn(`读取配置文件失败: ${err instanceof Error ? err.message : String(err)}`);
@@ -102,22 +101,30 @@ async function statusCommand(options = {}) {
         {
             name: 'server-go',
             displayName: 'server-go',
-            port: config?.endpoints?.serverGo?.split(':').pop() || 8080,
-            healthUrl: `${config?.endpoints?.serverGo || 'http://localhost:8080'}/health`,
+            port: config?.services?.serverGo?.port || 50001,
+            healthUrl: `${config?.services?.serverGo?.url || 'http://127.0.0.1:50001'}${config?.services?.serverGo?.healthPath || '/health'}`,
             command: [],
         },
         {
             name: 'llm-py',
             displayName: 'llm-py',
-            port: config?.endpoints?.llmPy?.split(':').pop() || 8000,
-            healthUrl: `${config?.endpoints?.llmPy || 'http://localhost:8000'}/health`,
+            port: config?.services?.llmPy?.port || 50002,
+            healthUrl: `${config?.services?.llmPy?.url || 'http://127.0.0.1:50002'}${config?.services?.llmPy?.healthPath || '/health'}`,
             command: [],
         },
         {
             name: 'web-ui',
             displayName: 'web-ui',
-            port: config?.endpoints?.webUi?.split(':').pop() || 3000,
-            healthUrl: `${config?.endpoints?.webUi || 'http://localhost:3000'}/health`,
+            port: config?.services?.webUi?.port || 50003,
+            healthUrl: `${config?.services?.webUi?.url || 'http://127.0.0.1:50003'}${config?.services?.webUi?.healthPath || '/__ddo/health'}`,
+            command: [],
+        },
+        {
+            name: 'electron',
+            displayName: 'electron',
+            port: 0,
+            healthUrl: '',
+            startupStrategy: 'process',
             command: [],
         },
     ];
@@ -129,15 +136,25 @@ async function statusCommand(options = {}) {
     for (const service of services) {
         const status = manager.getStatus(service);
         if (status.running) {
+            if (service.startupStrategy === 'process') {
+                console.log(`${chalk_1.default.green('✓ 运行中')} ${service.displayName}`);
+                console.log(`  PID: ${chalk_1.default.gray(status.pid)}`);
+                continue;
+            }
             // 检查健康状态
             const healthResult = await (0, health_check_1.checkHealth)(service.healthUrl, 2000);
             const healthStatus = healthResult.healthy
                 ? chalk_1.default.green('✓ 健康')
                 : chalk_1.default.yellow('? 未就绪');
+            const displayUrl = service.healthUrl.endsWith('/__ddo/health')
+                ? service.healthUrl.replace('/__ddo/health', '')
+                : service.healthUrl.endsWith('/health')
+                    ? service.healthUrl.replace('/health', '')
+                    : service.healthUrl;
             console.log(`${healthStatus} ${service.displayName}`);
             console.log(`  PID: ${chalk_1.default.gray(status.pid)}`);
             console.log(`  端口: ${chalk_1.default.gray(status.port)}`);
-            console.log(`  地址: ${chalk_1.default.gray(service.healthUrl.replace('/health', ''))}`);
+            console.log(`  地址: ${chalk_1.default.gray(displayUrl)}`);
         }
         else {
             console.log(`${chalk_1.default.red('✗ 已停止')} ${service.displayName}`);

@@ -188,13 +188,14 @@ export function getNotificationHistory(): NotificationData[] {
 export function connectNotify(): void {
   try {
     console.log('[Ddo Ding] Connecting to notification polling service...')
+    const serverGoUrl = (process.env.DDO_SERVER_GO_URL || 'http://127.0.0.1:50001').replace(/\/+$/, '')
 
     let pollInterval: NodeJS.Timeout | null = null
 
     const startPolling = () => {
       pollInterval = setInterval(async () => {
         try {
-          const response = await fetch('http://localhost:8080/api/v1/notifications/subscribe')
+          const response = await fetch(`${serverGoUrl}/api/v1/notifications/subscribe`)
           if (response.ok) {
             const data = await response.json() as NotificationSubscribeResponse
             if (data.notifications && data.notifications.length > 0) {

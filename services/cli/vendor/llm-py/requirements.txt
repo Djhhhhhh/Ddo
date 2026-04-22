@@ -1,0 +1,30 @@
+# FastAPI Framework
+fastapi>=0.109.0
+uvicorn[standard]>=0.27.0
+
+# Configuration Management
+pydantic>=2.5.0
+pydantic-settings>=2.1.0
+python-dotenv>=1.0.0
+
+# LangChain
+langchain>=0.3.0
+langchain-core>=0.3.0
+langchain-openrouter>=0.1.0
+
+# Fallback if langchain-openrouter unavailable
+langchain-openai>=0.2.0
+
+# Embeddings
+langchain-community>=0.3.0
+
+# Utils
+python-multipart>=0.0.6
+
+# Vector Store (Choose one or both)
+chromadb>=0.5.0      # Recommended: persistent vector store with collection management
+# faiss-cpu>=1.8.0   # Alternative: high-performance vector search (uncomment to use)
+
+# Database
+sqlalchemy>=2.0.0    # ORM for database operations
+aiosqlite>=0.20.0    # Async SQLite driver

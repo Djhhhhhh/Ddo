@@ -8,14 +8,12 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"os"
 	"strings"
 	"time"
 )
 
 const (
 	defaultLLMTimeout = 60 * time.Second
-	defaultLLMBaseURL = "http://localhost:8000"
 )
 
 // LLMProxy LLM 代理服务接口
@@ -34,10 +32,7 @@ type llmProxy struct {
 
 // NewLLMProxy 创建 LLM 代理服务
 func NewLLMProxy() LLMProxy {
-	baseURL := os.Getenv("DDO_LLM_HOST")
-	if baseURL == "" {
-		baseURL = defaultLLMBaseURL
-	}
+	baseURL := resolveLLMBaseURL()
 
 	return &llmProxy{
 		httpClient: &http.Client{

@@ -3,11 +3,18 @@
   "version": "0.1.0",
   "description": "Ddo - 个人智能工作空间 CLI",
   "main": "dist/index.js",
+  "files": [
+    "dist/**/*",
+    "vendor/**/*",
+    "package.json"
+  ],
   "bin": {
     "ddo": "dist/index.js"
   },
   "scripts": {
     "build": "tsc",
+    "bundle:services": "node ../../scripts/package-all.mjs",
+    "pack:npm": "node ../../scripts/package-all.mjs && npm pack",
     "dev": "ts-node src/index.ts",
     "start": "node dist/index.js",
     "test": "jest"
@@ -23,6 +30,9 @@
   "dependencies": {
     "chalk": "^4.1.2",
     "commander": "^11.1.0",
+    "electron": "^28.2.10",
+    "electron-log": "^5.1.2",
+    "electron-store": "^8.2.0",
     "fs-extra": "^11.2.0",
     "yaml": "^2.3.4"
   },

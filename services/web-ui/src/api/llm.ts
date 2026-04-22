@@ -57,7 +57,7 @@ export interface ConversationDetailResponse extends ConversationItem {
 function normalizeConversationDetail(payload: any, id: string): ConversationDetailResponse {
   const rawConversation = payload?.conversation ?? payload ?? {}
   const messageList = payload?.messages ?? rawConversation?.messages ?? payload?.items ?? []
-  const normalizedMessages = Array.isArray(messageList)
+  const normalizedMessages: ConversationMessage[] = Array.isArray(messageList)
     ? messageList
         .map((message: any) => ({
           id: message?.id,

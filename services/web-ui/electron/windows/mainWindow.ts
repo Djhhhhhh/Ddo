@@ -49,7 +49,7 @@ export function createMainWindow(options: MainWindowOptions = {}): BrowserWindow
   // Load Web UI
   const isDev = !app.isPackaged
   if (isDev) {
-    mainWindow.loadURL(process.env.VITE_DEV_SERVER_URL || 'http://localhost:3000')
+    mainWindow.loadURL(process.env.DDO_WEB_UI_URL || process.env.VITE_DEV_SERVER_URL || 'http://127.0.0.1:50003')
     // DevTools opened manually when needed
   } else {
     mainWindow.loadFile(path.join(__dirname, '..', 'dist', 'index.html'))
@@ -80,7 +80,7 @@ export function navigateMainWindow(hashPath: string): void {
 
   const isDev = !app.isPackaged
   if (isDev) {
-    const baseUrl = process.env.VITE_DEV_SERVER_URL || 'http://localhost:3000'
+    const baseUrl = process.env.DDO_WEB_UI_URL || process.env.VITE_DEV_SERVER_URL || 'http://127.0.0.1:50003'
     mainWindow.loadURL(`${baseUrl}#${hashPath}`)
   } else {
     mainWindow.loadFile(path.join(__dirname, '..', 'dist', 'index.html'), {

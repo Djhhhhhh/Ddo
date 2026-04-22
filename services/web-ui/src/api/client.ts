@@ -2,7 +2,7 @@ import axios, { type AxiosInstance, type AxiosError } from 'axios'
 
 // Create axios instance with default config
 const client: AxiosInstance = axios.create({
-  baseURL: 'http://127.0.0.1:8080',
+  baseURL: '',
   timeout: 300000,
   headers: {
     'Content-Type': 'application/json'

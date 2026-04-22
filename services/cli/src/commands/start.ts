@@ -3,17 +3,17 @@
  * 启动所有 Ddo 服务并进入 REPL
  */
 
-import * as path from 'path';
-import yaml from 'yaml';
 import * as fs from 'fs-extra';
 import chalk from 'chalk';
+import type { DdoConfig } from '../types';
 import logger from '../utils/logger';
 import { resolveDataDir, getPaths, prettyPath } from '../utils/paths';
+import { loadDdoConfig } from '../utils/config';
 import {
   createServiceManager,
-  ServiceDefinition,
   ServiceStatus,
 } from '../services/manager';
+import { getServiceDefinitions } from '../services/service-runtime';
 import { startRepl } from '../repl';
 
 interface StartOptions {
@@ -50,10 +50,9 @@ export async function startCommand(options: StartOptions = {}): Promise<{
   }
 
   // 3. 读取配置
-  let config: any;
+  let config: DdoConfig;
   try {
-    const configContent = await fs.readFile(paths.config, 'utf8');
-    config = yaml.parse(configContent);
+    config = await loadDdoConfig(dataDir);
   } catch (err) {
     return {
       success: false,
@@ -61,72 +60,15 @@ export async function startCommand(options: StartOptions = {}): Promise<{
     };
   }
 
-  // 辅助函数：从配置中提取端口号
-  function getPort(endpoint: string | undefined, defaultPort: number): number {
-    if (!endpoint) return defaultPort;
-    const match = endpoint.match(/:(\d+)\/?$/);
-    return match ? parseInt(match[1], 10) : defaultPort;
-  }
+  process.env.DDO_SERVER_GO_URL = config.endpoints.serverGo;
+  process.env.DDO_WEB_UI_URL = config.endpoints.webUi;
 
-  // 检查服务目录是否存在
-  const serverGoDir = path.join(process.cwd(), '..', '..', 'server-go');
-  const serverGoCmdDir = path.join(serverGoDir, 'cmd', 'server');
-  const llmPyDir = path.join(process.cwd(), '..', '..', 'llm-py');
-  const webUiDir = path.join(process.cwd(), '..', '..', 'web-ui');
-
-  // 5. 定义服务列表（只包含存在的服务）
-  const allServices: ServiceDefinition[] = [];
-
-  if (await fs.pathExists(serverGoCmdDir)) {
-    allServices.push({
-      name: 'server-go',
-      displayName: 'server-go',
-      port: getPort(config.endpoints?.serverGo, 8080),
-      healthUrl: `${config.endpoints?.serverGo || 'http://localhost:8080'}/health`,
-      command: ['go', 'run', '.'],
-      cwd: serverGoCmdDir,
-      env: {
-        DDO_DATA_DIR: dataDir,
-        DDO_DATABASE_PATH: config.database?.path || paths.serverGoDb,
-        PORT: String(getPort(config.endpoints?.serverGo, 8080)),
-      },
-    });
-  }
-
-  if (await fs.pathExists(llmPyDir)) {
-    allServices.push({
-      name: 'llm-py',
-      displayName: 'llm-py',
-      port: getPort(config.endpoints?.llmPy, 8000),
-      healthUrl: `${config.endpoints?.llmPy || 'http://localhost:8000'}/health`,
-      command: ['python', '-m', 'uvicorn', 'main:app', '--host', '0.0.0.0'],
-      cwd: llmPyDir,
-      env: {
-        DDO_DATA_DIR: dataDir,
-        PORT: String(getPort(config.endpoints?.llmPy, 8000)),
-      },
-    });
-  }
-
-  if (await fs.pathExists(webUiDir)) {
-    allServices.push({
-      name: 'web-ui',
-      displayName: 'web-ui',
-      port: getPort(config.endpoints?.webUi, 3000),
-      healthUrl: `${config.endpoints?.webUi || 'http://localhost:3000'}/health`,
-      command: ['npm', 'run', 'dev'],
-      cwd: webUiDir,
-      env: {
-        DDO_DATA_DIR: dataDir,
-        PORT: String(getPort(config.endpoints?.webUi, 3000)),
-      },
-    });
-  }
+  const allServices = await getServiceDefinitions(config, dataDir);
 
   // 如果没有任何服务，给出提示但仍继续进入 REPL
   let noBackendServices = false;
   if (allServices.length === 0) {
-    logger.warn('未找到任何后端服务目录');
+    logger.warn('未找到可启动的服务产物或源码目录');
     logger.info('当前仅 CLI 可用，部分功能受限');
     logger.newline();
     noBackendServices = true;
@@ -194,7 +136,12 @@ export async function startCommand(options: StartOptions = {}): Promise<{
 
     for (const service of runningStatuses) {
       const status = service.running ? chalk.green('● 运行中') : chalk.red('● 已停止');
-      console.log(`  ${status} ${service.displayName.padEnd(12)} ${chalk.cyan(service.healthUrl)}`);
+      const definition = services.find((item) => item.name === service.name);
+      if (definition?.startupStrategy === 'process' || !service.healthUrl) {
+        console.log(`  ${status} ${service.displayName.padEnd(12)}`);
+      } else {
+        console.log(`  ${status} ${service.displayName.padEnd(12)} ${chalk.cyan(service.healthUrl)}`);
+      }
     }
 
     logger.divider();
@@ -227,13 +174,23 @@ export async function startCommand(options: StartOptions = {}): Promise<{
     ]);
 
     if (healthResult.status === 'fulfilled') {
-      replServices.push({ name: 'server-go', displayName: 'server-go', running: true, port: 8080 });
+      replServices.push({
+        name: 'server-go',
+        displayName: 'server-go',
+        running: true,
+        port: config.services.serverGo.port,
+      });
     }
 
     if (metricsResult.status === 'fulfilled') {
       const m = metricsResult.value;
       if (m.services?.llm_py === 'running') {
-        replServices.push({ name: 'llm-py', displayName: 'llm-py', running: true, port: 8000 });
+        replServices.push({
+          name: 'llm-py',
+          displayName: 'llm-py',
+          running: true,
+          port: config.services.llmPy.port,
+        });
       }
     }
   } catch {

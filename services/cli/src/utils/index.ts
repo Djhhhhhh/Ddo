@@ -12,6 +12,11 @@ export {
   isSafePath,
 } from './paths';
 export {
+  loadDdoConfig,
+  loadDdoConfigSync,
+  normalizeDdoConfig,
+} from './config';
+export {
   checkDocker,
   checkDockerCompose,
   getContainerStatus,

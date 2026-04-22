@@ -1,17 +1,17 @@
 import { app, BrowserWindow, globalShortcut, Tray } from 'electron'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { createTray, destroyTray, getAppIconPath } from './tray'
-import { createIslandWindow, showIslandWindow, NotificationData } from './windows/islandWindow'
-import { initIpcHandlers } from './ipc'
-import { connectNotify } from './notification'
+import { createTray, destroyTray, getAppIconPath } from './tray.js'
+import { createIslandWindow, showIslandWindow, NotificationData } from './windows/islandWindow.js'
+import { initIpcHandlers } from './ipc.js'
+import { connectNotify } from './notification.js'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
 let mainWindow: BrowserWindow | null = null
 let tray: Tray | null = null
 
-const VITE_DEV_SERVER_URL = process.env.VITE_DEV_SERVER_URL || 'http://localhost:3000'
+const VITE_DEV_SERVER_URL = process.env.DDO_WEB_UI_URL || process.env.VITE_DEV_SERVER_URL || 'http://127.0.0.1:50003'
 const IS_DEV = !app.isPackaged
 const APP_ICON_PATH = getAppIconPath()
 const gotSingleInstanceLock = app.requestSingleInstanceLock()

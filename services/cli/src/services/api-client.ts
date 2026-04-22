@@ -3,6 +3,9 @@
  * 统一调用 server-go API（server-go 再代理到 llm-py）
  */
 
+import { loadDdoConfigSync } from '../utils/config';
+import { resolveDataDir } from '../utils/paths';
+
 export interface ServerGoHealth {
   status: 'ok' | 'error';
   mysql: 'connected' | 'disconnected';
@@ -411,7 +414,10 @@ let globalClient: ReturnType<typeof createApiClient> | null = null;
  */
 export function getApiClient(): ReturnType<typeof createApiClient> {
   if (!globalClient) {
-    const serverGoUrl = process.env.DDO_SERVER_GO_URL || 'http://localhost:8080';
+    const dataDir = resolveDataDir({
+      envDataDir: process.env.DDO_DATA_DIR,
+    });
+    const serverGoUrl = process.env.DDO_SERVER_GO_URL || loadDdoConfigSync(dataDir).endpoints.serverGo;
     globalClient = createApiClient({
       serverGoUrl,
     });

@@ -13,6 +13,8 @@ exports.createNLPService = createNLPService;
 exports.getNLPService = getNLPService;
 exports.resetNLPService = resetNLPService;
 const logger_1 = __importDefault(require("../utils/logger"));
+const config_1 = require("../utils/config");
+const paths_1 = require("../utils/paths");
 /**
  * NLP Service 错误类
  */
@@ -107,8 +109,11 @@ let defaultService = null;
  */
 function getNLPService() {
     if (!defaultService) {
+        const dataDir = (0, paths_1.resolveDataDir)({
+            envDataDir: process.env.DDO_DATA_DIR,
+        });
         defaultService = createNLPService({
-            baseUrl: process.env.DDO_SERVER_GO_URL || 'http://localhost:8080',
+            baseUrl: process.env.DDO_SERVER_GO_URL || (0, config_1.loadDdoConfigSync)(dataDir).endpoints.serverGo,
         });
     }
     return defaultService;

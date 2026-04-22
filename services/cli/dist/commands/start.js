@@ -41,13 +41,13 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.startCommand = startCommand;
-const path = __importStar(require("path"));
-const yaml_1 = __importDefault(require("yaml"));
 const fs = __importStar(require("fs-extra"));
 const chalk_1 = __importDefault(require("chalk"));
 const logger_1 = __importDefault(require("../utils/logger"));
 const paths_1 = require("../utils/paths");
+const config_1 = require("../utils/config");
 const manager_1 = require("../services/manager");
+const service_runtime_1 = require("../services/service-runtime");
 const repl_1 = require("../repl");
 /**
  * 执行 start 命令
@@ -72,8 +72,7 @@ async function startCommand(options = {}) {
     // 3. 读取配置
     let config;
     try {
-        const configContent = await fs.readFile(paths.config, 'utf8');
-        config = yaml_1.default.parse(configContent);
+        config = await (0, config_1.loadDdoConfig)(dataDir);
     }
     catch (err) {
         return {
@@ -81,67 +80,13 @@ async function startCommand(options = {}) {
             error: `读取配置文件失败: ${err instanceof Error ? err.message : String(err)}`,
         };
     }
-    // 辅助函数：从配置中提取端口号
-    function getPort(endpoint, defaultPort) {
-        if (!endpoint)
-            return defaultPort;
-        const match = endpoint.match(/:(\d+)\/?$/);
-        return match ? parseInt(match[1], 10) : defaultPort;
-    }
-    // 检查服务目录是否存在
-    const serverGoDir = path.join(process.cwd(), '..', '..', 'server-go');
-    const serverGoCmdDir = path.join(serverGoDir, 'cmd', 'server');
-    const llmPyDir = path.join(process.cwd(), '..', '..', 'llm-py');
-    const webUiDir = path.join(process.cwd(), '..', '..', 'web-ui');
-    // 5. 定义服务列表（只包含存在的服务）
-    const allServices = [];
-    if (await fs.pathExists(serverGoCmdDir)) {
-        allServices.push({
-            name: 'server-go',
-            displayName: 'server-go',
-            port: getPort(config.endpoints?.serverGo, 8080),
-            healthUrl: `${config.endpoints?.serverGo || 'http://localhost:8080'}/health`,
-            command: ['go', 'run', '.'],
-            cwd: serverGoCmdDir,
-            env: {
-                DDO_DATA_DIR: dataDir,
-                DDO_DATABASE_PATH: config.database?.path || paths.serverGoDb,
-                PORT: String(getPort(config.endpoints?.serverGo, 8080)),
-            },
-        });
-    }
-    if (await fs.pathExists(llmPyDir)) {
-        allServices.push({
-            name: 'llm-py',
-            displayName: 'llm-py',
-            port: getPort(config.endpoints?.llmPy, 8000),
-            healthUrl: `${config.endpoints?.llmPy || 'http://localhost:8000'}/health`,
-            command: ['python', '-m', 'uvicorn', 'main:app', '--host', '0.0.0.0'],
-            cwd: llmPyDir,
-            env: {
-                DDO_DATA_DIR: dataDir,
-                PORT: String(getPort(config.endpoints?.llmPy, 8000)),
-            },
-        });
-    }
-    if (await fs.pathExists(webUiDir)) {
-        allServices.push({
-            name: 'web-ui',
-            displayName: 'web-ui',
-            port: getPort(config.endpoints?.webUi, 3000),
-            healthUrl: `${config.endpoints?.webUi || 'http://localhost:3000'}/health`,
-            command: ['npm', 'run', 'dev'],
-            cwd: webUiDir,
-            env: {
-                DDO_DATA_DIR: dataDir,
-                PORT: String(getPort(config.endpoints?.webUi, 3000)),
-            },
-        });
-    }
+    process.env.DDO_SERVER_GO_URL = config.endpoints.serverGo;
+    process.env.DDO_WEB_UI_URL = config.endpoints.webUi;
+    const allServices = await (0, service_runtime_1.getServiceDefinitions)(config, dataDir);
     // 如果没有任何服务，给出提示但仍继续进入 REPL
     let noBackendServices = false;
     if (allServices.length === 0) {
-        logger_1.default.warn('未找到任何后端服务目录');
+        logger_1.default.warn('未找到可启动的服务产物或源码目录');
         logger_1.default.info('当前仅 CLI 可用，部分功能受限');
         logger_1.default.newline();
         noBackendServices = true;
@@ -197,7 +142,13 @@ async function startCommand(options = {}) {
         runningStatuses = services.map((s) => manager.getStatus(s));
         for (const service of runningStatuses) {
             const status = service.running ? chalk_1.default.green('● 运行中') : chalk_1.default.red('● 已停止');
-            console.log(`  ${status} ${service.displayName.padEnd(12)} ${chalk_1.default.cyan(service.healthUrl)}`);
+            const definition = services.find((item) => item.name === service.name);
+            if (definition?.startupStrategy === 'process' || !service.healthUrl) {
+                console.log(`  ${status} ${service.displayName.padEnd(12)}`);
+            }
+            else {
+                console.log(`  ${status} ${service.displayName.padEnd(12)} ${chalk_1.default.cyan(service.healthUrl)}`);
+            }
         }
         logger_1.default.divider();
         logger_1.default.newline();
@@ -223,12 +174,22 @@ async function startCommand(options = {}) {
             apiClient.getMetrics(),
         ]);
         if (healthResult.status === 'fulfilled') {
-            replServices.push({ name: 'server-go', displayName: 'server-go', running: true, port: 8080 });
+            replServices.push({
+                name: 'server-go',
+                displayName: 'server-go',
+                running: true,
+                port: config.services.serverGo.port,
+            });
         }
         if (metricsResult.status === 'fulfilled') {
             const m = metricsResult.value;
             if (m.services?.llm_py === 'running') {
-                replServices.push({ name: 'llm-py', displayName: 'llm-py', running: true, port: 8000 });
+                replServices.push({
+                    name: 'llm-py',
+                    displayName: 'llm-py',
+                    running: true,
+                    port: config.services.llmPy.port,
+                });
             }
         }
     }

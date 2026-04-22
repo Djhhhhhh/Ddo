@@ -26,8 +26,15 @@ export declare function getPaths(dataDir: string): {
     database: string;
     serverGoConfig: string;
     serverGoConfigYaml: string;
+    llmPyConfig: string;
+    llmPyConfigJson: string;
+    webUiConfig: string;
+    webUiConfigJson: string;
     goData: string;
     serverGoDb: string;
+    llmData: string;
+    llmPyDb: string;
+    vectorData: string;
     mysqlData: string;
     cache: string;
     logs: string;

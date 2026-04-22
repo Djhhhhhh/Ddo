@@ -41,10 +41,10 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.stopCommand = stopCommand;
-const yaml_1 = __importDefault(require("yaml"));
 const fs = __importStar(require("fs-extra"));
 const logger_1 = __importDefault(require("../utils/logger"));
 const paths_1 = require("../utils/paths");
+const config_1 = require("../utils/config");
 const manager_1 = require("../services/manager");
 /**
  * 执行 stop 命令
@@ -67,8 +67,7 @@ async function stopCommand(options = {}) {
     // 3. 读取配置
     let config;
     try {
-        const configContent = await fs.readFile(paths.config, 'utf8');
-        config = yaml_1.default.parse(configContent);
+        config = await (0, config_1.loadDdoConfig)(dataDir);
     }
     catch (err) {
         logger_1.default.warn(`读取配置文件失败: ${err instanceof Error ? err.message : String(err)}`);
@@ -79,22 +78,30 @@ async function stopCommand(options = {}) {
         {
             name: 'server-go',
             displayName: 'server-go',
-            port: config?.endpoints?.serverGo?.split(':').pop() || 8080,
-            healthUrl: `${config?.endpoints?.serverGo || 'http://localhost:8080'}/health`,
+            port: config?.services?.serverGo?.port || 50001,
+            healthUrl: `${config?.services?.serverGo?.url || 'http://127.0.0.1:50001'}${config?.services?.serverGo?.healthPath || '/health'}`,
             command: [], // stop 不需要 command
         },
         {
             name: 'llm-py',
             displayName: 'llm-py',
-            port: config?.endpoints?.llmPy?.split(':').pop() || 8000,
-            healthUrl: `${config?.endpoints?.llmPy || 'http://localhost:8000'}/health`,
+            port: config?.services?.llmPy?.port || 50002,
+            healthUrl: `${config?.services?.llmPy?.url || 'http://127.0.0.1:50002'}${config?.services?.llmPy?.healthPath || '/health'}`,
             command: [],
         },
         {
             name: 'web-ui',
             displayName: 'web-ui',
-            port: config?.endpoints?.webUi?.split(':').pop() || 3000,
-            healthUrl: `${config?.endpoints?.webUi || 'http://localhost:3000'}/health`,
+            port: config?.services?.webUi?.port || 50003,
+            healthUrl: `${config?.services?.webUi?.url || 'http://127.0.0.1:50003'}${config?.services?.webUi?.healthPath || '/__ddo/health'}`,
+            command: [],
+        },
+        {
+            name: 'electron',
+            displayName: 'electron',
+            port: 0,
+            healthUrl: '',
+            startupStrategy: 'process',
             command: [],
         },
     ];

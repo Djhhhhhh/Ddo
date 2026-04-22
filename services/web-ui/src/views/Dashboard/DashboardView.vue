@@ -73,7 +73,7 @@ function handleRefresh() {
     <div v-if="store.error" class="mb-6 p-4 bg-gray-100 border border-gray-200" style="border-radius: 12px;">
       <p class="font-medium text-gray-900">获取指标数据失败</p>
       <p class="text-sm text-gray-500">{{ store.error }}</p>
-      <p class="text-sm text-gray-400 mt-2">请确保 server-go 运行在 127.0.0.1:8080</p>
+      <p class="text-sm text-gray-400 mt-2">请确保 server-go 已启动且 web-ui 配置中的 API 地址可访问</p>
     </div>
 
     <!-- Statistics Cards -->

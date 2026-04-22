@@ -7,6 +7,8 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.createApiClient = createApiClient;
 exports.getApiClient = getApiClient;
 exports.resetApiClient = resetApiClient;
+const config_1 = require("../utils/config");
+const paths_1 = require("../utils/paths");
 /**
  * 创建 API Client
  * 注意：不使用超时限制，因为 LLM 推理时间不可预知
@@ -194,7 +196,10 @@ let globalClient = null;
  */
 function getApiClient() {
     if (!globalClient) {
-        const serverGoUrl = process.env.DDO_SERVER_GO_URL || 'http://localhost:8080';
+        const dataDir = (0, paths_1.resolveDataDir)({
+            envDataDir: process.env.DDO_DATA_DIR,
+        });
+        const serverGoUrl = process.env.DDO_SERVER_GO_URL || (0, config_1.loadDdoConfigSync)(dataDir).endpoints.serverGo;
         globalClient = createApiClient({
             serverGoUrl,
         });

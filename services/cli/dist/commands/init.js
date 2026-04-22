@@ -43,6 +43,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.initCommand = initCommand;
 const fs = __importStar(require("fs-extra"));
 const paths_1 = require("../utils/paths");
+const config_1 = require("../utils/config");
 const logger_1 = __importDefault(require("../utils/logger"));
 const config_yaml_1 = require("../templates/config.yaml");
 const docker_compose_yml_1 = require("../templates/docker-compose.yml");
@@ -68,7 +69,11 @@ async function initCommand(options = {}) {
         paths.services,
         paths.database,
         paths.goData,
+        paths.llmData,
+        paths.vectorData,
         paths.serverGoConfig,
+        paths.llmPyConfig,
+        paths.webUiConfig,
         paths.cache,
         paths.logs,
         paths.backup,
@@ -86,11 +91,10 @@ async function initCommand(options = {}) {
     let config;
     if (configExists && !options.force) {
         logger_1.default.info('发现已有配置文件，将保留现有配置');
-        // 这里可以添加读取现有配置的逻辑
-        config = (0, config_yaml_1.generateDefaultConfig)(dataDir);
+        config = await (0, config_1.loadDdoConfig)(dataDir);
     }
     else {
-        config = (0, config_yaml_1.generateDefaultConfig)(dataDir);
+        config = (0, config_1.normalizeDdoConfig)((0, config_yaml_1.generateDefaultConfig)(dataDir), dataDir);
         await fs.writeFile(paths.config, (0, config_yaml_1.generateConfigYaml)(config), 'utf8');
         logger_1.default.success(`生成配置: ${(0, paths_1.prettyPath)(paths.config)}`);
         actions.push('generate_config');
@@ -110,10 +114,30 @@ async function initCommand(options = {}) {
         logger_1.default.info('发现已有 server-go 配置，将保留现有配置');
     }
     else {
-        const serverPort = parseInt(config.endpoints.serverGo.split(':').pop() || '8080', 10);
+        const serverPort = config.services.serverGo.port;
         await fs.writeFile(paths.serverGoConfigYaml, (0, config_yaml_1.generateServerGoConfigYaml)(dataDir, serverPort, config.endpoints.llmPy), 'utf8');
         logger_1.default.success(`生成配置: ${(0, paths_1.prettyPath)(paths.serverGoConfigYaml)}`);
         actions.push('generate_server_go_config');
+    }
+    logger_1.default.section('生成 llm-py 配置');
+    const llmPyConfigExists = await fs.pathExists(paths.llmPyConfigJson);
+    if (llmPyConfigExists && !options.force) {
+        logger_1.default.info('发现已有 llm-py 配置，将保留现有配置');
+    }
+    else {
+        await fs.writeFile(paths.llmPyConfigJson, (0, config_yaml_1.generateLLMPyConfigJson)(config), 'utf8');
+        logger_1.default.success(`生成配置: ${(0, paths_1.prettyPath)(paths.llmPyConfigJson)}`);
+        actions.push('generate_llm_py_config');
+    }
+    logger_1.default.section('生成 web-ui 配置');
+    const webUiConfigExists = await fs.pathExists(paths.webUiConfigJson);
+    if (webUiConfigExists && !options.force) {
+        logger_1.default.info('发现已有 web-ui 配置，将保留现有配置');
+    }
+    else {
+        await fs.writeFile(paths.webUiConfigJson, (0, config_yaml_1.generateWebUiConfigJson)(config), 'utf8');
+        logger_1.default.success(`生成配置: ${(0, paths_1.prettyPath)(paths.webUiConfigJson)}`);
+        actions.push('generate_web_ui_config');
     }
     // 7. 输出完成信息
     logger_1.default.newline();
@@ -125,6 +149,8 @@ async function initCommand(options = {}) {
     logger_1.default.info(`  数据目录: ${logger_1.default.path((0, paths_1.prettyPath)(paths.root))}`);
     logger_1.default.info(`  CLI 配置: ${logger_1.default.path((0, paths_1.prettyPath)(paths.config))}`);
     logger_1.default.info(`  server-go 配置: ${logger_1.default.path((0, paths_1.prettyPath)(paths.serverGoConfigYaml))}`);
+    logger_1.default.info(`  llm-py 配置: ${logger_1.default.path((0, paths_1.prettyPath)(paths.llmPyConfigJson))}`);
+    logger_1.default.info(`  web-ui 配置: ${logger_1.default.path((0, paths_1.prettyPath)(paths.webUiConfigJson))}`);
     logger_1.default.info(`  SQLite 数据库: ${logger_1.default.path((0, paths_1.prettyPath)(paths.serverGoDb))}`);
     logger_1.default.newline();
     if (!options.skipDocker) {

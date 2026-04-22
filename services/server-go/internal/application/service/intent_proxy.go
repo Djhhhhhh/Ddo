@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"os"
 )
 
 // IntentProxy 意图识别代理服务接口
@@ -41,10 +40,7 @@ type intentProxy struct {
 
 // NewIntentProxy 创建意图识别代理服务
 func NewIntentProxy() IntentProxy {
-	baseURL := os.Getenv("DDO_LLM_HOST")
-	if baseURL == "" {
-		baseURL = defaultLLMHost
-	}
+	baseURL := resolveLLMBaseURL()
 
 	return &intentProxy{
 		httpClient: &http.Client{

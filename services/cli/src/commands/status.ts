@@ -3,11 +3,12 @@
  * 显示所有服务的状态
  */
 
-import yaml from 'yaml';
 import * as fs from 'fs-extra';
 import chalk from 'chalk';
+import type { DdoConfig } from '../types';
 import logger from '../utils/logger';
 import { resolveDataDir, getPaths, prettyPath } from '../utils/paths';
+import { loadDdoConfig } from '../utils/config';
 import { createServiceManager, ServiceDefinition } from '../services/manager';
 import { readPid } from '../services/pid-file';
 import { isProcessRunning } from '../services/pid-file';
@@ -46,10 +47,9 @@ export async function statusCommand(options: StatusOptions = {}): Promise<{
   }
 
   // 3. 读取配置
-  let config: any;
+  let config: DdoConfig | undefined;
   try {
-    const configContent = await fs.readFile(paths.config, 'utf8');
-    config = yaml.parse(configContent);
+    config = await loadDdoConfig(dataDir);
   } catch (err) {
     logger.warn(`读取配置文件失败: ${err instanceof Error ? err.message : String(err)}`);
   }
@@ -81,22 +81,30 @@ export async function statusCommand(options: StatusOptions = {}): Promise<{
     {
       name: 'server-go',
       displayName: 'server-go',
-      port: config?.endpoints?.serverGo?.split(':').pop() || 8080,
-      healthUrl: `${config?.endpoints?.serverGo || 'http://localhost:8080'}/health`,
+      port: config?.services?.serverGo?.port || 50001,
+      healthUrl: `${config?.services?.serverGo?.url || 'http://127.0.0.1:50001'}${config?.services?.serverGo?.healthPath || '/health'}`,
       command: [],
     },
     {
       name: 'llm-py',
       displayName: 'llm-py',
-      port: config?.endpoints?.llmPy?.split(':').pop() || 8000,
-      healthUrl: `${config?.endpoints?.llmPy || 'http://localhost:8000'}/health`,
+      port: config?.services?.llmPy?.port || 50002,
+      healthUrl: `${config?.services?.llmPy?.url || 'http://127.0.0.1:50002'}${config?.services?.llmPy?.healthPath || '/health'}`,
       command: [],
     },
     {
       name: 'web-ui',
       displayName: 'web-ui',
-      port: config?.endpoints?.webUi?.split(':').pop() || 3000,
-      healthUrl: `${config?.endpoints?.webUi || 'http://localhost:3000'}/health`,
+      port: config?.services?.webUi?.port || 50003,
+      healthUrl: `${config?.services?.webUi?.url || 'http://127.0.0.1:50003'}${config?.services?.webUi?.healthPath || '/__ddo/health'}`,
+      command: [],
+    },
+    {
+      name: 'electron',
+      displayName: 'electron',
+      port: 0,
+      healthUrl: '',
+      startupStrategy: 'process',
       command: [],
     },
   ];
@@ -111,16 +119,27 @@ export async function statusCommand(options: StatusOptions = {}): Promise<{
     const status = manager.getStatus(service);
 
     if (status.running) {
+      if (service.startupStrategy === 'process') {
+        console.log(`${chalk.green('✓ 运行中')} ${service.displayName}`);
+        console.log(`  PID: ${chalk.gray(status.pid)}`);
+        continue;
+      }
+
       // 检查健康状态
       const healthResult = await checkHealth(service.healthUrl, 2000);
       const healthStatus = healthResult.healthy
         ? chalk.green('✓ 健康')
         : chalk.yellow('? 未就绪');
+      const displayUrl = service.healthUrl.endsWith('/__ddo/health')
+        ? service.healthUrl.replace('/__ddo/health', '')
+        : service.healthUrl.endsWith('/health')
+          ? service.healthUrl.replace('/health', '')
+          : service.healthUrl;
 
       console.log(`${healthStatus} ${service.displayName}`);
       console.log(`  PID: ${chalk.gray(status.pid)}`);
       console.log(`  端口: ${chalk.gray(status.port)}`);
-      console.log(`  地址: ${chalk.gray(service.healthUrl.replace('/health', ''))}`);
+      console.log(`  地址: ${chalk.gray(displayUrl)}`);
     } else {
       console.log(`${chalk.red('✗ 已停止')} ${service.displayName}`);
       console.log(`  端口: ${chalk.gray(status.port)}`);

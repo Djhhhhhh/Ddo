@@ -23,6 +23,8 @@ export interface ServiceDefinition {
   displayName: string;
   port: number;
   healthUrl: string;
+  startupStrategy?: 'health' | 'process';
+  startupTimeoutMs?: number;
   command: string[];
   cwd?: string;
   env?: Record<string, string>;
@@ -92,10 +94,13 @@ export function createServiceManager(config: ManagerConfig) {
 
     // 准备启动选项
     // Windows 不支持 stdio 传入流，使用 'pipe' 然后手动重定向
+    const needsShell = process.platform === 'win32' && /\.(cmd|bat)$/i.test(service.command[0]);
     const spawnOptions: SpawnOptions = {
       detached: true,
       stdio: ['ignore', 'pipe', 'pipe'],
       env,
+      shell: needsShell,
+      windowsHide: true,
     };
 
     if (service.cwd) {
@@ -133,8 +138,27 @@ export function createServiceManager(config: ManagerConfig) {
 
       logger.debug(`${service.displayName} 进程已启动，PID: ${child.pid}`);
 
+      const startupStrategy = service.startupStrategy || 'health';
+
+      if (startupStrategy === 'process') {
+        const timeoutMs = service.startupTimeoutMs ?? 5000;
+        await sleep(timeoutMs);
+
+        if (!isProcessRunning(child.pid)) {
+          removePid(pidDir, service.name);
+          logStream.end();
+          return {
+            success: false,
+            error: `${service.displayName} 启动后立即退出，请检查日志: ${logFile}`,
+          };
+        }
+
+        logger.success(`${service.displayName} 已启动 (PID: ${child.pid})`);
+        return { success: true, pid: child.pid };
+      }
+
       // 等待服务就绪
-      const healthy = await waitForHealthy(service.healthUrl, 30000, 1000);
+      const healthy = await waitForHealthy(service.healthUrl, service.startupTimeoutMs ?? 30000, 1000);
 
       if (!healthy) {
         // 启动失败，清理
@@ -176,33 +200,20 @@ export function createServiceManager(config: ManagerConfig) {
       return { success: true };
     }
 
-    // 先尝试优雅终止
+    // Windows 下 detached 进程无法优雅终止，直接强制终止
     logger.info(`停止 ${displayName} (PID: ${pid})...`);
-    killProcess(pid, false);
-
-    // 等待进程结束
-    let attempts = 0;
-    const maxAttempts = 10;
-    while (attempts < maxAttempts && isProcessRunning(pid)) {
-      await sleep(500);
-      attempts++;
-    }
-
-    // 如果还在运行，强制终止
-    if (isProcessRunning(pid)) {
-      logger.warn(`${displayName} 未响应，强制终止...`);
-      killProcess(pid, true);
-      await sleep(500);
-    }
+    killProcess(pid, process.platform === 'win32');
+    await sleep(1000);
 
     // 清理 PID 文件
     removePid(pidDir, serviceName);
 
+    // 再次确认进程是否已停止
     if (isProcessRunning(pid)) {
-      return {
-        success: false,
-        error: `无法终止 ${displayName} 进程 (PID: ${pid})`,
-      };
+      logger.warn(`${displayName} 未响应，再次强制终止...`);
+      killProcess(pid, true);
+      await sleep(500);
+      removePid(pidDir, serviceName);
     }
 
     logger.success(`${displayName} 已停止`);

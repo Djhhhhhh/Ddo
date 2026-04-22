@@ -3,10 +3,11 @@
  * 停止所有 Ddo 服务
  */
 
-import yaml from 'yaml';
 import * as fs from 'fs-extra';
+import type { DdoConfig } from '../types';
 import logger from '../utils/logger';
 import { resolveDataDir, getPaths, prettyPath } from '../utils/paths';
+import { loadDdoConfig } from '../utils/config';
 import { createServiceManager, ServiceDefinition } from '../services/manager';
 
 interface StopOptions {
@@ -40,10 +41,9 @@ export async function stopCommand(options: StopOptions = {}): Promise<{
   }
 
   // 3. 读取配置
-  let config: any;
+  let config: DdoConfig | undefined;
   try {
-    const configContent = await fs.readFile(paths.config, 'utf8');
-    config = yaml.parse(configContent);
+    config = await loadDdoConfig(dataDir);
   } catch (err) {
     logger.warn(`读取配置文件失败: ${err instanceof Error ? err.message : String(err)}`);
     logger.info('将继续尝试停止服务...');
@@ -54,22 +54,30 @@ export async function stopCommand(options: StopOptions = {}): Promise<{
     {
       name: 'server-go',
       displayName: 'server-go',
-      port: config?.endpoints?.serverGo?.split(':').pop() || 8080,
-      healthUrl: `${config?.endpoints?.serverGo || 'http://localhost:8080'}/health`,
+      port: config?.services?.serverGo?.port || 50001,
+      healthUrl: `${config?.services?.serverGo?.url || 'http://127.0.0.1:50001'}${config?.services?.serverGo?.healthPath || '/health'}`,
       command: [], // stop 不需要 command
     },
     {
       name: 'llm-py',
       displayName: 'llm-py',
-      port: config?.endpoints?.llmPy?.split(':').pop() || 8000,
-      healthUrl: `${config?.endpoints?.llmPy || 'http://localhost:8000'}/health`,
+      port: config?.services?.llmPy?.port || 50002,
+      healthUrl: `${config?.services?.llmPy?.url || 'http://127.0.0.1:50002'}${config?.services?.llmPy?.healthPath || '/health'}`,
       command: [],
     },
     {
       name: 'web-ui',
       displayName: 'web-ui',
-      port: config?.endpoints?.webUi?.split(':').pop() || 3000,
-      healthUrl: `${config?.endpoints?.webUi || 'http://localhost:3000'}/health`,
+      port: config?.services?.webUi?.port || 50003,
+      healthUrl: `${config?.services?.webUi?.url || 'http://127.0.0.1:50003'}${config?.services?.webUi?.healthPath || '/__ddo/health'}`,
+      command: [],
+    },
+    {
+      name: 'electron',
+      displayName: 'electron',
+      port: 0,
+      healthUrl: '',
+      startupStrategy: 'process',
       command: [],
     },
   ];
