@@ -34,7 +34,11 @@ server-go/
 │   │   ├── result/
 │   │   │   └── result.go                    # 统一响应结果封装（2026-04-14）
 │   │   ├── service/
-│   │   │   └── rag_proxy.go                 # RAG 代理服务，转发到 llm-py（2026-04-15）
+│   │   │   ├── llm_base_url.go              # LLM 基础地址统一解析（2026-04-22）
+│   │   │   ├── llm_proxy.go                 # LLM 代理服务 - 统一配置读取（2026-04-22）
+│   │   │   ├── rag_proxy.go                 # RAG 代理服务 - 统一配置读取（2026-04-22）
+│   │   │   ├── intent_proxy.go              # 意图识别代理服务 - 统一配置读取（2026-04-22）
+│   │   │   └── conversation_service.go       # 对话服务 - 统一配置读取（2026-04-22）
 │   │   └── usecase/
 │   │       ├── health/
 │   │       │   └── check_health.go          # CheckHealth 用例实现（2026-04-15）
@@ -163,6 +167,11 @@ server-go/
 - ❌ 在 repository 中直接暴露数据库实现细节
 
 ## 🕒 最后更新时间
+
+2026-04-22：统一 LLM 代理服务配置读取
+- 新增 llm_base_url.go 统一解析 llm_py_url
+- llm_proxy/rag_proxy/intent_proxy/conversation_service 统一使用配置读取
+- 去除 localhost:8000 硬编码，改为从 config.yaml 读取
 
 2026-04-21：新增 LLM 统计 API 代理层
 - 新增 `/api/v1/llm/stats/*` Dashboard 统计接口

@@ -90,6 +90,10 @@
 **问题**：MySQL 连接失败会导致服务无法启动
 **解决**：在 provideMySQLConn 中捕获错误，返回 nil 和空 cleanup，让健康检查报告状态
 
+### LLM 代理服务硬编码地址（2026-04-22）
+**问题**：llm_proxy/rag_proxy/intent_proxy 中硬编码 localhost:8000 导致连接失败
+**解决**：统一使用 resolveLLMBaseURL() 函数，优先级：环境变量 DDO_LLM_HOST > config.yaml llm_py_url > 默认值
+
 ## 示例参考
 
 ### 用例实现模板（2026-04-14）

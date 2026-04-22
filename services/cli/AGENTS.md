@@ -29,6 +29,7 @@ services/cli/
 │   │   ├── manager.ts        # 服务管理器 - 统一管理服务生命周期
 │   │   ├── pid-file.ts       # PID 文件操作 - 读写进程ID
 │   │   ├── health-check.ts   # 健康检查 - HTTP 轮询检查服务就绪
+│   │   ├── service-runtime.ts # 服务运行时定义 - 路径解析与 Electron 启动配置（2026-04-22）
 │   │   └── nlp.ts            # NLP Service - llm-py NLP 接口封装（2026-04-16）
 │   ├── repl/
 │   │   ├── index.ts          # REPL 入口，命令分发和自然语言处理
@@ -116,6 +117,10 @@ services/cli/
 
 ## 🕒 最后更新时间
 
+2026-04-22：统一服务端口配置与进程管理优化
+- Windows 下 detached 进程直接强制终止（manager.ts）
+- Electron 改用 electron.exe 避免弹窗（service-runtime.ts）
+- 启动时自动同步 llm-py 配置文件端口（service-runtime.ts）
 2026-04-20：新增 Web 快捷命令（/web、/status-web、/timer-web、/mcp-web、/kb-web）和浏览器打开工具
 2026-04-20：新增间隔重复任务命令（/timer-add-interval）与一次性延迟任务入口（/timer-add-delay）
 2026-04-17：REPL 交互模式增强（Shift+Tab 切换知识库优先、输入去重、AI 对话换行）
