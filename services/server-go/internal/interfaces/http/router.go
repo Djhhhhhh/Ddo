@@ -126,6 +126,7 @@ func (r *Router) RegisterRoutes(
 			llmStats.GET("/stats/overview", llmStatsHandler.GetOverview)    // 概览统计
 			llmStats.GET("/stats/trend", llmStatsHandler.GetTrend)          // 趋势数据
 			llmStats.GET("/conversations", llmStatsHandler.ListConversations) // 对话列表
+			llmStats.GET("/conversations/:id", llmStatsHandler.GetConversationDetail) // 对话详情
 		}
 	}
 }

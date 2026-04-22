@@ -12,6 +12,7 @@ from uuid import uuid4
 
 from sqlalchemy import select, desc, delete, func
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
 from app.db.models import Conversation, Message
 
@@ -48,7 +49,9 @@ class ConversationService:
     async def get_conversation(self, conversation_id: str) -> Optional[Conversation]:
         """Get conversation by ID with messages."""
         result = await self.session.execute(
-            select(Conversation).where(Conversation.id == conversation_id)
+            select(Conversation)
+            .where(Conversation.id == conversation_id)
+            .options(selectinload(Conversation.messages))
         )
         return result.scalar_one_or_none()
     

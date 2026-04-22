@@ -25,99 +25,145 @@
       </div>
     </div>
 
-    <!-- Trend Chart -->
-    <div class="bg-white rounded-xl border border-gray-200 p-6 mb-8">
-      <div class="flex items-center justify-between mb-4">
-        <h2 class="text-lg font-medium text-gray-900">调用趋势</h2>
-        <div class="flex gap-2">
+    <!-- Conversation List -->
+    <div class="grid grid-cols-1 xl:grid-cols-[360px_minmax(0,1fr)] gap-6">
+      <div class="bg-white rounded-xl border border-gray-200 overflow-hidden">
+        <div class="p-4 border-b border-gray-200">
+          <h2 class="text-lg font-medium text-gray-900">对话列表</h2>
+        </div>
+
+        <div class="divide-y divide-gray-100 max-h-[720px] overflow-y-auto">
           <button
-            v-for="d in [7, 14, 30]"
-            :key="d"
-            @click="days = d; loadTrend()"
+            v-for="conv in conversations?.items || []"
+            :key="conv.id"
+            type="button"
+            @click="selectConversation(conv.id)"
             :class="[
-              'px-3 py-1 text-sm rounded-full border transition-colors',
-              days === d
-                ? 'bg-black text-white border-black'
-                : 'bg-white text-gray-600 border-gray-200 hover:border-gray-300'
+              'w-full p-4 text-left transition-colors',
+              selectedConversationId === conv.id
+                ? 'bg-gray-100'
+                : 'hover:bg-gray-50'
             ]"
           >
-            {{ d }}天
+            <div class="flex items-start justify-between gap-3">
+              <div class="flex-1 min-w-0">
+                <div class="flex items-center gap-2 mb-1 flex-wrap">
+                  <span class="text-sm font-medium text-gray-900 truncate">{{ conv.title || '未命名对话' }}</span>
+                  <span class="px-2 py-0.5 text-xs rounded-full bg-gray-100 text-gray-600">
+                    {{ conv.message_count }} 消息
+                  </span>
+                  <span
+                    v-if="conv.memory_enabled"
+                    class="px-2 py-0.5 text-xs rounded-full bg-gray-800 text-white"
+                  >
+                    记忆
+                  </span>
+                </div>
+                <div class="text-xs text-gray-500 leading-5">
+                  <div>ID: {{ conv.id }}</div>
+                  <div>来源: {{ conv.source || '-' }}</div>
+                  <div>创建时间: {{ formatDate(conv.created_at) }}</div>
+                </div>
+              </div>
+            </div>
           </button>
+
+          <div v-if="!(conversations?.items?.length)" class="p-6 text-sm text-gray-500">
+            暂无对话记录
+          </div>
         </div>
-      </div>
-      <div class="h-48 flex items-end gap-1">
-        <div
-          v-for="(count, i) in trend?.requests || []"
-          :key="i"
-          class="flex-1 bg-gray-200 rounded-t hover:bg-gray-300 transition-colors relative group"
-          :style="{ height: `${Math.max((count / maxRequests) * 100, 5)}%` }"
-        >
-          <div class="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 bg-black text-white text-xs rounded opacity-0 group-hover:opacity-100 pointer-events-none whitespace-nowrap">
-            {{ trend?.dates?.[i] }}: {{ count }} 请求
+
+        <div v-if="conversations?.total_pages > 1" class="p-4 border-t border-gray-200 flex items-center justify-between">
+          <span class="text-sm text-gray-500">
+            共 {{ conversations?.total }} 条
+          </span>
+          <div class="flex gap-2">
+            <button
+              :disabled="page === 1"
+              @click="page--; loadConversations()"
+              class="px-3 py-1 text-sm rounded-full border border-gray-200 hover:border-gray-300 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              上一页
+            </button>
+            <span class="px-3 py-1 text-sm">{{ page }} / {{ conversations?.total_pages }}</span>
+            <button
+              :disabled="page >= (conversations?.total_pages || 1)"
+              @click="page++; loadConversations()"
+              class="px-3 py-1 text-sm rounded-full border border-gray-200 hover:border-gray-300 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              下一页
+            </button>
           </div>
         </div>
       </div>
-    </div>
 
-    <!-- Conversation List -->
-    <div class="bg-white rounded-xl border border-gray-200">
-      <div class="p-4 border-b border-gray-200">
-        <h2 class="text-lg font-medium text-gray-900">对话列表</h2>
-      </div>
+      <div class="bg-white rounded-xl border border-gray-200 min-h-[480px] flex flex-col">
+        <div class="p-4 border-b border-gray-200">
+          <h2 class="text-lg font-medium text-gray-900">会话详情</h2>
+        </div>
 
-      <div class="divide-y divide-gray-100">
-        <div
-          v-for="conv in conversations?.items || []"
-          :key="conv.id"
-          class="p-4 hover:bg-gray-50 transition-colors"
-        >
-          <div class="flex items-start justify-between">
-            <div class="flex-1 min-w-0">
-              <div class="flex items-center gap-2 mb-1">
-                <span class="text-sm font-medium text-gray-900 truncate">{{ conv.title || '未命名对话' }}</span>
-                <span class="px-2 py-0.5 text-xs rounded-full bg-gray-100 text-gray-600">
-                  {{ conv.message_count }} 消息
-                </span>
-                <span
-                  v-if="conv.memory_enabled"
-                  class="px-2 py-0.5 text-xs rounded-full bg-gray-800 text-white"
-                >
-                  记忆
-                </span>
-              </div>
-              <div class="text-xs text-gray-500">
-                <span>ID: {{ conv.id.slice(0, 8) }}</span>
-                <span class="mx-2">|</span>
-                <span>来源: {{ conv.source }}</span>
-                <span class="mx-2">|</span>
-                <span>{{ formatDate(conv.created_at) }}</span>
-              </div>
+        <div v-if="selectedConversation" class="p-4 border-b border-gray-100 space-y-2">
+          <div class="flex items-center gap-2 flex-wrap">
+            <span class="text-base font-medium text-gray-900">{{ selectedConversation.title || '未命名对话' }}</span>
+            <span class="px-2 py-0.5 text-xs rounded-full bg-gray-100 text-gray-600">
+              {{ selectedConversation.message_count }} 消息
+            </span>
+            <span
+              v-if="selectedConversation.memory_enabled"
+              class="px-2 py-0.5 text-xs rounded-full bg-gray-800 text-white"
+            >
+              记忆
+            </span>
+          </div>
+          <div class="text-xs text-gray-500 leading-5 break-all">
+            <div>会话 ID: {{ selectedConversation.id }}</div>
+            <div v-if="selectedConversation.session_id">Session ID: {{ selectedConversation.session_id }}</div>
+            <div>来源: {{ selectedConversation.source || '-' }}</div>
+            <div>创建时间: {{ formatDate(selectedConversation.created_at) }}</div>
+            <div>更新时间: {{ formatDate(selectedConversation.updated_at) }}</div>
+          </div>
+        </div>
+
+        <div v-if="detailLoading" class="flex-1 flex items-center justify-center text-sm text-gray-500">
+          正在加载会话详情...
+        </div>
+
+        <div v-else-if="detailError" class="flex-1 p-6 text-sm text-gray-500">
+          {{ detailError }}
+        </div>
+
+        <div v-else-if="selectedConversation && selectedConversation.messages.length" class="flex-1 overflow-y-auto p-4 space-y-4">
+          <div
+            v-for="(message, index) in selectedConversation.messages"
+            :key="message.id || `${message.role}-${index}`"
+            :class="[
+              'rounded-xl border p-4',
+              message.role === 'user'
+                ? 'border-blue-200 bg-blue-50 text-gray-900 ml-12'
+                : 'border-gray-200 bg-gray-50 text-gray-900 mr-12'
+            ]"
+          >
+            <div class="flex items-center justify-between gap-3 mb-2">
+              <span :class="['text-xs uppercase tracking-wide', message.role === 'user' ? 'text-blue-600' : 'text-gray-500']">
+                {{ formatRole(message.role) }}
+              </span>
+              <span :class="['text-xs', message.role === 'user' ? 'text-blue-400' : 'text-gray-400']">
+                {{ formatDate(message.created_at || message.timestamp || '') }}
+              </span>
+            </div>
+            <div class="text-sm leading-6 whitespace-pre-wrap break-words">{{ message.content }}</div>
+            <div v-if="message.model" :class="['text-xs mt-3', message.role === 'user' ? 'text-blue-400' : 'text-gray-400']">
+              模型: {{ message.model }}
             </div>
           </div>
         </div>
-      </div>
 
-      <!-- Pagination -->
-      <div v-if="conversations?.total_pages > 1" class="p-4 border-t border-gray-200 flex items-center justify-between">
-        <span class="text-sm text-gray-500">
-          共 {{ conversations?.total }} 条
-        </span>
-        <div class="flex gap-2">
-          <button
-            :disabled="page === 1"
-            @click="page--; loadConversations()"
-            class="px-3 py-1 text-sm rounded-full border border-gray-200 hover:border-gray-300 disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            上一页
-          </button>
-          <span class="px-3 py-1 text-sm">{{ page }} / {{ conversations?.total_pages }}</span>
-          <button
-            :disabled="page >= (conversations?.total_pages || 1)"
-            @click="page++; loadConversations()"
-            class="px-3 py-1 text-sm rounded-full border border-gray-200 hover:border-gray-300 disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            下一页
-          </button>
+        <div v-else-if="selectedConversation" class="flex-1 p-6 text-sm text-gray-500">
+          当前会话暂无可展示的消息内容
+        </div>
+
+        <div v-else class="flex-1 flex items-center justify-center text-sm text-gray-500">
+          点击左侧会话后查看完整内容
         </div>
       </div>
     </div>
@@ -126,21 +172,19 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
-import { getLLMOverview, getLLMTrend, getConversations } from '../../api'
-import type { OverviewResponse, TrendData, ConversationListResponse } from '../../api'
+import { getLLMOverview, getConversations, getConversationDetail } from '../../api'
+import type { OverviewResponse, ConversationListResponse, ConversationDetailResponse } from '../../api'
 
 const overview = ref<OverviewResponse | null>(null)
-const trend = ref<TrendData | null>(null)
 const conversations = ref<ConversationListResponse | null>(null)
+const selectedConversation = ref<ConversationDetailResponse | null>(null)
+const selectedConversationId = ref('')
+const detailLoading = ref(false)
+const detailError = ref('')
 
-const days = ref(7)
 const page = ref(1)
 const pageSize = 10
 
-const maxRequests = computed(() => {
-  const counts = trend.value?.requests || []
-  return Math.max(...counts, 1)
-})
 
 async function loadOverview() {
   try {
@@ -150,24 +194,62 @@ async function loadOverview() {
   }
 }
 
-async function loadTrend() {
-  try {
-    trend.value = await getLLMTrend(days.value)
-  } catch (e) {
-    console.error('Failed to load trend:', e)
-  }
-}
 
 async function loadConversations() {
   try {
     conversations.value = await getConversations(page.value, pageSize)
+
+    const firstConversation = conversations.value.items[0]
+
+    if (!firstConversation) {
+      selectedConversation.value = null
+      selectedConversationId.value = ''
+      detailError.value = ''
+      return
+    }
+
+    const existsInCurrentPage = conversations.value.items.some((item) => item.id === selectedConversationId.value)
+
+    if (!existsInCurrentPage) {
+      await selectConversation(firstConversation.id)
+    }
   } catch (e) {
     console.error('Failed to load conversations:', e)
   }
 }
 
+async function selectConversation(id: string) {
+  if (!id || detailLoading.value || (selectedConversationId.value === id && selectedConversation.value && !detailError.value)) {
+    return
+  }
+
+  selectedConversationId.value = id
+  detailLoading.value = true
+  detailError.value = ''
+  selectedConversation.value = null
+
+  try {
+    selectedConversation.value = await getConversationDetail(id)
+  } catch (e) {
+    selectedConversation.value = null
+    detailError.value = '会话详情加载失败，请确认后端已返回完整消息内容'
+    console.error('Failed to load conversation detail:', e)
+  } finally {
+    detailLoading.value = false
+  }
+}
+
 function formatDate(dateStr: string) {
+  if (!dateStr) {
+    return '-'
+  }
+
   const date = new Date(dateStr)
+
+  if (Number.isNaN(date.getTime())) {
+    return dateStr
+  }
+
   return date.toLocaleString('zh-CN', {
     year: 'numeric',
     month: '2-digit',
@@ -177,9 +259,26 @@ function formatDate(dateStr: string) {
   })
 }
 
+function formatRole(role: string) {
+  const normalizedRole = role.toLowerCase()
+
+  if (normalizedRole === 'user') {
+    return '用户'
+  }
+
+  if (normalizedRole === 'assistant') {
+    return '助手'
+  }
+
+  if (normalizedRole === 'system') {
+    return '系统'
+  }
+
+  return role
+}
+
 onMounted(() => {
   loadOverview()
-  loadTrend()
   loadConversations()
 })
 </script>

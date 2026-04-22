@@ -51,6 +51,15 @@ class Conversation(Base):
     
     def to_dict(self, include_messages: bool = False, message_count: int = 0) -> Dict[str, Any]:
         """Convert to dictionary."""
+        messages = []
+        actual_count = message_count
+
+        if include_messages and self.messages:
+            messages = [msg.to_dict() for msg in self.messages]
+            actual_count = len(messages)
+        elif include_messages:
+            actual_count = 0
+
         data = {
             "id": self.id,
             "session_id": self.session_id,
@@ -59,8 +68,12 @@ class Conversation(Base):
             "source": self.source,
             "created_at": self.created_at.isoformat() if self.created_at else None,
             "updated_at": self.updated_at.isoformat() if self.updated_at else None,
-            "message_count": message_count,
+            "message_count": actual_count,
         }
+
+        if include_messages:
+            data["messages"] = messages
+
         return data
 
 

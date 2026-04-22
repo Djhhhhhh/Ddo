@@ -14,6 +14,7 @@ type LLMStatsHandler struct {
 	overviewUC         *llm_stats.GetOverviewUseCase
 	trendUC            *llm_stats.GetTrendUseCase
 	listConversationsUC *llm_stats.ListConversationsUseCase
+	getConversationDetailUC *llm_stats.GetConversationDetailUseCase
 }
 
 // NewLLMStatsHandler 创建处理器
@@ -22,6 +23,7 @@ func NewLLMStatsHandler(llmPyURL string) *LLMStatsHandler {
 		overviewUC:         llm_stats.NewGetOverviewUseCase(llmPyURL),
 		trendUC:            llm_stats.NewGetTrendUseCase(llmPyURL),
 		listConversationsUC: llm_stats.NewListConversationsUseCase(llmPyURL),
+		getConversationDetailUC: llm_stats.NewGetConversationDetailUseCase(llmPyURL),
 	}
 }
 
@@ -134,6 +136,38 @@ func (h *LLMStatsHandler) ListConversations(c *gin.Context) {
 	data := result.Data
 	if data.Items == nil {
 		data.Items = []llm_stats.ConversationItem{}
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"code":    0,
+		"message": "ok",
+		"data":    data,
+	})
+}
+
+// GetConversationDetail 获取单条会话详情
+// GET /api/v1/llm/conversations/:id
+func (h *LLMStatsHandler) GetConversationDetail(c *gin.Context) {
+	ctx := c.Request.Context()
+	conversationID := c.Param("id")
+
+	result := h.getConversationDetailUC.Execute(ctx, conversationID)
+
+	if result == nil || !result.IsSuccess() {
+		errMsg := "获取会话详情失败"
+		if result != nil && result.Error != nil {
+			errMsg = errMsg + ": " + result.Error.Error()
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"code":    500,
+			"message": errMsg,
+		})
+		return
+	}
+
+	data := result.Data
+	if data.Messages == nil {
+		data.Messages = []llm_stats.ConversationMessage{}
 	}
 
 	c.JSON(http.StatusOK, gin.H{
