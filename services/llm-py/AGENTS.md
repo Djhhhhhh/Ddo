@@ -28,15 +28,18 @@ services/llm-py/
 │   ├── api/                      # API 路由模块 (FastAPI "大门" 层)
 │   │   ├── __init__.py          # 路由聚合 (api_router)
 │   │   ├── health.py            # /api/health - 健康检查
-│   │   ├── chat.py              # /api/chat/* - Chat Completions ✅ LangChain 实现，含对话存储
-│   │   ├── conversation.py      # /api/conversations/* - 对话历史管理 ✅ p2-9 新增
+│   │   ├── chat.py              # /api/chat/* - Chat Completions LangChain 实现，含对话存储
+│   │   ├── conversation.py      # /api/conversations/* - 对话历史管理 p2-9 新增
 │   │   ├── models.py            # /api/models/* - 模型管理
-│   │   ├── nlp.py               # /api/nlp/* - NLP 意图识别 ✅ LangChain 实现
-│   │   ├── analyze.py           # /api/analyze/* - 知识分析（标签/分类提取）✅ 知识库增强功能
-│   │   ├── rag.py               # /api/rag/* - RAG 知识库 ✅ p2-8 Retriever / p2-9 Generator 已实现
-│   │   └── stats.py             # /api/stats/* - LLM 使用统计 ✅ p2-9 新增
+│   │   ├── nlp.py               # /api/nlp/* - NLP 意图识别 LangChain 实现
+│   │   ├── analyze.py           # /api/analyze/* - 知识分析（标签/分类提取）知识库增强功能
+│   │   ├── rag.py               # /api/rag/* - RAG 知识库 p2-8 Retriever / p2-9 Generator 已实现
+│   │   └── stats.py             # /api/stats/* - LLM 使用统计 p2-9 新增
 │   ├── core/                     # 核心模块 (LangChain "大脑" 层)
 │   │   ├── __init__.py
+│   │   ├── chains/               # LangChain 业务链封装
+│   │   │   ├── __init__.py      # Chain 模块导出
+│   │   │   └── intent_chain.py  # NLP 意图识别链封装
 │   │   ├── config.py            # Pydantic Settings 配置管理 (含数据库配置)
 │   │   ├── llm_factory.py       # LangChain 核心：模型工厂、链式编排、提示管理
 │   │   ├── embedder.py          # RAG Embedder 服务核心 - 文本向量化 (p2-7)
@@ -54,6 +57,7 @@ services/llm-py/
 │   │   └── session.py           # 异步会话管理
 │   ├── models/                   # Pydantic 数据模型定义
 │   │   ├── __init__.py          # 模型包导出
+│   │   ├── document.py          # RAG 文档/向量存储共享数据模型
 │   │   └── rag.py               # RAG 相关 Pydantic 模型
 │   ├── services/                 # ← 新增：业务服务层
 │   │   ├── __init__.py          # 服务模块导出
@@ -62,13 +66,40 @@ services/llm-py/
 │   └── utils/                    # 工具模块
 │       ├── __init__.py
 │       └── logger.py            # 日志配置和工具函数
+├── docs/
+│   ├── roadmap/
+│   │   └── mvp.md               # MVP 需求文档
+│   └── feature/
+│       ├── 2026-04-14-fastapi-framework/
+│       │   ├── review-list.md
+│       │   └── 技术方案.md
+│       ├── 2026-04-15-openrouter-proxy/
+│       │   ├── review-list.md
+│       │   └── 技术方案.md
+│       ├── 2026-04-15-rag-embedder/
+│       │   ├── review-list.md
+│       │   └── 技术方案.md
+│       ├── 2026-04-15-rag-retriever-generator/
+│       │   ├── review-list.md
+│       │   └── 技术方案.md
+│       ├── 2026-04-20-llm-session-save/
+│       │   └── 技术方案.md
+│       └── 2026-04-21-llm-conversation-storage/
+│           ├── review-list-go.md
+│           ├── review-list.md
+│           └── 技术方案.md
+├── .claude/
+│   └── rules/
+│       └── rules.md             # 服务规则文件
 ├── main.py                       # Uvicorn 启动脚本
 ├── requirements.txt              # Python 依赖 (langchain, langchain-openrouter)
+├── .env                          # 本地环境变量配置（开发用，不提交）
 ├── .env.example                  # 环境变量示例
 └── AGENTS.md (本文件)
 ```
 
-**架构分工**:
+## 架构分工
+
 - **FastAPI "大门"** (`app/api/`): 负责 HTTP 路由、请求验证、并发控制、序列化
 - **LangChain "大脑"** (`app/core/`):
   - `llm_factory.py`: 负责 Chat/NLP 模型管理、链式编排、流式处理
@@ -79,7 +110,8 @@ services/llm-py/
   - `generator.py`: RAG 生成服务，组装上下文并调用 LLM 生成回答
 - **OpenRouter 接入**: 通过 `langchain-openrouter` / `langchain-openai` 包实现
 
-**关键文件说明**：
+## 关键文件说明
+
 - `app/main.py`: FastAPI 实例创建、CORS 中间件、路由挂载
 - `app/core/config.py`: 统一配置管理，支持环境变量和 .env 文件
 - `app/api/__init__.py`: 路由聚合，所有 API 通过 `api_router` 注册
@@ -87,55 +119,48 @@ services/llm-py/
 - `.env`: 本地配置文件（不提交到 git）
 - `app/core/rag/`: RAG 核心引擎，实现检索增强生成的完整流程
 
-## 🧠 Rules 自维护
+## 规则
 
-**此章节指导 AI 如何自动维护本服务的规则。**
+- 所有路径、目录和文件说明必须以 `services/llm-py` 的真实内容为准，禁止补写不存在的路由、模型、链路或文档。
+- llm-py 只负责 LLM、NLP、RAG、对话存储与统计相关能力，不在文档中扩展为业务编排服务。
+- 更新文档时优先维护 `AGENTS.md` 的目录结构、边界和流程，再补充 `.claude/rules/rules.md` 的架构规则与经验结论。
+- 面向用户的文案不能泄露内部约束；服务级文档必须明确 API 边界、配置来源和安全要求。
 
-### Rules 文件位置
-- 本服务规则：[.claude/rules/rules.md](.claude/rules/rules.md)
+## 开发流程
 
-### 何时更新 Rules
-开发完成后，如果满足以下条件之一，**必须**更新 Rules：
-- 🆕 引入新的架构模式
-- 📁 新增目录结构
-- 📋 改变代码规范
-- 🔁 出现重复实现（需要抽象规则）
+1. 开发前先阅读本文件，确认 llm-py 的职责边界、目录结构和禁止事项。
+2. 仅在 `services/llm-py` 目录内实施修改，不跨 service 读取或写入实现细节。
+3. 若新增 API、核心模块、配置项、数据模型或文档目录，完成代码后同步更新 `## 目录结构`。
+4. 若沉淀出新的架构规则、代码规范或常见陷阱，同步更新 `.claude/rules/rules.md`。
+5. 提交前确认 API 路由、配置来源、模型契约和文档内容与当前代码一致。
 
-### 如何更新 Rules
-1. 打开 [.claude/rules/rules.md](.claude/rules/rules.md)
-2. 在对应类别下追加新规则（不要覆盖）
-3. 格式：`- 规则描述（发现日期：YYYY-MM-DD）`
+## Rules 自维护
 
-> 💡 提示：每次开发完成后问自己：这次我学到了什么模式值得记录？
+- Rules 文件位置：[.claude/rules/rules.md](.claude/rules/rules.md)
+- 触发时机：新增目录结构、引入新架构模式、调整代码规范、出现可复用经验时必须追加。
+- 追加格式：`- 规则描述（发现日期：YYYY-MM-DD）`
+- 维护原则：只增量补充，不覆盖仍然有效的历史规则。
 
-## ✅ 开发检查清单
+## 开发检查清单
 
 提交前检查：
 - [ ] 本次修改只在当前 service 目录内
 - [ ] 新加文件已更新上面的目录结构
 - [ ] 如涉及新架构/规范，已更新 .claude/rules/<service>.md
 
-## 🚫 禁止
+## 禁止
 
 硬性红线（违反会导致架构混乱）：
-- ❌ 跨 service import（只能调 API，不能 import 包）
-- ❌ 直接修改其他 service 的代码
-- ❌ 将 OpenRouter API Key 提交到 Git
-- ❌ 在生产环境启用 `reload=True`
-- ❌ 直接暴露 llm-py 端口到外网（必须走 server-go 代理）
+- 跨 service import（只能调 API，不能 import 包）
+- 直接修改其他 service 的代码
+- 将 OpenRouter API Key 提交到 Git
+- 在生产环境启用 `reload=True`
+- 直接暴露 llm-py 端口到外网（必须走 server-go 代理）
 
-## 🕒 最后更新时间
+## 最后更新时间
 
-2026-04-22：启动脚本改为从配置文件直接读取端口
-- main.py 直接从 config.json 读取 host/port 传给 uvicorn
-- 去除环境变量覆盖依赖，确保配置文件优先级最高
+2026-04-22 20:14
 
-2026-04-21：新增对话记录存储与统计功能
-- 新增 `/api/conversations/*` 对话管理 API
-- 新增 `/api/stats/*` 统计查询 API
-- 新增 SQLite 数据库存储 (SQLAlchemy + aiosqlite)
-- 预留系统记忆扩展字段
-
-2026-04-17：新增知识分析 API (`/api/analyze`) 和 `create_knowledge_analysis_chain` 方法
-2026-04-16：新增 NLP 参数契约规范（llm_factory.py 意图识别提示词）
-2026-04-15 23:30:00
+- 同步 `services/llm-py` 真实目录结构，补充 `app/core/chains/`、`app/models/document.py`、`.env`、`.claude/rules/` 与 `docs/feature/*` 条目
+- 补齐 规则、开发流程 章节，使服务文档结构与 `doc-fix` 要求一致
+- 保留原有职责边界、检查清单与禁止事项，避免文档修复改变服务定义

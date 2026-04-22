@@ -25,7 +25,6 @@
     "workspace",
     "productivity"
   ],
-  "author": "",
   "license": "MIT",
   "dependencies": {
     "chalk": "^4.1.2",
@@ -44,5 +43,11 @@
   },
   "engines": {
     "node": ">=18.0.0"
-  }
+  },
+  "author": "@_djhhh/ddo-cli",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Djhhhhhh/Ddo.git"
+  },
+  "homepage": "https://github.com/Djhhhhhh/Ddo"
 }

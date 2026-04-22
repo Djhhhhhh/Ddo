@@ -2,6 +2,7 @@
 
 > 由 AI 在开发过程中自动维护的规则文件。
 > 发现时间：2026-04-14
+> 更新时间：2026-04-22 20:45
 
 ## 架构规则
 
@@ -11,6 +12,11 @@
 - 应用层编排用例，依赖领域层
 - 接口层适配协议，依赖应用层
 - 基础设施层实现技术细节，依赖领域层定义的接口
+
+### MCP 客户端层规范（2026-04-16）
+- MCP 客户端统一放在 `internal/mcp/` 目录，独立于 DDD 四层之外，供应用层按需调用
+- 使用 `ClientPool` 管理连接生命周期，内部按 `Type`（stdio/http/sse）分发到 `StdioManager` 或 `HTTPManager`
+- 新增 MCP 传输类型时，必须在 `ClientPool.TestConnection` 和 `Close` 中同步处理，避免连接泄漏
 
 ### Wire 依赖注入最佳实践（2026-04-14）
 - Provider 函数放在 wire.go 中，生成的代码放在 wire_gen.go
@@ -62,6 +68,11 @@
 - 消息失败时根据重试次数决定是否重新投递
 - 消费确认后删除消息，保证 at-least-once 语义
 - 调度器轮询间隔可配置，默认 1 秒
+
+### Timer 触发类型常量规范（2026-04-15）
+- 触发类型常量定义在 `internal/application/usecase/timer/` 包内：`TriggerTypeCron`、`TriggerTypePeriodic`、`TriggerTypeDelayed`
+- 不同 TriggerType 有独立的必填参数校验逻辑：Cron 必须填 CronExpr 且通过 `cron.ParseStandard` 校验；Periodic 必须填 IntervalSeconds > 0；Delayed 必须填 DelaySeconds > 0
+- CallbackHeaders 和 NotifyConfig 等复合字段在用例层统一 JSON 序列化后存入 model，禁止在 repository 层直接处理 `map[string]string`
 
 ## 常见陷阱
 

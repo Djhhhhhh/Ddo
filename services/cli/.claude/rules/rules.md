@@ -2,7 +2,7 @@
 
 > 由 AI 在开发过程中自动维护的规则文件。
 > 发现时间：2026-04-14
-> 更新时间：2026-04-20
+> 更新时间：2026-04-22 20:03
 
 ## 架构规则
 
@@ -13,12 +13,14 @@
 - 所有业务逻辑通过 API 调用委托给 server-go
 - 目录结构：
   - `src/commands/` - CLI 命令实现（init、start、stop、status、logs）
-  - `src/services/` - 服务管理模块（PID文件、健康检查、进程管理、NLP）
-  - `src/repl/` - REPL 交互模式（命令解析、模式管理、命令注册、意图路由）
+  - `src/services/` - 服务管理与 API 集成模块（API 客户端、PID 文件、健康检查、进程管理、NLP、运行时配置、Web UI 本地静态服务）
+  - `src/repl/` - REPL 交互模式（命令解析、模式管理、命令注册、意图路由、AI 对话输出、工具注册）
     - `src/repl/parser.ts` - 命令解析，支持参数、flags、引号字符串
     - `src/repl/mode.ts` - 模式管理（Default/Chat/Kb/Timer/Mcp）
     - `src/repl/intent-router.ts` - 意图路由器，根据 NLP 结果路由到对应动作
-    - `src/repl/commands/` - REPL 命令实现（/exit、/help、/chat、/status、/kb、/timer、/mcp）
+    - `src/repl/commands/` - REPL 命令实现（/exit、/help、/chat、/status、/kb、/timer、/mcp 及 Web 快捷入口）
+    - `src/repl/conversation-handler.ts` - AI 对话输出与流式响应控制
+    - `src/repl/tools/` - REPL 工具导出与注册
     - `src/repl/completer.ts` - Tab 自动补全
   - `src/utils/` - 通用工具函数
   - `src/templates/` - 配置文件模板
@@ -75,12 +77,13 @@
 
 - 使用 TypeScript + strict 模式
 - CLI 命令采用 async/await 编写，统一返回 `{ success, data, error }` 结构
-- REPL 命令 handler 返回 `Promise<boolean>`，`true` 表示继续 REPL，`false` 表示退出（发现日期：2026-04-14）
+- REPL 命令 handler 返回 `Promise<CommandResult>`，通过 `shouldContinue` 和 `outputType` 控制 REPL 行为与输出类型（发现日期：2026-04-14，更新日期：2026-04-22）
 - 用户输出统一使用 `logger.ts`，支持级别控制（debug/info/warn/error）
-- 路径处理统一使用 `path.ts` 中的工具函数，支持 Windows/macOS 跨平台
+- 路径处理统一使用 `paths.ts` 中的工具函数，支持 Windows/macOS 跨平台
 - Docker 操作统一封装在 `docker.ts`，错误处理要友好
 - 服务管理统一使用 `services/manager.ts`，包含 PID 文件管理、健康检查、进程启停
 - REPL 命令通过 `registry.register()` 注册，支持 name + aliases 多名称映射
+- `src/services/api-client.ts` 是 CLI 访问 server-go 的统一出口；状态、知识库、定时任务、MCP、聊天请求不要在命令层直接手写 fetch 逻辑（发现日期：2026-04-22）
 - 面向用户的 Timer/MCP 交互文案应优先使用页面表单语义，例如“目标 URL”“请求方法”“连接配置”（发现日期：2026-04-20）
 - 间隔重复任务可在 CLI 内转换为 cron 表达式后创建；一次性延迟任务若后端未提供专用字段，则必须明确提示能力边界，不能伪装成已创建成功（发现日期：2026-04-20）
 - CLI 默认走本地启动模式：`init/start/status/stop` 不能把 Docker/MySQL 作为必需前置条件，server-go 数据库路径统一从 `config.database.path` 传递（发现日期：2026-04-21）

@@ -13,7 +13,8 @@ server-go 是 Ddo 平台的核心网关服务，负责提供统一的 API 路由
 server-go/
 ├── cmd/
 │   └── server/
-│       └── main.go                          # 服务启动入口（2026-04-14）
+│       ├── main.go                          # 服务启动入口（2026-04-14）
+│       └── wire_gen.go                      # Wire 生成的代码（手动维护）
 ├── configs/
 │   └── config.yaml                          # 配置文件模板（2026-04-14）
 ├── internal/
@@ -24,44 +25,22 @@ server-go/
 │   ├── domain/                              # ★ 领域层（核心业务）
 │   │   ├── common/                          # 领域共享组件（2026-04-14）
 │   │   │   ├── entity.go                    # 实体基类
+│   │   │   ├── entity_test.go               # 实体基类测试
 │   │   │   ├── valueobject.go               # 值对象基类
 │   │   │   ├── event.go                     # 领域事件接口
-│   │   │   └── errors.go                    # 领域错误定义
+│   │   │   ├── event_test.go                # 领域事件测试
+│   │   │   ├── errors.go                    # 领域错误定义
+│   │   │   └── errors_test.go               # 领域错误测试
 │   │   └── health/                          # 健康检查领域（2026-04-14）
 │   │       ├── aggregate.go                 # Health 聚合根
-│   │       └── valueobject.go               # HealthStatus 值对象
-│   ├── application/                         # 应用层（用例编排）
-│   │   ├── result/
-│   │   │   └── result.go                    # 统一响应结果封装（2026-04-14）
-│   │   ├── service/
-│   │   │   ├── llm_base_url.go              # LLM 基础地址统一解析（2026-04-22）
-│   │   │   ├── llm_proxy.go                 # LLM 代理服务 - 统一配置读取（2026-04-22）
-│   │   │   ├── rag_proxy.go                 # RAG 代理服务 - 统一配置读取（2026-04-22）
-│   │   │   ├── intent_proxy.go              # 意图识别代理服务 - 统一配置读取（2026-04-22）
-│   │   │   └── conversation_service.go       # 对话服务 - 统一配置读取（2026-04-22）
-│   │   └── usecase/
-│   │       ├── health/
-│   │       │   └── check_health.go          # CheckHealth 用例实现（2026-04-15）
-│   │       ├── knowledge/                   # 知识库用例层（2026-04-15）
-│   │       │   ├── create_knowledge.go      # 创建知识条目（含 AI 分析）
-│   │       │   ├── list_knowledge.go        # 查询知识列表
-│   │       │   ├── get_knowledge.go         # 获取知识详情
-│   │       │   ├── delete_knowledge.go      # 删除知识条目
-│   │       │   ├── search_knowledge.go      # 语义搜索
-│   │       │   └── ask_knowledge.go         # RAG 问答
-│   │       ├── category/                    # 分类用例层（2026-04-17）
-│   │       │   ├── list_category.go         # 列出分类
-│   │       │   ├── create_category.go       # 创建分类
-│   │       │   ├── delete_category.go       # 删除分类
-│   │       │   └── get_knowledge_by_category.go  # 按分类查询知识
-│   │       └── llm_stats/                   # ← 新增：LLM 统计用例层（2026-04-21）
-│   │           ├── get_overview.go          # 获取概览统计
-│   │           ├── get_trend.go             # 获取趋势数据
-│   │           └── list_conversations.go    # 获取对话列表
+│   │       ├── aggregate_test.go            # Health 聚合根测试
+│   │       ├── valueobject.go               # HealthStatus 值对象
+│   │       └── valueobject_test.go          # HealthStatus 测试
 │   ├── interfaces/                          # 接口层（协议适配）
 │   │   └── http/
 │   │       ├── handler/
 │   │       │   ├── health_handler.go        # 健康检查 Handler（2026-04-15）
+│   │       │   ├── health_handler_test.go   # 健康检查 Handler 测试
 │   │       │   ├── knowledge_handler.go     # 知识库 Handler（2026-04-15）
 │   │       │   ├── timer_handler.go          # 定时任务 Handler（2026-04-15）
 │   │       │   ├── mcp_handler.go           # MCP Handler（2026-04-15）
@@ -73,18 +52,27 @@ server-go/
 │   │       │   └── llm_stats_handler.go       # LLM 统计 Handler（2026-04-21）
 │   │       ├── middleware/
 │   │       │   ├── recovery.go              # 异常恢复（2026-04-14）
+│   │       │   ├── recovery_test.go           # 异常恢复测试
 │   │       │   ├── logger.go                # 请求日志（2026-04-14）
+│   │       │   ├── logger_test.go             # 请求日志测试
 │   │       │   ├── cors.go                  # 跨域支持（2026-04-14）
-│   │       │   └── request_id.go            # 请求ID追踪（2026-04-14）
+│   │       │   ├── cors_test.go               # 跨域支持测试
+│   │       │   ├── request_id.go            # 请求ID追踪（2026-04-14）
+│   │       │   └── request_id_test.go       # 请求ID追踪测试
 │   │       ├── dto/
+│   │       │   ├── category_dto.go          # 分类 DTO（2026-04-17）
 │   │       │   ├── health_dto.go            # HTTP DTO（2026-04-15）
-│   │       │   └── knowledge_dto.go         # ← 新增：知识库 DTO（2026-04-15）
+│   │       │   ├── knowledge_dto.go         # ← 新增：知识库 DTO（2026-04-15）
+│   │       │   ├── mcp_dto.go               # MCP DTO（2026-04-15）
+│   │       │   └── timer_dto.go             # 定时任务 DTO（2026-04-15）
 │   │       └── router.go                    # 路由注册（2026-04-14）
 │   ├── infrastructure/                      # 基础设施层（技术实现）
 │   │   ├── config/
-│   │   │   └── config.go                    # Viper 配置管理（2026-04-15）
+│   │   │   ├── config.go                    # Viper 配置管理（2026-04-15）
+│   │   │   └── config_test.go               # 配置管理测试
 │   │   ├── logger/
-│   │   │   └── logger.go                    # Zap 日志实现（2026-04-14）
+│   │   │   ├── logger.go                    # Zap 日志实现（2026-04-14）
+│   │   │   └── logger_test.go               # 日志实现测试
 │   │   └── server/
 │   │       └── gin_server.go                # Gin HTTP 服务器适配器（2026-04-14）
 │   ├── db/                                  # ← 新增：数据库层（2026-04-15）
@@ -102,24 +90,79 @@ server-go/
 │   │       ├── timer_log_repo.go            # 定时任务日志 Repository
 │   │       ├── mcp_repo.go                  # MCP Repository
 │   │       ├── category_repo.go             # 分类 Repository（2026-04-17）
-│   │       └── notification_repo.go         # 通知 Repository（2026-04-20）
+│   │       └── notification.go              # 通知 Repository（2026-04-20）
 │   ├── queue/                               # ← 新增：消息队列层（2026-04-15）
 │   │   ├── queue.go                         # Queue 接口定义
 │   │   └── badger_queue.go                  # BadgerDB 队列实现
-│   └── scheduler/                           # ← 新增：任务调度层（2026-04-15）
-│       └── scheduler.go                     # Cron 调度器
-│   ├── application/service/                  # 应用层服务（2026-04-20）
-│   │   ├── callback_executor.go              # 回调执行器
-│   │   └── notification.go                   # 通知服务（新增）
+│   ├── scheduler/                           # ← 新增：任务调度层（2026-04-15）
+│   │   └── scheduler.go                     # Cron 调度器
+│   ├── mcp/                                 # ← 新增：MCP 客户端层（2026-04-16）
+│   │   ├── client.go                        # MCP 客户端核心
+│   │   ├── http.go                          # MCP HTTP 传输实现
+│   │   └── stdio.go                         # MCP stdio 传输实现
+│   └── application/                         # 应用层（用例编排）
+│       ├── result/
+│       │   └── result.go                    # 统一响应结果封装（2026-04-14）
+│       ├── service/
+│       │   ├── callback_executor.go         # 回调执行器（2026-04-20）
+│       │   ├── conversation_service.go      # 对话服务（2026-04-21）
+│       │   ├── intent_proxy.go              # 意图识别代理服务（2026-04-22）
+│       │   ├── llm_base_url.go              # LLM 基础地址统一解析（2026-04-22）
+│       │   ├── llm_proxy.go                 # LLM 代理服务（2026-04-22）
+│       │   ├── notification.go              # 通知服务（2026-04-20）
+│       │   └── rag_proxy.go                 # RAG 代理服务（2026-04-22）
+│       └── usecase/
+│           ├── category/
+│           │   ├── create_category.go
+│           │   ├── delete_category.go
+│           │   ├── get_knowledge_by_category.go
+│           │   └── list_category.go
+│           ├── health/
+│           │   ├── check_health.go
+│           │   └── check_health_test.go
+│           ├── knowledge/
+│           │   ├── ask_knowledge.go
+│           │   ├── create_knowledge.go
+│           │   ├── delete_knowledge.go
+│           │   ├── get_knowledge.go
+│           │   ├── list_knowledge.go
+│           │   └── search_knowledge.go
+│           ├── llm_stats/
+│           │   ├── get_overview.go
+│           │   ├── get_trend.go
+│           │   └── list_conversations.go
+│           ├── mcp/
+│           │   ├── create_mcp.go
+│           │   ├── delete_mcp.go
+│           │   ├── get_mcp.go
+│           │   ├── list_mcp.go
+│           │   └── test_mcp.go
+│           └── timer/
+│               ├── create_timer.go
+│               ├── delete_timer.go
+│               ├── get_timer.go
+│               ├── list_timer.go
+│               ├── list_timer_logs.go
+│               ├── pause_timer.go
+│               ├── resume_timer.go
+│               ├── trigger_timer.go
+│               └── update_timer.go
 ├── pkg/
 │   └── utils/
 │       └── validator.go                     # 通用验证工具（2026-04-14）
 ├── docs/
-│   └── feature/                             # 技术方案文档
+│   ├── change-logs/                         # 变更日志
+│   ├── feature/                             # 技术方案文档
+│   └── roadmap/
+│       └── mvp.md                           # MVP 需求文档
 ├── .claude/
 │   └── rules/
 │       └── rules.md                         # 服务规则文件（2026-04-15）
+├── build/                                   # 构建输出（含 server.exe）
+├── data/
+│   └── server-go.db                         # SQLite 本地数据文件
 ├── go.mod                                   # Go 模块定义
+├── go.sum                                   # Go 依赖校验
 ├── Makefile                                 # 构建脚本（2026-04-14）
 └── AGENTS.md                                # 本文件
 ```
@@ -167,6 +210,11 @@ server-go/
 - ❌ 在 repository 中直接暴露数据库实现细节
 
 ## 🕒 最后更新时间
+
+2026-04-22：修正 AGENTS.md 目录树
+- 移除重复的旧 application/ 块，补全 mcp/、timer/ usecase、test 文件、docs/ 子目录、data/、build/、go.sum
+- 修正 repository 下 notification_repo.go 为 notification.go
+- 统一 application/ 位置到 internal/ 末尾
 
 2026-04-22：统一 LLM 代理服务配置读取
 - 新增 llm_base_url.go 统一解析 llm_py_url

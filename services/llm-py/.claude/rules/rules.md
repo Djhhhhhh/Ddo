@@ -1,11 +1,12 @@
 # Service Rules
-
-> 由 AI 在开发过程中自动维护的规则文件。
-> 发现时间：2026-04-14
-
-## 架构规则
-
-- **分层架构**：FastAPI "大门"层 (`app/api/`) + LangChain "大脑"层 (`app/core/`)
+ 
+ > 由 AI 在开发过程中自动维护的规则文件。
+ > 发现时间：2026-04-14
+ > 更新时间：2026-04-22 20:14
+ 
+ ## 架构规则
+ 
+ - **分层架构**：FastAPI "大门"层 (`app/api/`) + LangChain "大脑"层 (`app/core/`)
   - FastAPI 负责：HTTP 路由、请求验证、并发控制、部署运维
   - LangChain 负责：提示模板、模型调用、逻辑编排、流式处理（2026-04-15）
   - **RAG Embedder**：`app/core/embedder.py` 配置化 embedding 服务，支持批处理和自动重试（2026-04-15）
@@ -13,8 +14,10 @@
 - FastAPI 应用结构：app/main.py 创建实例，app/api/ 存放路由，app/core/ 存放配置和核心逻辑（2026-04-14）
 - 路由聚合模式：在 app/api/__init__.py 中使用 APIRouter 聚合所有子路由，统一 prefix="/api"（2026-04-14）
 - 配置管理：使用 Pydantic Settings 统一处理环境变量和 .env 文件，通过 `@lru_cache` 缓存配置实例（2026-04-14）
+- 运行时配置优先级：`main.py` 启动时先读取 `config.json`，再回退到 `get_settings()`；`app/core/config.py` 同时负责 `DDO_DATA_DIR` 与 `DDO_LLM_PY_CONFIG` 的路径解析（发现日期：2026-04-22）
 - 生命周期管理：使用 FastAPI 的 lifespan 上下文管理器处理启动/关闭逻辑（2026-04-15）
 - 占位实现：未实现的功能返回 HTTP 501，并在错误信息中注明对应的 Task ID（2026-04-14）
+- 目录结构补充：`app/core/chains/` 用于封装 LangChain 业务链，`app/models/document.py` 负责 RAG 文档/向量存储共享数据模型（发现日期：2026-04-22）
 
 ### LangChain 架构规则（新增）
 
@@ -72,15 +75,13 @@
   - API 日志：`[embed_api_success] documents=N`
   - 错误日志：`[embedder_error] error_type=X message=Y`
 - 配置命名：环境变量使用大写下划线，Settings 类属性使用小写下划线（2026-04-14）
+- 启动入口 `main.py` 必须显式把解析后的 `host`、`port`、`reload`、`log_level` 传给 `uvicorn.run()`，不要在部署文档中假设 uvicorn 会自动读取 `.env` 里的运行参数（发现日期：2026-04-22）
 - 错误处理：使用 FastAPI 的 HTTPException，明确返回合适的 HTTP 状态码（2026-04-14）
   - 400 Bad Request: 请求参数验证失败
   - 429 Too Many Requests: API 限流
   - 503 Service Unavailable: 服务临时不可用
   - 500 Internal Server Error: 内部错误
 - 自定义异常：外部 API 错误封装为自定义异常类，映射到合适的 HTTP 状态码（2026-04-15）
-  - EmbeddingError: 基础 embedding 异常，带 status_code 属性
-  - RateLimitError: 限流错误 (429)
-  - NetworkError: 网络错误 (503)
 - 缓存管理：缓存需记录时间戳，支持 TTL 和手动刷新，日志记录缓存命中/未命中（2026-04-15）
 ## 常见陷阱
 
@@ -96,6 +97,7 @@
 - **RAG Prompt Template**: 使用 LangChain `ChatPromptTemplate` 定义 RAG 系统提示，包含 Context 和 Question 变量（2026-04-15）
 - **Cosine Distance Conversion**: Chroma 返回 distance，需转换为 similarity: `score = 1 - distance`（2026-04-15）
 - **配置文件优先级**：main.py 启动时直接从 config.json 读取 host/port 传给 uvicorn，不要依赖 Pydantic Settings 的环境变量覆盖（发现日期：2026-04-22）
+- `.env` 仅承载密钥和基础环境变量；服务监听地址、端口与 reload 等运行参数要以运行时 config.json / Settings 解析结果为准（发现日期：2026-04-22）
 
 ### API Endpoint 定义示例
 
