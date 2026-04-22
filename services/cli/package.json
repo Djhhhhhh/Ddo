@@ -1,5 +1,5 @@
 {
-  "name": "ddo-cli",
+  "name": "@_djhhh/ddo-cli",
   "version": "0.1.0",
   "description": "Ddo - 个人智能工作空间 CLI",
   "main": "dist/index.js",
@@ -44,7 +44,7 @@
   "engines": {
     "node": ">=18.0.0"
   },
-  "author": "@_djhhh/ddo-cli",
+  "author": "Djhhhhhh",
   "repository": {
     "type": "git",
     "url": "https://github.com/Djhhhhhh/Ddo.git"
