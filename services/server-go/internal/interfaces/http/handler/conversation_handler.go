@@ -33,11 +33,12 @@ type ChatRequest struct {
 
 // ChatResponse 对话响应
 type ChatResponse struct {
-	Decision      string                 `json:"decision"`
-	Intent        IntentDetail           `json:"intent"`
-	Answer        string                 `json:"answer"`
-	Sources       []string               `json:"sources,omitempty"`
-	RetrievedDocs []RetrievedDoc         `json:"retrieved_docs,omitempty"`
+	Decision       string                 `json:"decision"`
+	Intent         IntentDetail           `json:"intent"`
+	Answer         string                 `json:"answer"`
+	Sources        []string               `json:"sources,omitempty"`
+	RetrievedDocs  []RetrievedDoc         `json:"retrieved_docs,omitempty"`
+	ConversationID string                 `json:"conversation_id,omitempty"`
 }
 
 // IntentDetail 意图详情
@@ -97,9 +98,10 @@ func (h *ConversationHandler) Chat(c *gin.Context) {
 				NeedKnowledge: resp.Intent.NeedKnowledge,
 				Confidence:    resp.Intent.Confidence,
 			},
-			Answer:        resp.Answer,
-			Sources:       resp.Sources,
-			RetrievedDocs: convertRetrievedDocs(resp.RetrievedDocs),
+			Answer:         resp.Answer,
+			Sources:        resp.Sources,
+			RetrievedDocs:  convertRetrievedDocs(resp.RetrievedDocs),
+			ConversationID: resp.ConversationID,
 		},
 	})
 }

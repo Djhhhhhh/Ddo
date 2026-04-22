@@ -55,6 +55,38 @@ const createForm = ref<CreateKnowledgeRequest>({
 const createTagsInput = ref('')
 const createLoading = ref(false)
 
+// File import
+const fileInputRef = ref<HTMLInputElement | null>(null)
+const selectedFileName = ref('')
+
+function handleFileSelect(event: Event) {
+  const target = event.target as HTMLInputElement
+  const file = target.files?.[0]
+  if (!file) return
+
+  const fileName = file.name.toLowerCase()
+  if (!fileName.endsWith('.md') && !fileName.endsWith('.txt')) {
+    alert('仅支持 .md 或 .txt 文件')
+    return
+  }
+
+  selectedFileName.value = file.name
+  const reader = new FileReader()
+  reader.onload = (e) => {
+    const content = e.target?.result as string
+    createForm.value.content = content
+    // 如果标题为空，使用文件名（去掉扩展名）作为标题
+    if (!createForm.value.title) {
+      createForm.value.title = file.name.replace(/\.(md|txt)$/, '')
+    }
+  }
+  reader.readAsText(file)
+}
+
+function triggerFileSelect() {
+  fileInputRef.value?.click()
+}
+
 // Load knowledge list
 async function loadKnowledge() {
   loading.value = true
@@ -143,12 +175,13 @@ async function submitCreate() {
     const payload = {
       title: createForm.value.title,
       content: createForm.value.content,
-      source: 'web'
+      source: selectedFileName.value ? 'file-import' : 'web'
     }
     await knowledgeApi.createKnowledge(payload)
     showCreateForm.value = false
     createForm.value = { title: '', content: '', category: '', tags: [], source: '' }
     createTagsInput.value = ''
+    selectedFileName.value = ''
     await loadKnowledge()
   } catch (e) {
     console.error('Failed to create knowledge:', e)
@@ -210,23 +243,23 @@ function formatDate(date?: string) {
                 @keydown.enter="handleSearch"
               />
             </div>
-            <div class="flex gap-2">
+            <div class="flex gap-2 items-center shrink-0">
               <Select
                 v-model="selectedCategory"
                 :options="allCategories"
                 placeholder="分类"
-                class="w-36"
+                class="!w-28"
                 @update:modelValue="handleSearch"
               />
               <Select
                 v-model="selectedTag"
                 :options="allTags"
                 placeholder="标签"
-                class="w-36"
+                class="!w-28"
                 @update:modelValue="handleSearch"
               />
-              <Button variant="gray" @click="handleSearch">搜索</Button>
-              <Button v-if="searchKeyword || selectedCategory || selectedTag" variant="white" @click="resetFilters">
+              <Button variant="gray" class="shrink-0" @click="handleSearch">搜索</Button>
+              <Button v-if="searchKeyword || selectedCategory || selectedTag" variant="white" class="shrink-0" @click="resetFilters">
                 重置
               </Button>
             </div>
@@ -367,32 +400,58 @@ function formatDate(date?: string) {
     </Modal>
 
     <!-- Create Form Modal -->
-    <Modal v-model="showCreateForm" title="新增知识库词条" class="max-w-2xl">
-      <div class="space-y-4">
-        <div>
-          <label class="block text-sm font-medium text-gray-700 mb-1">标题 *</label>
-          <Input v-model="createForm.title" placeholder="输入知识标题" />
+    <Modal v-model="showCreateForm" title="新增知识库词条" maxWidth="max-w-3xl">
+      <div class="flex gap-5">
+        <!-- Left Panel - 35% -->
+        <div class="w-[35%] space-y-4 shrink-0">
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">标题 *</label>
+            <Input v-model="createForm.title" placeholder="输入知识标题" />
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-2">导入文档</label>
+            <input
+              ref="fileInputRef"
+              type="file"
+              accept=".md,.txt"
+              class="hidden"
+              @change="handleFileSelect"
+            />
+            <div
+              class="border border-dashed border-gray-300 bg-gray-50 flex flex-col items-center justify-center py-5 px-3 cursor-pointer hover:bg-gray-100 transition-colors"
+              style="border-radius: 12px;"
+              @click="triggerFileSelect"
+            >
+              <span class="text-2xl text-gray-400 mb-1">&#8593;</span>
+              <span class="text-xs text-gray-500">点击上传 .md / .txt</span>
+            </div>
+            <p v-if="selectedFileName" class="text-xs text-gray-500 mt-2 truncate">
+              {{ selectedFileName }}
+            </p>
+          </div>
         </div>
-        <div>
+
+        <!-- Right Panel - 65% -->
+        <div class="w-[65%] flex flex-col min-w-0">
           <label class="block text-sm font-medium text-gray-700 mb-1">内容 *</label>
           <textarea
             v-model="createForm.content"
-            placeholder="输入知识内容..."
-            class="w-full h-32 bg-white border border-gray-200 outline-none p-4 text-sm"
-            style="border-radius: 12px;"
+            placeholder="输入知识内容或导入文档..."
+            class="w-full bg-white border border-gray-200 outline-none p-4 text-sm resize-none"
+            style="border-radius: 12px; height: 240px;"
           />
         </div>
-        <div class="flex justify-end gap-2 pt-4">
-          <Button variant="gray" @click="showCreateForm = false">取消</Button>
-          <Button
-            variant="black"
-            :loading="createLoading"
-            :disabled="!createForm.title || !createForm.content"
-            @click="submitCreate"
-          >
-            创建
-          </Button>
-        </div>
+      </div>
+      <div class="flex justify-end gap-2 pt-4">
+        <Button variant="gray" @click="showCreateForm = false">取消</Button>
+        <Button
+          variant="black"
+          :loading="createLoading"
+          :disabled="!createForm.title || !createForm.content"
+          @click="submitCreate"
+        >
+          创建
+        </Button>
       </div>
     </Modal>
 

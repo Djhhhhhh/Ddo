@@ -42,6 +42,7 @@ export interface StreamEvent {
 export declare class ConversationHandler {
     private state;
     private serverGoUrl;
+    private conversationId;
     constructor(serverGoUrl?: string);
     /**
      * 处理用户输入

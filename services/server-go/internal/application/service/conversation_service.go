@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/ddo/server-go/internal/application/result"
+	"github.com/google/uuid"
 )
 
 // DecisionType 路由决策类型
@@ -48,11 +49,12 @@ type ConversationRequest struct {
 
 // ConversationResponse 对话响应
 type ConversationResponse struct {
-	Decision     DecisionType   `json:"decision"`
-	Intent       IntentDetail   `json:"intent"`
-	Answer       string         `json:"answer"`
-	Sources      []string       `json:"sources,omitempty"`
-	RetrievedDocs []RetrievedDoc `json:"retrieved_docs,omitempty"`
+	Decision       DecisionType   `json:"decision"`
+	Intent         IntentDetail   `json:"intent"`
+	Answer         string         `json:"answer"`
+	Sources        []string       `json:"sources,omitempty"`
+	RetrievedDocs  []RetrievedDoc `json:"retrieved_docs,omitempty"`
+	ConversationID string         `json:"conversation_id,omitempty"`
 }
 
 // IntentDetail 意图详情
@@ -105,9 +107,10 @@ type DeltaData struct {
 
 // CompletedData 完成事件数据
 type CompletedData struct {
-	AnswerLength   int      `json:"answer_length"`
-	Sources        []string `json:"sources,omitempty"`
-	ProcessingTime int64    `json:"processing_time_ms,omitempty"`
+	AnswerLength     int      `json:"answer_length"`
+	Sources          []string `json:"sources,omitempty"`
+	ProcessingTime   int64    `json:"processing_time_ms,omitempty"`
+	ConversationID   string   `json:"conversation_id,omitempty"`
 }
 
 // ClarifyData 澄清询问事件数据
@@ -152,6 +155,11 @@ func (s *conversationService) ProcessQuery(ctx context.Context, req *Conversatio
 		return result.NewFailure[ConversationResponse](fmt.Errorf("查询内容不能为空"))
 	}
 
+	// 确保 conversation_id 存在，用于跨请求保持会话
+	if req.ConversationID == "" {
+		req.ConversationID = uuid.New().String()
+	}
+
 	// Step 1: 意图识别
 	intentResult, err := s.intentProxy.RecognizeIntent(ctx, req.Query, req.Model)
 	if err != nil {
@@ -186,6 +194,11 @@ func (s *conversationService) ProcessQuery(ctx context.Context, req *Conversatio
 func (s *conversationService) ProcessQueryStream(ctx context.Context, req *ConversationRequest) (<-chan StreamEvent, error) {
 	if req.Query == "" {
 		return nil, fmt.Errorf("查询内容不能为空")
+	}
+
+	// 确保 conversation_id 存在，用于跨请求保持会话
+	if req.ConversationID == "" {
+		req.ConversationID = uuid.New().String()
 	}
 
 	eventChan := make(chan StreamEvent)
@@ -290,6 +303,22 @@ func (s *conversationService) makeDecision(intent *IntentResult, kbPriority bool
 	return DecisionChat
 }
 
+// saveRAGConversation 保存 RAG 对话记录（使用 preset_reply 避免重复调用 LLM）
+func (s *conversationService) saveRAGConversation(ctx context.Context, req *ConversationRequest, answer string) {
+	chatReq := &ChatRequest{
+		Messages:       []Message{{Role: "user", Content: req.Query}},
+		Model:          req.Model,
+		Stream:         false,
+		ConversationID: req.ConversationID,
+		SessionID:      "cli",
+		PresetReply:    answer,
+	}
+	// 异步保存，不阻塞返回
+	go func() {
+		_, _ = s.llmProxy.Chat(ctx, chatReq)
+	}()
+}
+
 // handleRAG 处理RAG查询（非流式）
 func (s *conversationService) handleRAG(ctx context.Context, req *ConversationRequest, intent IntentDetail) *result.Result[ConversationResponse] {
 	// 步骤1：检索文档
@@ -320,12 +349,16 @@ func (s *conversationService) handleRAG(ctx context.Context, req *ConversationRe
 		return s.handleChat(ctx, req, intent)
 	}
 
+	// 步骤4：保存对话记录
+	s.saveRAGConversation(ctx, req, rawResp.Answer)
+
 	return result.NewSuccess(ConversationResponse{
-		Decision:     DecisionRAG,
-		Intent:       intent,
-		Answer:       rawResp.Answer,
-		Sources:      rawResp.Sources,
-		RetrievedDocs: convertToRetrievedDocs(rawResp),
+		Decision:       DecisionRAG,
+		Intent:         intent,
+		Answer:         rawResp.Answer,
+		Sources:        rawResp.Sources,
+		RetrievedDocs:  convertToRetrievedDocs(rawResp),
+		ConversationID: req.ConversationID,
 	})
 }
 
@@ -396,6 +429,8 @@ func (s *conversationService) handleRAGStream(ctx context.Context, req *Conversa
 			}
 			return
 		}
+		// 保存对话记录
+		s.saveRAGConversation(ctx, req, rawResp.Answer)
 		// 一次性发送完整回答
 		eventChan <- StreamEvent{
 			Type: "generating",
@@ -430,6 +465,9 @@ func (s *conversationService) handleRAGStream(ctx context.Context, req *Conversa
 		index++
 	}
 
+	// 保存对话记录
+	s.saveRAGConversation(ctx, req, fullAnswer)
+
 	// 发送完成事件
 	sources := []string{}
 	for _, doc := range docs {
@@ -438,8 +476,9 @@ func (s *conversationService) handleRAGStream(ctx context.Context, req *Conversa
 	eventChan <- StreamEvent{
 		Type: "completed",
 		Data: CompletedData{
-			AnswerLength: len(fullAnswer),
-			Sources:      sources,
+			AnswerLength:   len(fullAnswer),
+			Sources:        sources,
+			ConversationID: req.ConversationID,
 		},
 	}
 }
@@ -464,9 +503,10 @@ func (s *conversationService) handleChat(ctx context.Context, req *ConversationR
 	}
 
 	return result.NewSuccess(ConversationResponse{
-		Decision: DecisionChat,
-		Intent:   intent,
-		Answer:   resp.Content,
+		Decision:       DecisionChat,
+		Intent:         intent,
+		Answer:         resp.Content,
+		ConversationID: req.ConversationID,
 	})
 }
 
@@ -531,7 +571,10 @@ func (s *conversationService) handleChatStream(ctx context.Context, req *Convers
 	// 发送完成事件
 	eventChan <- StreamEvent{
 		Type: "completed",
-		Data: CompletedData{AnswerLength: len(fullAnswer)},
+		Data: CompletedData{
+			AnswerLength:     len(fullAnswer),
+			ConversationID:   req.ConversationID,
+		},
 	}
 }
 
@@ -567,7 +610,10 @@ func (s *conversationService) streamReplyWithSave(ctx context.Context, req *Conv
 
 	eventChan <- StreamEvent{
 		Type: "completed",
-		Data: CompletedData{AnswerLength: len(reply)},
+		Data: CompletedData{
+			AnswerLength:   len(reply),
+			ConversationID: req.ConversationID,
+		},
 	}
 }
 

@@ -27,6 +27,7 @@ class ConversationHandler {
             answerBuffer: '',
             isStreaming: false,
         };
+        this.conversationId = null;
         const dataDir = (0, paths_1.resolveDataDir)({
             envDataDir: process.env.DDO_DATA_DIR,
         });
@@ -39,7 +40,7 @@ class ConversationHandler {
         if (!input.trim()) {
             return true;
         }
-        // 重置状态
+        // 重置状态（保留 conversationId 以维持会话连续性）
         this.resetState();
         this.state.status = 'analyzing';
         // 显示正在分析
@@ -56,6 +57,7 @@ class ConversationHandler {
                     query: input,
                     stream: true,
                     kb_priority: kbPriority,
+                    conversation_id: this.conversationId,
                 }),
             });
             if (!response.ok) {
@@ -236,6 +238,10 @@ class ConversationHandler {
     handleCompleted(data) {
         this.state.status = 'completed';
         this.state.isStreaming = false;
+        // 保存会话 ID，后续查询可保持连续性
+        if (data.conversation_id) {
+            this.conversationId = data.conversation_id;
+        }
         console.log(); // 结束流式输出后换行
         // 显示来源（如果有）- 支持 sources 或 retrieved_docs
         const sources = data.sources || (data.retrieved_docs || []);

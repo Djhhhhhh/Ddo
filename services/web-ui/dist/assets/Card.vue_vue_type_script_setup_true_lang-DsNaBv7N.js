@@ -1,1 +1,0 @@
-import{d as o,c as a,n as s,A as t,o as n}from"./index-C3JQASWu.js";const c=o({__name:"Card",props:{hoverable:{type:Boolean}},setup(e){return(r,l)=>(n(),a("div",{class:s(["bg-white border border-gray-200 p-6 transition-colors duration-150",{"hover:border-gray-300":e.hoverable}]),style:{"border-radius":"12px"}},[t(r.$slots,"default")],2))}});export{c as _};

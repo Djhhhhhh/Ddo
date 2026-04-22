@@ -30,11 +30,12 @@ class ConversationService:
         session_id: Optional[str] = None,
         title: Optional[str] = None,
         source: str = "api",
-        memory_enabled: bool = False
+        memory_enabled: bool = False,
+        conversation_id: Optional[str] = None,
     ) -> Conversation:
         """Create a new conversation."""
         conversation = Conversation(
-            id=str(uuid4()),
+            id=conversation_id or str(uuid4()),
             session_id=session_id,
             title=title,
             source=source,
@@ -215,5 +216,6 @@ class ConversationService:
         
         return await self.create_conversation(
             session_id=session_id,
-            source=source
+            source=source,
+            conversation_id=conversation_id
         )

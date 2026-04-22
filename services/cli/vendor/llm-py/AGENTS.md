@@ -24,7 +24,7 @@ llm-py 是 Ddo 项目的 LLM 代理服务，基于 FastAPI 构建。
 services/llm-py/
 ├── app/                           # 主应用包
 │   ├── __init__.py               # 包初始化
-│   ├── main.py                   # FastAPI 主应用入口
+│   ├── main.py                   # Uvicorn 启动脚本 - 从配置文件读取端口（2026-04-22）
 │   ├── api/                      # API 路由模块 (FastAPI "大门" 层)
 │   │   ├── __init__.py          # 路由聚合 (api_router)
 │   │   ├── health.py            # /api/health - 健康检查
@@ -125,6 +125,10 @@ services/llm-py/
 - ❌ 直接暴露 llm-py 端口到外网（必须走 server-go 代理）
 
 ## 🕒 最后更新时间
+
+2026-04-22：启动脚本改为从配置文件直接读取端口
+- main.py 直接从 config.json 读取 host/port 传给 uvicorn
+- 去除环境变量覆盖依赖，确保配置文件优先级最高
 
 2026-04-21：新增对话记录存储与统计功能
 - 新增 `/api/conversations/*` 对话管理 API

@@ -114,7 +114,7 @@ export interface ApiClientConfig {
 }
 export interface ConversationRequest {
     query: string;
-    conversation_id?: string;
+    conversation_id?: string | null;
     model?: string;
     stream?: boolean;
     kb_priority?: boolean;

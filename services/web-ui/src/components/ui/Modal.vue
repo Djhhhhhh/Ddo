@@ -4,6 +4,7 @@ import { watch } from 'vue'
 const props = defineProps<{
   modelValue: boolean
   title?: string
+  maxWidth?: string
 }>()
 
 const emit = defineEmits<{
@@ -45,7 +46,8 @@ function handleKeydown(e: KeyboardEvent) {
 
         <!-- Modal Content -->
         <div
-          class="relative bg-white border border-gray-200 w-full max-w-lg max-h-[80vh] overflow-auto"
+          class="relative bg-white border border-gray-200 w-full max-h-[85vh] overflow-auto"
+          :class="maxWidth || 'max-w-lg'"
           style="border-radius: 12px;"
         >
           <!-- Header -->

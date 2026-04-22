@@ -95,6 +95,7 @@
 - **Vector Store Abstraction**: 定义 `BaseVectorStore` 接口，支持多后端切换 (Chroma/FAISS)，通过 `get_vector_store()` 工厂方法获取实例（2026-04-15）
 - **RAG Prompt Template**: 使用 LangChain `ChatPromptTemplate` 定义 RAG 系统提示，包含 Context 和 Question 变量（2026-04-15）
 - **Cosine Distance Conversion**: Chroma 返回 distance，需转换为 similarity: `score = 1 - distance`（2026-04-15）
+- **配置文件优先级**：main.py 启动时直接从 config.json 读取 host/port 传给 uvicorn，不要依赖 Pydantic Settings 的环境变量覆盖（发现日期：2026-04-22）
 
 ### API Endpoint 定义示例
 
