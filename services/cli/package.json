@@ -1,6 +1,6 @@
 {
   "name": "@_djhhh/ddo-cli",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "description": "Ddo - 个人智能工作空间 CLI",
   "main": "dist/index.js",
   "files": [

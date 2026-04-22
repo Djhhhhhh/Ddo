@@ -4,6 +4,15 @@ llm-py startup script.
 Entry point for running the FastAPI service with Uvicorn.
 """
 
+import sys
+from pathlib import Path
+
+# Add current directory to sys.path to find installed dependencies
+# (when packaged via npm, dependencies are installed to vendor/llm-py)
+current_dir = Path(__file__).parent
+if str(current_dir) not in sys.path:
+    sys.path.insert(0, str(current_dir))
+
 import uvicorn
 
 from app.core.config import get_settings, _load_runtime_config

@@ -78,6 +78,22 @@ async function bundleLLMPy() {
   await rmrf(outputDir);
   await ensureDir(outputDir);
   await copyDir(llmPyRoot, outputDir, ['__pycache__', '.pytest_cache', '.venv', 'venv', '.mypy_cache']);
+
+  // Install Python dependencies to vendor/llm-py
+  const requirementsPath = path.join(outputDir, 'requirements.txt');
+  if (await fs.access(requirementsPath).then(() => true).catch(() => false)) {
+    console.log('[package-all] installing Python dependencies to vendor/llm-py');
+    await run(process.platform === 'win32' ? 'python' : 'python3', [
+      '-m',
+      'pip',
+      'install',
+      '--target',
+      outputDir,
+      '--upgrade',
+      '-r',
+      requirementsPath,
+    ], outputDir);
+  }
 }
 
 async function bundleWebUi() {
