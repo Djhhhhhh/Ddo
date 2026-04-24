@@ -112,8 +112,8 @@ export interface TimerListResponse {
 export interface Mcp {
   uuid: string;
   name: string;
-  type: 'stdio' | 'http' | 'sse';
-  status: 'connected' | 'disconnected';
+  type: 'stdio' | 'http' | 'streamable_http' | 'sse';
+  status: 'connected' | 'disconnected' | 'active' | 'inactive';
   command?: string;
   args?: string[];
   url?: string;
@@ -122,6 +122,41 @@ export interface Mcp {
 
 export interface McpListResponse {
   mcps: Mcp[];
+}
+
+export interface McpTool {
+  name: string;
+  title?: string;
+  description?: string;
+  inputSchema?: Record<string, unknown>;
+  annotations?: Record<string, unknown>;
+}
+
+export interface McpConnectionTestResponse {
+  status?: string;
+  reachable?: boolean;
+  initializeSucceeded?: boolean;
+  protocolReady?: boolean;
+  latencyMs?: number;
+  serverInfo?: Record<string, unknown>;
+  serverProtocolVersion?: string;
+  serverCapabilities?: Record<string, unknown>;
+  tools?: Array<string | McpTool>;
+  error?: string;
+}
+
+export interface McpToolListResponse {
+  serverId?: string;
+  tools: McpTool[];
+}
+
+export interface McpToolCallResponse {
+  content?: unknown;
+  structuredContent?: unknown;
+  raw?: unknown;
+  isError?: boolean;
+  error?: string;
+  [key: string]: unknown;
 }
 
 export interface McpTestResponse {
@@ -133,32 +168,32 @@ export interface ApiClientConfig {
   serverGoUrl: string;
 }
 
-// === 统一对话接口类型 ===
+ // === 统一对话接口类型 ===
 
-export interface ConversationRequest {
-  query: string;
-  conversation_id?: string | null;
-  model?: string;
-  stream?: boolean;
-  kb_priority?: boolean;
-}
+ export interface ConversationRequest {
+   query: string;
+   conversation_id?: string | null;
+   model?: string;
+   stream?: boolean;
+   kb_priority?: boolean;
+ }
 
-export interface ConversationResponse {
-  decision: string;
-  intent: {
-    type: string;
-    sub_intent: string;
-    need_knowledge: boolean;
-    confidence: number;
-  };
-  answer: string;
-  sources?: string[];
-  retrieved_docs?: {
-    id: string;
-    content: string;
-    score: number;
-  }[];
-}
+ export interface ConversationResponse {
+   decision: string;
+   intent: {
+     type: string;
+     sub_intent: string;
+     need_knowledge: boolean;
+     confidence: number;
+   };
+   answer: string;
+   sources?: string[];
+   retrieved_docs?: {
+     id: string;
+     content: string;
+     score: number;
+   }[];
+ }
 
 /**
  * 创建 API Client
@@ -166,6 +201,30 @@ export interface ConversationResponse {
  */
 export function createApiClient(config: ApiClientConfig) {
   const { serverGoUrl } = config;
+
+  function normalizeOutgoingMcpType(type: string): Mcp['type'] {
+    const normalized = type.trim().toLowerCase().replace(/-/g, '_');
+    if (normalized === 'stdio' || normalized === 'http' || normalized === 'streamable_http' || normalized === 'sse') {
+      return normalized;
+    }
+    return 'http';
+  }
+
+  function encodePathSegment(value: string): string {
+    return encodeURIComponent(value);
+  }
+
+  async function withFallback<T>(requests: Array<() => Promise<T>>): Promise<T> {
+    let lastError: unknown;
+    for (const run of requests) {
+      try {
+        return await run();
+      } catch (error) {
+        lastError = error;
+      }
+    }
+    throw lastError instanceof Error ? lastError : new Error(String(lastError));
+  }
 
   /**
    * 发送 HTTP 请求（无超时限制）
@@ -356,9 +415,31 @@ export function createApiClient(config: ApiClientConfig) {
     headers?: Record<string, string>;
     env?: Record<string, string>;
   }): Promise<Mcp> {
+    const normalizedType = normalizeOutgoingMcpType(data.type);
+    const payload = {
+      ...data,
+      type: normalizedType,
+    };
+
+    if (normalizedType === 'streamable_http') {
+      return withFallback<Mcp>([
+        () => request<Mcp>('/api/v1/mcps', {
+          method: 'POST',
+          body: JSON.stringify(payload),
+        }),
+        () => request<Mcp>('/api/v1/mcps', {
+          method: 'POST',
+          body: JSON.stringify({
+            ...payload,
+            type: 'http',
+          }),
+        }),
+      ]);
+    }
+
     return request<Mcp>('/api/v1/mcps', {
       method: 'POST',
-      body: JSON.stringify(data),
+      body: JSON.stringify(payload),
     });
   }
 
@@ -368,8 +449,67 @@ export function createApiClient(config: ApiClientConfig) {
     });
   }
 
+   async function testMcpConnection(uuid: string): Promise<McpConnectionTestResponse> {
+     return withFallback<McpConnectionTestResponse>([
+       () => request<McpConnectionTestResponse>(`/api/v1/mcps/${uuid}/connect-test`, {
+         method: 'POST',
+       }),
+       async () => {
+         const legacy = await testMcp(uuid);
+         return {
+           status: legacy.status,
+           reachable: legacy.status === 'connected' || legacy.status === 'active' || legacy.status === 'ok',
+           initializeSucceeded: legacy.status === 'connected' || legacy.status === 'active' || legacy.status === 'ok',
+           protocolReady: legacy.status === 'connected' || legacy.status === 'active' || legacy.status === 'ok',
+           tools: legacy.tools,
+         };
+       },
+     ]);
+   }
+
+   async function getMcpTools(uuid: string): Promise<McpToolListResponse> {
+     return withFallback<McpToolListResponse>([
+       () => request<McpToolListResponse>(`/api/v1/mcps/${uuid}/tools`),
+       async () => {
+         const legacy = await testMcp(uuid);
+         return {
+           serverId: uuid,
+           tools: (legacy.tools || []).map((name) => ({ name })),
+         };
+       },
+     ]);
+   }
+
+   async function callMcpTool(
+     uuid: string,
+     toolName: string,
+     args: Record<string, unknown>
+   ): Promise<McpToolCallResponse> {
+     return request<McpToolCallResponse>(`/api/v1/mcps/${uuid}/tools/${encodePathSegment(toolName)}/test`, {
+       method: 'POST',
+       body: JSON.stringify({ arguments: args }),
+     });
+   }
+
   async function deleteMcp(uuid: string): Promise<{ success: boolean }> {
-    return request<{ success: boolean }>(`/api/v1/mcps/${uuid}/delete`, {
+    return withFallback<{ success: boolean }>([
+      () => request<{ success: boolean }>(`/api/v1/mcps/${uuid}`, {
+        method: 'DELETE',
+      }),
+      () => request<{ success: boolean }>(`/api/v1/mcps/${uuid}/delete`, {
+        method: 'POST',
+      }),
+    ]);
+  }
+
+  async function connectMcp(uuid: string): Promise<{ status: string }> {
+    return request<{ status: string }>(`/api/v1/mcps/${uuid}/connect`, {
+      method: 'POST',
+    });
+  }
+
+  async function disconnectMcp(uuid: string): Promise<{ status: string }> {
+    return request<{ status: string }>(`/api/v1/mcps/${uuid}/disconnect`, {
       method: 'POST',
     });
   }
@@ -399,7 +539,12 @@ export function createApiClient(config: ApiClientConfig) {
     getMcpList,
     createMcp,
     testMcp,
+    testMcpConnection,
+    getMcpTools,
+    callMcpTool,
     deleteMcp,
+    connectMcp,
+    disconnectMcp,
     // 统一对话
     conversationChat,
     conversationChatStream,

@@ -15,6 +15,28 @@ const paths_1 = require("../utils/paths");
  */
 function createApiClient(config) {
     const { serverGoUrl } = config;
+    function normalizeOutgoingMcpType(type) {
+        const normalized = type.trim().toLowerCase().replace(/-/g, '_');
+        if (normalized === 'stdio' || normalized === 'http' || normalized === 'streamable_http' || normalized === 'sse') {
+            return normalized;
+        }
+        return 'http';
+    }
+    function encodePathSegment(value) {
+        return encodeURIComponent(value);
+    }
+    async function withFallback(requests) {
+        let lastError;
+        for (const run of requests) {
+            try {
+                return await run();
+            }
+            catch (error) {
+                lastError = error;
+            }
+        }
+        throw lastError instanceof Error ? lastError : new Error(String(lastError));
+    }
     /**
      * 发送 HTTP 请求（无超时限制）
      * 自动解包 server-go 的标准响应格式 {code, message, data, ...}
@@ -143,9 +165,29 @@ function createApiClient(config) {
         return request('/api/v1/mcps');
     }
     async function createMcp(data) {
+        const normalizedType = normalizeOutgoingMcpType(data.type);
+        const payload = {
+            ...data,
+            type: normalizedType,
+        };
+        if (normalizedType === 'streamable_http') {
+            return withFallback([
+                () => request('/api/v1/mcps', {
+                    method: 'POST',
+                    body: JSON.stringify(payload),
+                }),
+                () => request('/api/v1/mcps', {
+                    method: 'POST',
+                    body: JSON.stringify({
+                        ...payload,
+                        type: 'http',
+                    }),
+                }),
+            ]);
+        }
         return request('/api/v1/mcps', {
             method: 'POST',
-            body: JSON.stringify(data),
+            body: JSON.stringify(payload),
         });
     }
     async function testMcp(uuid) {
@@ -153,8 +195,58 @@ function createApiClient(config) {
             method: 'POST',
         });
     }
+    async function testMcpConnection(uuid) {
+        return withFallback([
+            () => request(`/api/v1/mcps/${uuid}/connect-test`, {
+                method: 'POST',
+            }),
+            async () => {
+                const legacy = await testMcp(uuid);
+                return {
+                    status: legacy.status,
+                    reachable: legacy.status === 'connected' || legacy.status === 'active' || legacy.status === 'ok',
+                    initializeSucceeded: legacy.status === 'connected' || legacy.status === 'active' || legacy.status === 'ok',
+                    protocolReady: legacy.status === 'connected' || legacy.status === 'active' || legacy.status === 'ok',
+                    tools: legacy.tools,
+                };
+            },
+        ]);
+    }
+    async function getMcpTools(uuid) {
+        return withFallback([
+            () => request(`/api/v1/mcps/${uuid}/tools`),
+            async () => {
+                const legacy = await testMcp(uuid);
+                return {
+                    serverId: uuid,
+                    tools: (legacy.tools || []).map((name) => ({ name })),
+                };
+            },
+        ]);
+    }
+    async function callMcpTool(uuid, toolName, args) {
+        return request(`/api/v1/mcps/${uuid}/tools/${encodePathSegment(toolName)}/test`, {
+            method: 'POST',
+            body: JSON.stringify({ arguments: args }),
+        });
+    }
     async function deleteMcp(uuid) {
-        return request(`/api/v1/mcps/${uuid}/delete`, {
+        return withFallback([
+            () => request(`/api/v1/mcps/${uuid}`, {
+                method: 'DELETE',
+            }),
+            () => request(`/api/v1/mcps/${uuid}/delete`, {
+                method: 'POST',
+            }),
+        ]);
+    }
+    async function connectMcp(uuid) {
+        return request(`/api/v1/mcps/${uuid}/connect`, {
+            method: 'POST',
+        });
+    }
+    async function disconnectMcp(uuid) {
+        return request(`/api/v1/mcps/${uuid}/disconnect`, {
             method: 'POST',
         });
     }
@@ -183,7 +275,12 @@ function createApiClient(config) {
         getMcpList,
         createMcp,
         testMcp,
+        testMcpConnection,
+        getMcpTools,
+        callMcpTool,
         deleteMcp,
+        connectMcp,
+        disconnectMcp,
         // 统一对话
         conversationChat,
         conversationChatStream,

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 defineProps<{
-  variant?: 'gray' | 'white' | 'black'
+  variant?: 'gray' | 'white' | 'black' | 'primary'
   size?: 'sm' | 'md' | 'lg'
   disabled?: boolean
   loading?: boolean
@@ -16,7 +16,8 @@ defineProps<{
       'text-lg': size === 'lg',
       'bg-gray-100 text-gray-700 border border-gray-200 hover:bg-gray-200': variant === 'gray' || !variant,
       'bg-white text-gray-700 border border-gray-200 hover:bg-gray-50': variant === 'white',
-      'bg-gray-900 text-white border border-gray-900 hover:bg-gray-800': variant === 'black'
+      'bg-gray-900 text-white border border-gray-900 hover:bg-gray-800': variant === 'black',
+      'bg-gray-600 text-white border border-gray-600 hover:bg-gray-700': variant === 'primary'
     }"
     :style="{
       borderRadius: '9999px',

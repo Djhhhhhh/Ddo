@@ -97,11 +97,17 @@ func (r *Router) RegisterRoutes(
 		// MCP 管理路由组
 		mcps := v1.Group("/mcps")
 		{
-			mcps.POST("", mcpHandler.CreateMCP)                    // 创建 MCP 配置
-			mcps.GET("", mcpHandler.ListMCP)                      // 查询 MCP 列表
-			mcps.GET("/:uuid", mcpHandler.GetMCP)                  // 获取 MCP 详情
-			mcps.POST("/:uuid/delete", mcpHandler.DeleteMCP)      // 删除 MCP 配置
-			mcps.POST("/:uuid/test", mcpHandler.TestMCP)          // 测试 MCP 连接
+			mcps.POST("", mcpHandler.CreateMCP)                           // 创建 MCP 配置
+			mcps.GET("", mcpHandler.ListMCP)                             // 查询 MCP 列表
+			mcps.GET("/:uuid", mcpHandler.GetMCP)                        // 获取 MCP 详情
+			mcps.POST("/:uuid/delete", mcpHandler.DeleteMCP)              // 删除 MCP 配置（POST 兼容）
+			mcps.DELETE("/:uuid", mcpHandler.DeleteMCP)                  // 删除 MCP 配置（标准 DELETE）
+			mcps.POST("/:uuid/test", mcpHandler.TestMCP)                 // 测试 MCP 连接（旧版兼容）
+			mcps.POST("/:uuid/connect-test", mcpHandler.ConnectTestMCP)  // 连接存活测试
+			mcps.POST("/:uuid/connect", mcpHandler.ConnectMCP)           // 建立连接
+			mcps.POST("/:uuid/disconnect", mcpHandler.DisconnectMCP)     // 断开连接
+			mcps.GET("/:uuid/tools", mcpHandler.ListMCPTools)            // 获取工具列表
+			mcps.POST("/:uuid/tools/:tool_name/test", mcpHandler.CallMCPTool) // 测试调用工具
 		}
 
 		// 分类管理路由组

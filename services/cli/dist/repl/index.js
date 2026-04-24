@@ -98,6 +98,10 @@ commands_1.registry.register(timer_commands_1.timerHelpCommand);
 commands_1.registry.register(mcp_commands_1.mcpListCommand);
 commands_1.registry.register(mcp_commands_1.mcpAddCommand);
 commands_1.registry.register(mcp_commands_1.mcpTestCommand);
+commands_1.registry.register(mcp_commands_1.mcpConnectCommand);
+commands_1.registry.register(mcp_commands_1.mcpDisconnectCommand);
+commands_1.registry.register(mcp_commands_1.mcpToolsCommand);
+commands_1.registry.register(mcp_commands_1.mcpCallCommand);
 commands_1.registry.register(mcp_commands_1.mcpRemoveCommand);
 commands_1.registry.register(mcp_commands_1.mcpHelpCommand);
 // 注册工具（用于 NLP/意图识别触发的工具调用）

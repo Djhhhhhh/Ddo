@@ -25,7 +25,7 @@ import { kbListCommand, kbAddCommand, kbSearchCommand, kbRemoveCommand, kbHelpCo
 // Timer 子命令
 import { timerListCommand, timerAddCommand, timerAddIntervalCommand, timerAddDelayCommand, timerPauseCommand, timerResumeCommand, timerRemoveCommand, timerHelpCommand } from './commands/timer-commands';
 // MCP 子命令
-import { mcpListCommand, mcpAddCommand, mcpTestCommand, mcpRemoveCommand, mcpHelpCommand } from './commands/mcp-commands';
+import { mcpListCommand, mcpAddCommand, mcpTestCommand, mcpToolsCommand, mcpCallCommand, mcpRemoveCommand, mcpConnectCommand, mcpDisconnectCommand, mcpHelpCommand } from './commands/mcp-commands';
 
 // 注册命令
 registry.register(exitCommand);
@@ -64,6 +64,10 @@ registry.register(timerHelpCommand);
 registry.register(mcpListCommand);
 registry.register(mcpAddCommand);
 registry.register(mcpTestCommand);
+registry.register(mcpConnectCommand);
+registry.register(mcpDisconnectCommand);
+registry.register(mcpToolsCommand);
+registry.register(mcpCallCommand);
 registry.register(mcpRemoveCommand);
 registry.register(mcpHelpCommand);
 

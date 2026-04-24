@@ -13,7 +13,7 @@ type MCPConfig struct {
 	UUID        string         `gorm:"type:varchar(36);uniqueIndex;not null" json:"uuid"`
 	Name        string         `gorm:"type:varchar(100);not null;index" json:"name"`
 	Description string         `gorm:"type:varchar(500)" json:"description"`
-	Type        string         `gorm:"type:varchar(20);not null;index" json:"type"` // stdio, http, sse
+	Type        string         `gorm:"type:varchar(20);not null;index" json:"type"` // stdio, http, streamable_http, sse
 	// 连接配置（根据 Type 不同使用不同字段）
 	Command     string         `gorm:"type:varchar(500)" json:"command"`     // stdio 类型：命令
 	Args        string         `gorm:"type:json" json:"args"`                // stdio 类型：参数数组
@@ -47,9 +47,10 @@ func (m *MCPConfig) BeforeCreate(tx *gorm.DB) error {
 
 // MCPType MCP 类型常量
 const (
-	MCPTypeStdio = "stdio"
-	MCPTypeHTTP  = "http"
-	MCPTypeSSE   = "sse"
+	MCPTypeStdio         = "stdio"
+	MCPTypeHTTP          = "http"
+	MCPTypeStreamableHTTP = "streamable_http"
+	MCPTypeSSE           = "sse"
 )
 
 // MCPStatus MCP 状态常量

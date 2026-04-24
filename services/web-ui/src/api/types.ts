@@ -12,7 +12,7 @@ export interface MCPItem {
   uuid: string
   name: string
   description: string
-  type: 'stdio' | 'http' | 'sse'
+  type: 'stdio' | 'http' | 'streamable_http' | 'sse'
   status: string
   last_test_at?: string
 }
@@ -21,7 +21,7 @@ export interface MCPDetail {
   uuid: string
   name: string
   description: string
-  type: 'stdio' | 'http' | 'sse'
+  type: 'stdio' | 'http' | 'streamable_http' | 'sse'
   command?: string
   args?: string[]
   env?: string[]
@@ -37,7 +37,7 @@ export interface MCPDetail {
 export interface CreateMCPRequest {
   name: string
   description?: string
-  type: 'stdio' | 'http' | 'sse'
+  type: 'stdio' | 'http' | 'streamable_http' | 'sse'
   command?: string
   args?: string[]
   env?: string[]
@@ -271,14 +271,58 @@ export interface MetricsResponse extends ApiResponse<MetricsData> {}
 // Timer API - 移除重复定义，使用前面的 Timer 接口
 // 删除这里重复的 Timer、TimerListData、TimerListResponse 定义
 
-// MCP Test Data
+// MCP Test Data (legacy /test endpoint)
 export interface MCPTestData {
-  success: boolean
+  status: string
   tools: string[]
+  elapsed_ms: number
   error?: string
 }
 
 export interface MCPTestResponse extends ApiResponse<MCPTestData> {}
+
+// MCP Connect Test Data (/connect-test endpoint)
+export interface MCPConnectTestData {
+  status: string
+  reachable: boolean
+  initialize_succeeded: boolean
+  protocol_ready: boolean
+  latency_ms: number
+  server_info?: Record<string, unknown>
+  server_protocol_version?: string
+  server_capabilities?: Record<string, unknown>
+  tools?: string[]
+  error?: string
+}
+
+export interface MCPConnectTestResponse extends ApiResponse<MCPConnectTestData> {}
+
+// MCP Tool definition
+export interface MCPToolItem {
+  name: string
+  title?: string
+  description?: string
+  inputSchema?: Record<string, unknown>
+}
+
+// MCP Tools List Data
+export interface MCPListToolsData {
+  server_id: string
+  tools: MCPToolItem[]
+}
+
+export interface MCPListToolsResponse extends ApiResponse<MCPListToolsData> {}
+
+// MCP Tool Call Data
+export interface MCPCallToolData {
+  content?: unknown
+  structured_content?: unknown
+  raw?: unknown
+  is_error: boolean
+  error?: string
+}
+
+export interface MCPCallToolResponse extends ApiResponse<MCPCallToolData> {}
 
 // Knowledge API
 export interface KnowledgeListData {

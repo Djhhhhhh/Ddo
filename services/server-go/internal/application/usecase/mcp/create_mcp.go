@@ -54,8 +54,8 @@ func (uc *createMCPUseCase) Execute(ctx context.Context, input CreateMCPInput) *
 	if input.Type == "" {
 		return result.NewFailure[CreateMCPOutput](fmt.Errorf("type is required"))
 	}
-	if input.Type != models.MCPTypeStdio && input.Type != models.MCPTypeHTTP && input.Type != models.MCPTypeSSE {
-		return result.NewFailure[CreateMCPOutput](fmt.Errorf("invalid type: %s, must be one of: stdio, http, sse", input.Type))
+	if input.Type != models.MCPTypeStdio && input.Type != models.MCPTypeHTTP && input.Type != models.MCPTypeStreamableHTTP && input.Type != models.MCPTypeSSE {
+		return result.NewFailure[CreateMCPOutput](fmt.Errorf("invalid type: %s, must be one of: stdio, http, streamable_http, sse", input.Type))
 	}
 
 	// 2. stdio 类型验证
@@ -63,9 +63,9 @@ func (uc *createMCPUseCase) Execute(ctx context.Context, input CreateMCPInput) *
 		return result.NewFailure[CreateMCPOutput](fmt.Errorf("command is required for stdio type"))
 	}
 
-	// 3. http/sse 类型验证
-	if (input.Type == models.MCPTypeHTTP || input.Type == models.MCPTypeSSE) && input.URL == "" {
-		return result.NewFailure[CreateMCPOutput](fmt.Errorf("url is required for http/sse type"))
+	// 3. http/streamable_http/sse 类型验证
+	if (input.Type == models.MCPTypeHTTP || input.Type == models.MCPTypeStreamableHTTP || input.Type == models.MCPTypeSSE) && input.URL == "" {
+		return result.NewFailure[CreateMCPOutput](fmt.Errorf("url is required for http/streamable_http/sse type"))
 	}
 
 	// 4. 序列化数组字段

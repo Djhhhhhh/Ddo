@@ -7,5 +7,5 @@ llm-py: Ddo LLM Agent Service
 - NLP 意图识别
 """
 
-__version__ = "0.1.0"
+__version__ = "1.0.0"
 __author__ = "Ddo Team"

@@ -146,6 +146,12 @@ services/cli/
 
 ## 最后更新时间
 
+2026-04-25：MCP 连接管理功能
+- api-client.ts 新增 connectMcp 和 disconnectMcp 方法
+- mcp-commands.ts 新增 mcpConnectCommand 和 mcpDisconnectCommand
+- mcp-commands.ts 更新 mcpHelpCommand 包含新命令说明
+- repl/index.ts 导入并注册 mcpConnectCommand 和 mcpDisconnectCommand
+
 2026-04-22 20:03
 
 - 同步 `services/cli` 真实目录结构，补充 `api-client.ts`、`web-ui-server.ts`、REPL 子命令文件、`tests/`、`vendor/` 等条目

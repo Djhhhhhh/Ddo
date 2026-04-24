@@ -99,7 +99,9 @@ server-go/
 │   ├── mcp/                                 # ← 新增：MCP 客户端层（2026-04-16）
 │   │   ├── client.go                        # MCP 客户端核心
 │   │   ├── http.go                          # MCP HTTP 传输实现
-│   │   └── stdio.go                         # MCP stdio 传输实现
+│   │   ├── stdio.go                         # MCP stdio 传输实现
+│   │   ├── stdio_sysproc.go                 # 非 Windows 平台隐藏窗口（空实现）（2026-04-25）
+│   │   └── stdio_sysproc_windows.go         # Windows 平台隐藏 cmd 窗口（2026-04-25）
 │   └── application/                         # 应用层（用例编排）
 │       ├── result/
 │       │   └── result.go                    # 统一响应结果封装（2026-04-14）
@@ -136,7 +138,12 @@ server-go/
 │           │   ├── delete_mcp.go
 │           │   ├── get_mcp.go
 │           │   ├── list_mcp.go
-│           │   └── test_mcp.go
+│           │   ├── test_mcp.go
+│           │   ├── connect_test_mcp.go           # MCP 连接存活测试
+│           │   ├── connect_mcp.go               # MCP 建立持久连接（2026-04-25）
+│           │   ├── disconnect_mcp.go            # MCP 断开连接（2026-04-25）
+│           │   ├── list_mcp_tools.go             # MCP 工具列表查询
+│           │   └── call_mcp_tool.go              # MCP 工具调用测试
 │           └── timer/
 │               ├── create_timer.go
 │               ├── delete_timer.go
@@ -210,6 +217,25 @@ server-go/
 - ❌ 在 repository 中直接暴露数据库实现细节
 
 ## 🕒 最后更新时间
+
+2026-04-25：MCP 连接管理功能
+- 新增 MCP 持久连接管理（connect_mcp.go、disconnect_mcp.go）
+- ClientPool 新增 Connect/Disconnect/IsConnected 方法
+- stdio.go 新增 Connect/Disconnect 方法支持保持进程运行
+- http.go 新增 Connect/Disconnect 方法支持保持 HTTP 客户端
+- 新增 Windows 平台隐藏 cmd 窗口支持（stdio_sysproc_windows.go）
+- 新增非 Windows 平台空实现（stdio_sysproc.go）
+- 新增 API 路由 POST /:uuid/connect 和 /:uuid/disconnect
+- 新增 DTO ConnectMCPResponse 和 DisconnectMCPResponse
+- 更新 wire_gen.go 注入新的 usecase
+
+2026-04-24：Phase 2 MCP 协议完善
+- 新增 MCP 连接存活测试（connect_test_mcp.go）
+- 新增 MCP 工具列表查询（list_mcp_tools.go）
+- 新增 MCP 工具调用测试（call_mcp_tool.go）
+- 修复 MCP 删除逻辑为真软删除（gorm DeletedAt）
+- 支持 streamable_http 传输类型
+- 服务端新增 DELETE /api/v1/mcps/:uuid、GET /tools、POST /tools/:tool_name/test 等路由
 
 2026-04-22：修正 AGENTS.md 目录树
 - 移除重复的旧 application/ 块，补全 mcp/、timer/ usecase、test 文件、docs/ 子目录、data/、build/、go.sum

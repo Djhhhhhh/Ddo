@@ -13,12 +13,17 @@ import (
 
 // MCPHandler MCP 处理器
 type MCPHandler struct {
-	createUseCase mcp.CreateMCPUseCase
-	listUseCase   mcp.ListMCPUseCase
-	getUseCase    mcp.GetMCPUseCase
-	deleteUseCase mcp.DeleteMCPUseCase
-	testUseCase   mcp.TestMCPUseCase
-	logger        *zap.Logger
+	createUseCase       mcp.CreateMCPUseCase
+	listUseCase         mcp.ListMCPUseCase
+	getUseCase          mcp.GetMCPUseCase
+	deleteUseCase       mcp.DeleteMCPUseCase
+	testUseCase         mcp.TestMCPUseCase
+	connectTestUseCase  mcp.ConnectTestMCPUseCase
+	listToolsUseCase    mcp.ListMCPToolsUseCase
+	callToolUseCase     mcp.CallMCPToolUseCase
+	connectUseCase      mcp.ConnectMCPUseCase
+	disconnectUseCase   mcp.DisconnectMCPUseCase
+	logger              *zap.Logger
 }
 
 // NewMCPHandler 创建 MCP 处理器
@@ -28,15 +33,25 @@ func NewMCPHandler(
 	getUseCase mcp.GetMCPUseCase,
 	deleteUseCase mcp.DeleteMCPUseCase,
 	testUseCase mcp.TestMCPUseCase,
+	connectTestUseCase mcp.ConnectTestMCPUseCase,
+	listToolsUseCase mcp.ListMCPToolsUseCase,
+	callToolUseCase mcp.CallMCPToolUseCase,
+	connectUseCase mcp.ConnectMCPUseCase,
+	disconnectUseCase mcp.DisconnectMCPUseCase,
 	logger *zap.Logger,
 ) *MCPHandler {
 	return &MCPHandler{
-		createUseCase: createUseCase,
-		listUseCase:   listUseCase,
-		getUseCase:    getUseCase,
-		deleteUseCase: deleteUseCase,
-		testUseCase:   testUseCase,
-		logger:        logger.With(zap.String("handler", "mcp")),
+		createUseCase:      createUseCase,
+		listUseCase:        listUseCase,
+		getUseCase:         getUseCase,
+		deleteUseCase:      deleteUseCase,
+		testUseCase:        testUseCase,
+		connectTestUseCase: connectTestUseCase,
+		listToolsUseCase:   listToolsUseCase,
+		callToolUseCase:    callToolUseCase,
+		connectUseCase:     connectUseCase,
+		disconnectUseCase:  disconnectUseCase,
+		logger:             logger.With(zap.String("handler", "mcp")),
 	}
 }
 
@@ -199,7 +214,7 @@ func (h *MCPHandler) GetMCP(c *gin.Context) {
 	})
 }
 
-// DeleteMCP 删除 MCP 配置
+// DeleteMCP 删除 MCP 配置（支持 POST /:uuid/delete 和 DELETE /:uuid）
 func (h *MCPHandler) DeleteMCP(c *gin.Context) {
 	ctx := c.Request.Context()
 	uuid := c.Param("uuid")
@@ -232,6 +247,174 @@ func (h *MCPHandler) DeleteMCP(c *gin.Context) {
 		Message: "success",
 		Data: dto.DeleteMCPData{
 			Success: result.Data.Success,
+		},
+		Timestamp: time.Now(),
+	})
+}
+
+// ConnectTestMCP 连接存活测试
+func (h *MCPHandler) ConnectTestMCP(c *gin.Context) {
+	ctx := c.Request.Context()
+	uuid := c.Param("uuid")
+
+	if uuid == "" {
+		c.JSON(http.StatusBadRequest, dto.ErrorResponse{
+			Code:    400,
+			Message: "uuid is required",
+			Data:    nil,
+		})
+		return
+	}
+
+	var req dto.ConnectTestMCPRequest
+	if err := c.ShouldBindQuery(&req); err != nil {
+		req.Timeout = 10
+	}
+
+	result := h.connectTestUseCase.Execute(ctx, mcp.ConnectTestMCPInput{
+		UUID:    uuid,
+		Timeout: req.Timeout,
+	})
+
+	if !result.IsSuccess() {
+		h.logger.Error("connect test mcp failed", zap.Error(result.Error))
+		c.JSON(http.StatusInternalServerError, dto.ErrorResponse{
+			Code:    500,
+			Message: result.Error.Error(),
+			Data:    nil,
+		})
+		return
+	}
+
+	data := result.Data
+	c.JSON(http.StatusOK, dto.ConnectTestMCPResponse{
+		Code:    200,
+		Message: "success",
+		Data: dto.ConnectTestMCPData{
+			Status:                data.Status,
+			Reachable:            data.Reachable,
+			InitializeSucceeded:  data.InitializeSucceeded,
+			ProtocolReady:        data.ProtocolReady,
+			LatencyMs:            data.LatencyMs,
+			ServerInfo:           data.ServerInfo,
+			ServerProtocolVersion: data.ServerProtocolVersion,
+			ServerCapabilities:   data.ServerCapabilities,
+			Tools:                data.Tools,
+			Error:                data.Error,
+		},
+		Timestamp: time.Now(),
+	})
+}
+
+// ListMCPTools 获取 MCP 工具列表
+func (h *MCPHandler) ListMCPTools(c *gin.Context) {
+	ctx := c.Request.Context()
+	uuid := c.Param("uuid")
+
+	if uuid == "" {
+		c.JSON(http.StatusBadRequest, dto.ErrorResponse{
+			Code:    400,
+			Message: "uuid is required",
+			Data:    nil,
+		})
+		return
+	}
+
+	result := h.listToolsUseCase.Execute(ctx, mcp.ListMCPToolsInput{
+		UUID: uuid,
+	})
+
+	if !result.IsSuccess() {
+		h.logger.Error("list mcp tools failed", zap.Error(result.Error))
+		c.JSON(http.StatusInternalServerError, dto.ErrorResponse{
+			Code:    500,
+			Message: result.Error.Error(),
+			Data:    nil,
+		})
+		return
+	}
+
+	data := result.Data
+	tools := make([]dto.MCPToolDTO, 0, len(data.Tools))
+	for _, t := range data.Tools {
+		tools = append(tools, dto.MCPToolDTO{
+			Name:        t.Name,
+			Title:       t.Name,
+			Description: t.Description,
+			InputSchema: t.InputSchema,
+		})
+	}
+
+	c.JSON(http.StatusOK, dto.ListMCPToolsResponse{
+		Code:    200,
+		Message: "success",
+		Data: dto.ListMCPToolsData{
+			ServerID: data.ServerID,
+			Tools:    tools,
+		},
+		Timestamp: time.Now(),
+	})
+}
+
+// CallMCPTool 测试调用 MCP 工具
+func (h *MCPHandler) CallMCPTool(c *gin.Context) {
+	ctx := c.Request.Context()
+	uuid := c.Param("uuid")
+	toolName := c.Param("tool_name")
+
+	if uuid == "" {
+		c.JSON(http.StatusBadRequest, dto.ErrorResponse{
+			Code:    400,
+			Message: "uuid is required",
+			Data:    nil,
+		})
+		return
+	}
+	if toolName == "" {
+		c.JSON(http.StatusBadRequest, dto.ErrorResponse{
+			Code:    400,
+			Message: "tool name is required",
+			Data:    nil,
+		})
+		return
+	}
+
+	var req dto.CallMCPToolRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, dto.ErrorResponse{
+			Code:    400,
+			Message: "invalid request: " + err.Error(),
+			Data:    nil,
+		})
+		return
+	}
+
+	result := h.callToolUseCase.Execute(ctx, mcp.CallMCPToolInput{
+		UUID:     uuid,
+		ToolName: toolName,
+		Args:     req.Arguments,
+	})
+
+	if !result.IsSuccess() {
+		h.logger.Error("call mcp tool failed", zap.Error(result.Error))
+		c.JSON(http.StatusInternalServerError, dto.ErrorResponse{
+			Code:    500,
+			Message: result.Error.Error(),
+			Data:    nil,
+		})
+		return
+	}
+
+	data := result.Data
+	c.JSON(http.StatusOK, dto.CallMCPToolResponse{
+		Code:    200,
+		Message: "success",
+		Data: dto.CallMCPToolData{
+			Content:          data.Content,
+			StructuredContent: data.StructuredContent,
+			Raw:              data.Raw,
+			IsError:          data.IsError,
+			Error:            data.Error,
 		},
 		Timestamp: time.Now(),
 	})
@@ -285,3 +468,82 @@ func (h *MCPHandler) TestMCP(c *gin.Context) {
 		Timestamp: time.Now(),
 	})
 }
+
+// ConnectMCP 建立 MCP 连接
+func (h *MCPHandler) ConnectMCP(c *gin.Context) {
+	ctx := c.Request.Context()
+	uuid := c.Param("uuid")
+
+	if uuid == "" {
+		c.JSON(http.StatusBadRequest, dto.ErrorResponse{
+			Code:    400,
+			Message: "uuid is required",
+			Data:    nil,
+		})
+		return
+	}
+
+	result := h.connectUseCase.Execute(ctx, mcp.ConnectMCPInput{
+		UUID: uuid,
+	})
+
+	if !result.IsSuccess() {
+		h.logger.Error("connect mcp failed", zap.Error(result.Error))
+		c.JSON(http.StatusInternalServerError, dto.ErrorResponse{
+			Code:    500,
+			Message: result.Error.Error(),
+			Data:    nil,
+		})
+		return
+	}
+
+	data := result.Data
+	c.JSON(http.StatusOK, dto.ConnectMCPResponse{
+		Code:    200,
+		Message: "success",
+		Data: dto.ConnectMCPData{
+			Status: data.Status,
+		},
+		Timestamp: time.Now(),
+	})
+}
+
+// DisconnectMCP 断开 MCP 连接
+func (h *MCPHandler) DisconnectMCP(c *gin.Context) {
+	ctx := c.Request.Context()
+	uuid := c.Param("uuid")
+
+	if uuid == "" {
+		c.JSON(http.StatusBadRequest, dto.ErrorResponse{
+			Code:    400,
+			Message: "uuid is required",
+			Data:    nil,
+		})
+		return
+	}
+
+	result := h.disconnectUseCase.Execute(ctx, mcp.DisconnectMCPInput{
+		UUID: uuid,
+	})
+
+	if !result.IsSuccess() {
+		h.logger.Error("disconnect mcp failed", zap.Error(result.Error))
+		c.JSON(http.StatusInternalServerError, dto.ErrorResponse{
+			Code:    500,
+			Message: result.Error.Error(),
+			Data:    nil,
+		})
+		return
+	}
+
+	data := result.Data
+	c.JSON(http.StatusOK, dto.DisconnectMCPResponse{
+		Code:    200,
+		Message: "success",
+		Data: dto.DisconnectMCPData{
+			Status: data.Status,
+		},
+		Timestamp: time.Now(),
+	})
+}
+

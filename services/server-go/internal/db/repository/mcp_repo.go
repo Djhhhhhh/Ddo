@@ -101,11 +101,9 @@ func (r *mcpRepository) Update(ctx context.Context, mcp *models.MCPConfig) error
 	return r.db.WithContext(ctx).Save(mcp).Error
 }
 
-// Delete 软删除 MCP 配置（更新 status 为 deleted）
+// Delete 软删除 MCP 配置
 func (r *mcpRepository) Delete(ctx context.Context, uuid string) error {
-	return r.db.WithContext(ctx).Model(&models.MCPConfig{}).
-		Where("uuid = ?", uuid).
-		Update("status", models.MCPStatusInactive).Error
+	return r.db.WithContext(ctx).Delete(&models.MCPConfig{}, "uuid = ?", uuid).Error
 }
 
 // UpdateStatus 更新 MCP 状态

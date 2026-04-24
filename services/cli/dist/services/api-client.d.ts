@@ -95,8 +95,8 @@ export interface TimerListResponse {
 export interface Mcp {
     uuid: string;
     name: string;
-    type: 'stdio' | 'http' | 'sse';
-    status: 'connected' | 'disconnected';
+    type: 'stdio' | 'http' | 'streamable_http' | 'sse';
+    status: 'connected' | 'disconnected' | 'active' | 'inactive';
     command?: string;
     args?: string[];
     url?: string;
@@ -104,6 +104,37 @@ export interface Mcp {
 }
 export interface McpListResponse {
     mcps: Mcp[];
+}
+export interface McpTool {
+    name: string;
+    title?: string;
+    description?: string;
+    inputSchema?: Record<string, unknown>;
+    annotations?: Record<string, unknown>;
+}
+export interface McpConnectionTestResponse {
+    status?: string;
+    reachable?: boolean;
+    initializeSucceeded?: boolean;
+    protocolReady?: boolean;
+    latencyMs?: number;
+    serverInfo?: Record<string, unknown>;
+    serverProtocolVersion?: string;
+    serverCapabilities?: Record<string, unknown>;
+    tools?: Array<string | McpTool>;
+    error?: string;
+}
+export interface McpToolListResponse {
+    serverId?: string;
+    tools: McpTool[];
+}
+export interface McpToolCallResponse {
+    content?: unknown;
+    structuredContent?: unknown;
+    raw?: unknown;
+    isError?: boolean;
+    error?: string;
+    [key: string]: unknown;
 }
 export interface McpTestResponse {
     status: string;
@@ -199,8 +230,17 @@ export declare function createApiClient(config: ApiClientConfig): {
         env?: Record<string, string>;
     }) => Promise<Mcp>;
     testMcp: (uuid: string) => Promise<McpTestResponse>;
+    testMcpConnection: (uuid: string) => Promise<McpConnectionTestResponse>;
+    getMcpTools: (uuid: string) => Promise<McpToolListResponse>;
+    callMcpTool: (uuid: string, toolName: string, args: Record<string, unknown>) => Promise<McpToolCallResponse>;
     deleteMcp: (uuid: string) => Promise<{
         success: boolean;
+    }>;
+    connectMcp: (uuid: string) => Promise<{
+        status: string;
+    }>;
+    disconnectMcp: (uuid: string) => Promise<{
+        status: string;
     }>;
     conversationChat: (req: ConversationRequest) => Promise<ConversationResponse>;
     conversationChatStream: (req: ConversationRequest) => Promise<Response>;

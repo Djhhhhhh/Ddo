@@ -17,6 +17,11 @@
 - MCP 客户端统一放在 `internal/mcp/` 目录，独立于 DDD 四层之外，供应用层按需调用
 - 使用 `ClientPool` 管理连接生命周期，内部按 `Type`（stdio/http/sse）分发到 `StdioManager` 或 `HTTPManager`
 - 新增 MCP 传输类型时，必须在 `ClientPool.TestConnection` 和 `Close` 中同步处理，避免连接泄漏
+- Windows 平台使用 `syscall.SysProcAttr.HideWindow = true` 隐藏 stdio 进程的 cmd 窗口（2026-04-25）
+- 平台特定代码使用 build tags 分离：`stdio_sysproc_windows.go`（windows）、`stdio_sysproc.go`（!windows）（2026-04-25）
+- MCP 持久连接管理：Connect 方法保持进程/客户端运行，Disconnect 方法清理资源（2026-04-25）
+- stdio Connect 启动进程后不杀掉，保存在 processes map 中，Disconnect 时杀掉进程（2026-04-25）
+- http Connect 保存 HTTP 客户端到 clients map，Disconnect 时从 map 中移除（2026-04-25）
 
 ### Wire 依赖注入最佳实践（2026-04-14）
 - Provider 函数放在 wire.go 中，生成的代码放在 wire_gen.go

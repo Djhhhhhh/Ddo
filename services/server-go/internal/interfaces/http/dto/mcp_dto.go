@@ -8,7 +8,7 @@ import (
 type CreateMCPRequest struct {
 	Name        string            `json:"name" binding:"required"`
 	Description string            `json:"description"`
-	Type        string            `json:"type" binding:"required,oneof=stdio http sse"`
+	Type        string            `json:"type" binding:"required,oneof=stdio http streamable_http sse"`
 	Command     string            `json:"command"`
 	Args        []string          `json:"args"`
 	Env         []string          `json:"env"`
@@ -127,4 +127,101 @@ type TestMCPData struct {
 	Tools     []string `json:"tools"`
 	ElapsedMs int64    `json:"elapsed_ms"`
 	Error     string   `json:"error,omitempty"`
+}
+
+// ConnectTestMCPRequest 连接测试请求
+type ConnectTestMCPRequest struct {
+	Timeout int `json:"timeout" form:"timeout,default=10"`
+}
+
+// ConnectTestMCPResponse 连接测试响应
+type ConnectTestMCPResponse struct {
+	Code     int                `json:"code"`
+	Message  string             `json:"message"`
+	Data     ConnectTestMCPData `json:"data"`
+	Timestamp time.Time         `json:"timestamp"`
+}
+
+// ConnectTestMCPData 连接测试数据
+type ConnectTestMCPData struct {
+	Status                string                 `json:"status"`
+	Reachable            bool                   `json:"reachable"`
+	InitializeSucceeded  bool                   `json:"initialize_succeeded"`
+	ProtocolReady        bool                   `json:"protocol_ready"`
+	LatencyMs            int64                  `json:"latency_ms"`
+	ServerInfo           map[string]interface{} `json:"server_info,omitempty"`
+	ServerProtocolVersion string                `json:"server_protocol_version,omitempty"`
+	ServerCapabilities   map[string]interface{} `json:"server_capabilities,omitempty"`
+	Tools                []string               `json:"tools,omitempty"`
+	Error                string                 `json:"error,omitempty"`
+}
+
+// MCPToolDTO MCP 工具 DTO
+type MCPToolDTO struct {
+	Name        string                 `json:"name"`
+	Title       string                 `json:"title,omitempty"`
+	Description string                 `json:"description,omitempty"`
+	InputSchema map[string]interface{} `json:"inputSchema,omitempty"`
+}
+
+// ListMCPToolsResponse 工具列表响应
+type ListMCPToolsResponse struct {
+	Code     int             `json:"code"`
+	Message  string          `json:"message"`
+	Data     ListMCPToolsData `json:"data"`
+	Timestamp time.Time      `json:"timestamp"`
+}
+
+// ListMCPToolsData 工具列表数据
+type ListMCPToolsData struct {
+	ServerID string       `json:"server_id"`
+	Tools    []MCPToolDTO  `json:"tools"`
+}
+
+// CallMCPToolRequest 调用 MCP 工具请求
+type CallMCPToolRequest struct {
+	Arguments map[string]interface{} `json:"arguments"`
+}
+
+// CallMCPToolResponse 调用 MCP 工具响应
+type CallMCPToolResponse struct {
+	Code     int            `json:"code"`
+	Message  string         `json:"message"`
+	Data     CallMCPToolData `json:"data"`
+	Timestamp time.Time     `json:"timestamp"`
+}
+
+// CallMCPToolData 调用 MCP 工具数据
+type CallMCPToolData struct {
+	Content          interface{} `json:"content,omitempty"`
+	StructuredContent interface{} `json:"structured_content,omitempty"`
+	Raw              interface{} `json:"raw,omitempty"`
+	IsError          bool        `json:"is_error"`
+	Error            string      `json:"error,omitempty"`
+}
+
+// ConnectMCPResponse 连接 MCP 响应
+type ConnectMCPResponse struct {
+	Code     int            `json:"code"`
+	Message  string         `json:"message"`
+	Data     ConnectMCPData `json:"data"`
+	Timestamp time.Time     `json:"timestamp"`
+}
+
+// ConnectMCPData 连接 MCP 数据
+type ConnectMCPData struct {
+	Status string `json:"status"`
+}
+
+// DisconnectMCPResponse 断开 MCP 连接响应
+type DisconnectMCPResponse struct {
+	Code     int               `json:"code"`
+	Message  string            `json:"message"`
+	Data     DisconnectMCPData `json:"data"`
+	Timestamp time.Time        `json:"timestamp"`
+}
+
+// DisconnectMCPData 断开 MCP 连接数据
+type DisconnectMCPData struct {
+	Status string `json:"status"`
 }

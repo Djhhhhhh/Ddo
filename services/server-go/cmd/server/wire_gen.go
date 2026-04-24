@@ -129,6 +129,11 @@ func InitializeApp(cfgPath string) (*bootstrap.App, func(), error) {
 	getMCPUseCase := mcp.NewGetMCPUseCase(mcpRepo)
 	deleteMCPUseCase := mcp.NewDeleteMCPUseCase(mcpRepo)
 	testMCPUseCase := mcp.NewTestMCPUseCase(mcpRepo, mcpClientPool)
+	connectTestMCPUseCase := mcp.NewConnectTestMCPUseCase(mcpRepo, mcpClientPool)
+	listMCPToolsUseCase := mcp.NewListMCPToolsUseCase(mcpRepo, mcpClientPool)
+	callMCPToolUseCase := mcp.NewCallMCPToolUseCase(mcpRepo, mcpClientPool)
+	connectMCPUseCase := mcp.NewConnectMCPUseCase(mcpRepo, mcpClientPool)
+	disconnectMCPUseCase := mcp.NewDisconnectMCPUseCase(mcpRepo, mcpClientPool)
 
 	// 初始化 Handler
 	healthHandler := handler.NewHealthHandler(checkHealthUseCase, version)
@@ -190,6 +195,11 @@ func InitializeApp(cfgPath string) (*bootstrap.App, func(), error) {
 		getMCPUseCase,
 		deleteMCPUseCase,
 		testMCPUseCase,
+		connectTestMCPUseCase,
+		listMCPToolsUseCase,
+		callMCPToolUseCase,
+		connectMCPUseCase,
+		disconnectMCPUseCase,
 		zapLogger,
 	)
 

@@ -157,6 +157,22 @@ web-ui/
 
 ## 最后更新时间
 
+2026-04-25：MCP 连接管理功能
+- 新增 connectMCP 和 disconnectMCP API 函数（mcp.ts）
+- MCPView.vue 新增 persistentConnectionStatus 状态管理
+- 新增 connectMcp 和 disconnectMcp 函数实现连接/断开逻辑
+- MCP 详情页新增"连接"/"断开连接"按钮
+- 连接成功后自动加载工具列表
+- 切换 MCP 时重置连接状态
+
+2026-04-24：Phase 3 MCP Web UI 完善
+- MCP 管理页面支持 streamable_http 传输类型
+- 新增连接测试、工具列表、调用工具三个独立操作按钮
+- 新增工具列表弹窗（展示工具名称、描述、inputSchema）
+- 新增工具调用弹窗（支持输入工具名称和 JSON 参数，展示调用结果）
+- 修复删除逻辑使用标准 DELETE 方法，失败时回退旧版 POST /delete
+- 修复测试结果显示字段映射（服务端返回 status/tools/elapsed_ms/error）
+
 2026-04-22：修正 AGENTS.md 目录树
 - 补全根目录缺失项（dist/、dist-electron/、docs/、scripts/、package-lock.json、tsconfig.node.json）
 - 展开 docs/（feature/、roadmap/）和 scripts/（build-electron.mjs）

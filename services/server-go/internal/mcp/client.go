@@ -39,8 +39,70 @@ func (p *ClientPool) TestConnection(ctx context.Context, cfg *models.MCPConfig) 
 	switch cfg.Type {
 	case models.MCPTypeStdio:
 		return p.stdioMgr.TestConnection(ctx, cfg)
-	case models.MCPTypeHTTP, models.MCPTypeSSE:
+	case models.MCPTypeHTTP, models.MCPTypeStreamableHTTP, models.MCPTypeSSE:
 		return p.httpMgr.TestConnection(ctx, cfg)
+	default:
+		return nil, fmt.Errorf("unsupported mcp type: %s", cfg.Type)
+	}
+}
+
+// Connect 建立并保持连接
+func (p *ClientPool) Connect(ctx context.Context, cfg *models.MCPConfig) error {
+	switch cfg.Type {
+	case models.MCPTypeStdio:
+		return p.stdioMgr.Connect(ctx, cfg)
+	case models.MCPTypeHTTP, models.MCPTypeStreamableHTTP, models.MCPTypeSSE:
+		return p.httpMgr.Connect(ctx, cfg)
+	default:
+		return fmt.Errorf("unsupported mcp type: %s", cfg.Type)
+	}
+}
+
+// Disconnect 断开连接
+func (p *ClientPool) Disconnect(uuid string) error {
+	p.Lock()
+	defer p.Unlock()
+
+	// 从连接池移除
+	delete(p.clients, uuid)
+
+	// 关闭 stdio 连接
+	p.stdioMgr.Disconnect(uuid)
+
+	// 关闭 http 连接
+	p.httpMgr.Disconnect(uuid)
+
+	return nil
+}
+
+// IsConnected 检查是否已连接
+func (p *ClientPool) IsConnected(uuid string) bool {
+	p.RLock()
+	defer p.RUnlock()
+
+	_, ok := p.clients[uuid]
+	return ok
+}
+
+// GetTools 获取 MCP 工具列表（含 schema）
+func (p *ClientPool) GetTools(ctx context.Context, cfg *models.MCPConfig) ([]Tool, error) {
+	switch cfg.Type {
+	case models.MCPTypeStdio:
+		return p.stdioMgr.GetTools(ctx, cfg)
+	case models.MCPTypeHTTP, models.MCPTypeStreamableHTTP, models.MCPTypeSSE:
+		return p.httpMgr.GetTools(ctx, cfg)
+	default:
+		return nil, fmt.Errorf("unsupported mcp type: %s", cfg.Type)
+	}
+}
+
+// CallTool 调用指定 MCP 工具
+func (p *ClientPool) CallTool(ctx context.Context, cfg *models.MCPConfig, toolName string, args map[string]interface{}) (map[string]interface{}, error) {
+	switch cfg.Type {
+	case models.MCPTypeStdio:
+		return p.stdioMgr.CallTool(ctx, cfg, toolName, args)
+	case models.MCPTypeHTTP, models.MCPTypeStreamableHTTP, models.MCPTypeSSE:
+		return p.httpMgr.CallTool(ctx, cfg, toolName, args)
 	default:
 		return nil, fmt.Errorf("unsupported mcp type: %s", cfg.Type)
 	}

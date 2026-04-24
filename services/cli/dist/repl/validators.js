@@ -62,8 +62,9 @@ function validateMCPParams(params) {
         errors.push('名称不能为空');
     }
     const type = params.type;
-    const validTypes = ['stdio', 'http', 'sse'];
-    if (!type || !validTypes.includes(String(type))) {
+    const normalizedType = typeof type === 'string' ? type.trim().toLowerCase().replace(/-/g, '_') : '';
+    const validTypes = ['stdio', 'http', 'streamable_http', 'sse'];
+    if (!type || !validTypes.includes(normalizedType)) {
         errors.push(`类型必须是 ${validTypes.join('|')} 之一`);
     }
     const config = params.config;

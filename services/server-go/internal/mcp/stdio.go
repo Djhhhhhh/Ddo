@@ -54,6 +54,7 @@ func (m *StdioManager) TestConnection(ctx context.Context, cfg *models.MCPConfig
 	}
 
 	// 启动进程
+	hideWindow(cmd)
 	if err := cmd.Start(); err != nil {
 		return nil, fmt.Errorf("start process failed: %w", err)
 	}
@@ -142,6 +143,306 @@ func (m *StdioManager) TestConnection(ctx context.Context, cfg *models.MCPConfig
 	}
 
 	return tools, nil
+}
+
+// GetTools 获取 MCP 工具列表（含完整 schema）
+func (m *StdioManager) GetTools(ctx context.Context, cfg *models.MCPConfig) ([]Tool, error) {
+	var args []string
+	json.Unmarshal([]byte(cfg.Args), &args)
+
+	var envs []string
+	json.Unmarshal([]byte(cfg.Env), &envs)
+
+	cmd := exec.CommandContext(ctx, cfg.Command, args...)
+	if len(envs) > 0 {
+		cmd.Env = envs
+	}
+
+	stdin, err := cmd.StdinPipe()
+	if err != nil {
+		return nil, fmt.Errorf("create stdin pipe failed: %w", err)
+	}
+	defer stdin.Close()
+
+	stdout, err := cmd.StdoutPipe()
+	if err != nil {
+		return nil, fmt.Errorf("create stdout pipe failed: %w", err)
+	}
+
+	hideWindow(cmd)
+	if err := cmd.Start(); err != nil {
+		return nil, fmt.Errorf("start process failed: %w", err)
+	}
+
+	m.Lock()
+	m.processes[cfg.UUID] = cmd
+	m.Unlock()
+
+	defer func() {
+		m.Lock()
+		delete(m.processes, cfg.UUID)
+		m.Unlock()
+		cmd.Process.Kill()
+		cmd.Wait()
+	}()
+
+	// 1. initialize
+	initializeReq := MCPMessage{
+		JSONRPC: "2.0",
+		Method:  "initialize",
+		Params: mustMarshal(InitializeParams{
+			ProtocolVersion: "2024-11-05",
+			Capabilities:    map[string]interface{}{},
+			ClientInfo: ClientInfo{
+				Name:    "ddo-server",
+				Version: "1.0.0",
+			},
+		}),
+		ID: 1,
+	}
+	if err := writeJSON(stdin, initializeReq); err != nil {
+		return nil, fmt.Errorf("send initialize request failed: %w", err)
+	}
+
+	var initResp MCPMessage
+	if err := readJSONTimeout(stdout, &initResp, 10*time.Second); err != nil {
+		return nil, fmt.Errorf("read initialize response failed: %w", err)
+	}
+	if initResp.Error != nil {
+		return nil, fmt.Errorf("initialize error: %s", initResp.Error.Message)
+	}
+
+	// 2. notifications/initialized
+	writeJSON(stdin, MCPMessage{
+		JSONRPC: "2.0",
+		Method:  "notifications/initialized",
+	})
+
+	// 3. tools/list
+	listReq := MCPMessage{
+		JSONRPC: "2.0",
+		Method:  "tools/list",
+		Params:  mustMarshal(map[string]interface{}{}),
+		ID:      2,
+	}
+	if err := writeJSON(stdin, listReq); err != nil {
+		return nil, fmt.Errorf("send tools/list request failed: %w", err)
+	}
+
+	var listResp MCPMessage
+	if err := readJSONTimeout(stdout, &listResp, 10*time.Second); err != nil {
+		return nil, fmt.Errorf("read tools/list response failed: %w", err)
+	}
+	if listResp.Error != nil {
+		return nil, fmt.Errorf("tools/list error: %s", listResp.Error.Message)
+	}
+
+	var result ToolsListResult
+	if err := json.Unmarshal(listResp.Result, &result); err != nil {
+		return nil, fmt.Errorf("parse tools list result failed: %w", err)
+	}
+
+	return result.Tools, nil
+}
+
+// CallTool 调用指定 MCP 工具
+func (m *StdioManager) CallTool(ctx context.Context, cfg *models.MCPConfig, toolName string, args map[string]interface{}) (map[string]interface{}, error) {
+	var argsList []string
+	json.Unmarshal([]byte(cfg.Args), &argsList)
+
+	var envs []string
+	json.Unmarshal([]byte(cfg.Env), &envs)
+
+	cmd := exec.CommandContext(ctx, cfg.Command, argsList...)
+	if len(envs) > 0 {
+		cmd.Env = envs
+	}
+
+	stdin, err := cmd.StdinPipe()
+	if err != nil {
+		return nil, fmt.Errorf("create stdin pipe failed: %w", err)
+	}
+	defer stdin.Close()
+
+	stdout, err := cmd.StdoutPipe()
+	if err != nil {
+		return nil, fmt.Errorf("create stdout pipe failed: %w", err)
+	}
+
+	hideWindow(cmd)
+	if err := cmd.Start(); err != nil {
+		return nil, fmt.Errorf("start process failed: %w", err)
+	}
+
+	m.Lock()
+	m.processes[cfg.UUID] = cmd
+	m.Unlock()
+
+	defer func() {
+		m.Lock()
+		delete(m.processes, cfg.UUID)
+		m.Unlock()
+		cmd.Process.Kill()
+		cmd.Wait()
+	}()
+
+	// 1. initialize
+	initializeReq := MCPMessage{
+		JSONRPC: "2.0",
+		Method:  "initialize",
+		Params: mustMarshal(InitializeParams{
+			ProtocolVersion: "2024-11-05",
+			Capabilities:    map[string]interface{}{},
+			ClientInfo: ClientInfo{
+				Name:    "ddo-server",
+				Version: "1.0.0",
+			},
+		}),
+		ID: 1,
+	}
+	if err := writeJSON(stdin, initializeReq); err != nil {
+		return nil, fmt.Errorf("send initialize request failed: %w", err)
+	}
+
+	var initResp MCPMessage
+	if err := readJSONTimeout(stdout, &initResp, 10*time.Second); err != nil {
+		return nil, fmt.Errorf("read initialize response failed: %w", err)
+	}
+	if initResp.Error != nil {
+		return nil, fmt.Errorf("initialize error: %s", initResp.Error.Message)
+	}
+
+	// 2. notifications/initialized
+	writeJSON(stdin, MCPMessage{
+		JSONRPC: "2.0",
+		Method:  "notifications/initialized",
+	})
+
+	// 3. tools/call
+	callReq := MCPMessage{
+		JSONRPC: "2.0",
+		Method:  "tools/call",
+		Params: mustMarshal(map[string]interface{}{
+			"name":      toolName,
+			"arguments": args,
+		}),
+		ID: 3,
+	}
+	if err := writeJSON(stdin, callReq); err != nil {
+		return nil, fmt.Errorf("send tools/call request failed: %w", err)
+	}
+
+	var callResp MCPMessage
+	if err := readJSONTimeout(stdout, &callResp, 10*time.Second); err != nil {
+		return nil, fmt.Errorf("read tools/call response failed: %w", err)
+	}
+	if callResp.Error != nil {
+		return nil, fmt.Errorf("tools/call error: %s", callResp.Error.Message)
+	}
+
+	var result map[string]interface{}
+	if err := json.Unmarshal(callResp.Result, &result); err != nil {
+		return nil, fmt.Errorf("parse tools/call result failed: %w", err)
+	}
+
+	return result, nil
+}
+
+// Connect 建立并保持 stdio 连接
+func (m *StdioManager) Connect(ctx context.Context, cfg *models.MCPConfig) error {
+	// 解析参数
+	var args []string
+	json.Unmarshal([]byte(cfg.Args), &args)
+
+	var envs []string
+	json.Unmarshal([]byte(cfg.Env), &envs)
+
+	// 构建命令
+	cmd := exec.CommandContext(ctx, cfg.Command, args...)
+	if len(envs) > 0 {
+		cmd.Env = envs
+	}
+
+	// 创建管道
+	stdin, err := cmd.StdinPipe()
+	if err != nil {
+		return fmt.Errorf("create stdin pipe failed: %w", err)
+	}
+
+	stdout, err := cmd.StdoutPipe()
+	if err != nil {
+		return fmt.Errorf("create stdout pipe failed: %w", err)
+	}
+
+	// 启动进程
+	hideWindow(cmd)
+	if err := cmd.Start(); err != nil {
+		return fmt.Errorf("start process failed: %w", err)
+	}
+
+	// 记录进程
+	m.Lock()
+	m.processes[cfg.UUID] = cmd
+	m.Unlock()
+
+	// 发送 initialize 请求
+	initializeReq := MCPMessage{
+		JSONRPC: "2.0",
+		Method:  "initialize",
+		Params: mustMarshal(InitializeParams{
+			ProtocolVersion: "2024-11-05",
+			Capabilities:    map[string]interface{}{},
+			ClientInfo: ClientInfo{
+				Name:    "ddo-server",
+				Version: "1.0.0",
+			},
+		}),
+		ID: 1,
+	}
+
+	if err := writeJSON(stdin, initializeReq); err != nil {
+		m.Disconnect(cfg.UUID)
+		return fmt.Errorf("send initialize request failed: %w", err)
+	}
+
+	// 读取响应
+	var initResp MCPMessage
+	if err := readJSONTimeout(stdout, &initResp, 10*time.Second); err != nil {
+		m.Disconnect(cfg.UUID)
+		return fmt.Errorf("read initialize response failed: %w", err)
+	}
+
+	if initResp.Error != nil {
+		m.Disconnect(cfg.UUID)
+		return fmt.Errorf("initialize error: %s", initResp.Error.Message)
+	}
+
+	// 发送 initialized 通知
+	initializedNotify := MCPMessage{
+		JSONRPC: "2.0",
+		Method:  "notifications/initialized",
+	}
+	writeJSON(stdin, initializedNotify)
+
+	return nil
+}
+
+// Disconnect 断开 stdio 连接
+func (m *StdioManager) Disconnect(uuid string) {
+	m.Lock()
+	defer m.Unlock()
+
+	cmd, ok := m.processes[uuid]
+	if !ok {
+		return
+	}
+
+	delete(m.processes, uuid)
+
+	if cmd.Process != nil {
+		cmd.Process.Kill()
+		cmd.Wait()
+	}
 }
 
 // CloseAll 关闭所有 stdio 连接
